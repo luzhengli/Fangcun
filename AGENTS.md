@@ -26,6 +26,7 @@
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
 | `prototype/` | 网页版原型画布的源文件镜像，实现界面时参考。只同步，不手改。同步记录在 `prototype/README.md` |
+| `tools/prototype-preview/` | 原型的本地预览器和同步检查脚本 `check.js`。用法见 `prototype/README.md`「本地看」 |
 
 仓库里目前只有文档，还没有代码。开始写代码后，在这里补上代码目录和开发命令。
 
@@ -73,16 +74,18 @@
 
 ### 文件结构
 
+- `prototype/screens/<名称>.png`：每张画板默认状态的截图，同步时由 `check.js` 生成。先看截图了解布局，再读源文件。
 - `prototype/project/canvas.json`：画板索引。`boards` 里每张画板的位置、尺寸、标题，`notes` 是画布上的标题和便签。
 - `prototype/project/<名称>.dc.html`：每张画板一个文件，是完整的 HTML，分三段：
   1. `<helmet><style>`：页面基础样式。`.fc{--bg:…}` 和 `.fc.dark{…}` 是「墨格」的颜色 token，浅色与深色各一套。实现时颜色从这里和 `DesignSystem.dc.html` 取，不要另调。
   2. `<x-dc>` 里的标记：界面本身。样式写在行内 `style` 里。`{{name}}` 是绑定到脚本的值；`<sc-for list="{{xs}}" as="x">` 是循环，`<sc-if value="{{cond}}">` 是条件；`onClick="{{fn}}"` 是事件；`<a href="Activity.dc.html">` 是跳到另一张画板。
   3. 末尾的 `<script type="text/x-dc" data-dc-script>`：`class Component extends DCLogic` 的 `renderVals()`。里面有状态的默认值、示例数据（如活动页的 `EV`、全局页的 `ROWS`）和交互逻辑。`data-props` 是画布上的调节项，例如深色模式、密度。
-- 运行时 `support.js` 不在仓库里，这些文件在本地打不开成可交互的页面。只当参考读。
+- 画布的运行时 `support.js` 不在仓库里，直接打开文件没有样式。要看样子，看 `prototype/screens/` 的截图，或者用 `tools/prototype-preview/` 的预览器，用法见 `prototype/README.md`「本地看」。
+- 预览器是自己写的，支持 `{{}}`、`sc-for`、`sc-if`、事件、`dc-import` 和画板间链接。还不支持 `x-import`（设计系统组件）。同步时由 `check.js` 把关，见「同步」第 4 步。
 
 ### 怎么读
 
-- 先按 `prototype/README.md` 的表找到画板，再用 `grep -n` 找要的文案或数据，只读那一段。单个文件 25–80KB，不要整份读。
+- 先看 `prototype/screens/` 里那张画板的截图，再按 `prototype/README.md` 的表找到源文件，用 `grep -n` 找要的文案或数据，只读那一段。单个文件 25–80KB，不要整份读。
 - 找脚本段：`grep -n data-dc-script prototype/project/*.dc.html`。
 - 看结构时去掉行内样式和图标：`sed -E 's/ style="[^"]*"//g; s/<svg.*<\/svg>//g' 文件`。
 - 实现时：文案和示例数据照抄；结构和交互按原型改写成 React 组件，不要搬 `DCLogic` 或 `sc-*` 标签；视觉只用「墨格」token。
@@ -94,10 +97,11 @@
 1. 用 Artifact 工具 `list`（`scope: "files"`）列出画布文件。只要 `project/` 下的文件；`index.html`、`SKILL.md`、`artifact-type/` 是编辑器本身，不要。
 2. 用 `read`，`paths` 填全部 `project/…` 路径，`out_dir` 填仓库的 `prototype`，一次读完。画布上已删除的画板，把本地对应文件也删掉。不要用网页抓取去读。
 3. 改写 `prototype/README.md` 的同步记录（版本号取 `read` 结果里的 version）。新增或删掉画板时，改它的画板表。
-4. `git diff --stat prototype/` 看哪些画板变了，逐条对照设计文档。不符合文档的，列给人，改原型；文档里没有的，问人要不要写进文档。不要为了迁就原型去改文档。
-5. 按「收工前必须做的事」更新四份文档，提交。
+4. 在仓库根目录运行 `node tools/prototype-preview/check.js`。它用预览器渲染每张画板，重新生成 `prototype/screens/`。没有全部通过（有报错、残留 `{{`、不认识的标签），就先补 `tools/prototype-preview/dc-preview.js`，直到通过，再往下走。不要提交没通过的同步。
+5. `git diff --stat prototype/` 看哪些画板变了，逐条对照设计文档。不符合文档的，列给人，改原型；文档里没有的，问人要不要写进文档。不要为了迁就原型去改文档。
+6. 按「收工前必须做的事」更新四份文档，提交。
 
-本地会话只需 `git pull` 拿到最新的 `prototype/`。
+本地会话只需 `git pull` 拿到最新的 `prototype/`，包括截图。
 
 ## 交流
 

@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-11-14 原型同步加检查和截图
+
+- 人担心画布以后改了、预览器渲染不出来，本地 Agent 看不懂原型。不改用导出件，补了两层保障。
+- 新增 `tools/prototype-preview/check.js`：渲染每张画板，有报错、残留 `{{`、不认识的标签就失败；同时生成 `prototype/screens/*.png`（七张共 1.5MB）。写进同步步骤第 4 步。
+- 预览器补了 `dc-import` 子组件和底部问题提示条。用临时画板测过子组件状态和 `x-import` 报警。
+- 没做：`x-import`（设计系统组件）还不支持，画布用到时再补。
+
+---
+
+## 2026-11-14 原型本地预览器
+
+- 人反映本地打开原型没有样式。原因：`.dc.html` 是模板源码，根节点的 `{{rootClass}}` 不替换，token 全部失效，`sc-if` 里的弹窗也全部显示。
+- 新增 `tools/prototype-preview/`（`index.html` + `dc-preview.js`）：读 `prototype/project/` 的画板，实现 `{{}}`、`sc-for`、`sc-if`、事件、`setState` 和画板间跳转。
+- 用 Playwright 渲染七张画板：无报错，无残留 `{{`；抽查了回滚冲突、筛选、勾选、命令面板输入、跨画板链接、深色模式。
+- 用法写进 `prototype/README.md`「本地看」和 `AGENTS.md`。
+
+---
+
 ## 2026-11-14 删除 docs/archive/
 
 - 人说旧原型导出件不再看，删除 `docs/archive/` 下三个 HTML（约 4.6MB），用 `git rm`，可从 git 历史取回。
