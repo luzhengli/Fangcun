@@ -1,0 +1,23 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-13T23:10:00Z"},
+  "title": "Fangcun 设计系统与原型",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 1600, "y": 0, "w": 1440, "h": 900, "title": "项目 · 生效上下文", "expand": "fill", "is_interactive": true},
+    "DesignSystem.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 3400, "title": "方寸设计系统 · 墨格", "expand": "fill"},
+    "Checkup.dc.html": {"x": 1600, "y": 1020, "w": 1440, "h": 900, "title": "首次启动 · 体检报告", "expand": "fill", "is_interactive": true},
+    "Library.dc.html": {"x": 1600, "y": 2040, "w": 1440, "h": 900, "title": "资产库 · 资产详情", "expand": "fill", "is_interactive": true},
+    "Bundles.dc.html": {"x": 1600, "y": 3060, "w": 1440, "h": 900, "title": "套装 · 资产组合", "expand": "fill", "is_interactive": true},
+    "Global.dc.html": {"x": 1600, "y": 4080, "w": 1440, "h": 900, "title": "全局 · 瘦身", "expand": "fill", "is_interactive": true},
+    "Activity.dc.html": {"x": 1600, "y": 5100, "w": 1440, "h": 900, "title": "活动 · 时间线与回滚", "expand": "fill", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "DesignSystem.dc.html", "Checkup.dc.html", "Library.dc.html", "Bundles.dc.html", "Global.dc.html", "Activity.dc.html"],
+  "notes": {
+    "dsTitle": {"x": 0, "y": -300, "text": "设计系统：从产品方案提取", "kind": "title1", "maxW": 1440},
+    "protoTitle": {"x": 1600, "y": -300, "text": "高保真原型：Mac 主窗口", "kind": "title1", "maxW": 1440},
+    "changes93": {"x": 3120, "y": 0, "w": 420, "size": "s", "fill": "blue", "text": "按设计文档 9.3 更新（11-14）\n\n项目页\n· 回流完成的提示：「更新中心」→「活动」的待处理\n· 检查器「可更新」：加受影响项目的勾选（agent-lab、fangcun），计划里每个项目各一行\n\n活动页\n· 类型与筛选芯片「CI」→「校验」，触发方去掉 CI，校验记为命令行\n· 加「密钥」类型与芯片，示例：github-token 迁入钥匙串，不能回滚\n· 升级记录的说明：「更新中心」→「活动」\n· 回滚预览：被后来变更动过的文件标橙，要求先回滚后面的记录（试：登记项目 #124）\n· 快照过期：回滚按钮置灰并说明原因（试：10-09 client-acme #1）\n\n全局页\n· 转成套装：只勾选一个项目时，多一个「不建套装，直接写进清单」\n\n设计系统\n· 封面引用 6.6 → 6.10"}
+  },
+  "designSystems": []
+}

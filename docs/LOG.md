@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-14 原型源文件进仓库
+
+- 用 Artifact 工具读出新画布 WAK5 的 `project/` 下八个文件（索引加七张画板），存到 `prototype/project/`，版本 1794609317-1a05。
+- 新增 `prototype/README.md`（同步记录、画板与章节对照）。`AGENTS.md`「原型怎么读」改写为读 `prototype/`，写明文件结构、读法和同步步骤；旧导出件的解包法缩成一段。
+- 没做：旧画布 CJ7 没有存，人选了以新画布为准。
+
+---
+
 ## 2026-11-14 按 9.3 补改原型
 
 - 新建 Design 画布 https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq ，从旧画布读出七张画板原样搬过去，改了其中四张。

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸 · 体检报告</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+.fc-btn:hover{filter:brightness(.95)}
+.fc.dark .fc-btn:hover{filter:brightness(1.15)}
+.fc a{color:var(--accent)}
+.fc a:hover{color:var(--tx-1)}
+.fc-shell{height:100vh;min-height:640px;overflow:hidden}
+.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+.fc-navc{flex:0 0 56px!important;padding-left:8px!important;padding-right:8px!important}
+.fc-navc>div>a,.fc-navc>div>div{justify-content:center;padding-left:0!important;padding-right:0!important}
+.fc-navc>div:first-child{display:none!important}
+.fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fc-navc .fc-navhide{display:none!important}
+.fc-hidden{display:none!important}
+@media (max-width: 900px){.fc-shell{height:auto;overflow:visible}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
+</style>
+</helmet>
+<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <!-- 窗口工具栏：与其他页面一致 -->
+  <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
+    <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin-right: 16px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
+    <button type="button" disabled="" aria-label="后退" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"></path></svg></button>
+    <button type="button" disabled="" aria-label="前进" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg></button>
+    <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
+  </div>
+
+  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+  <!-- 侧栏：首次启动，体检为当前页 -->
+  <nav aria-label="主导航" class="fc-col {{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 2px 6px; height: 28px;">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
+      <span style="font-weight: 600; font-size: 14px; letter-spacing: .02em;">方寸</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <a href="Main.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+        <span style="flex: 1;">项目</span><span style="color: var(--tx-3); font-size: 12px;">6</span>
+      </a>
+      <a href="Library.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg>
+        <span style="flex: 1;">资产库</span><span style="color: var(--tx-3); font-size: 12px;">38</span>
+      </a>
+      <a href="Bundles.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg>
+        <span style="flex: 1;">套装</span><span style="color: var(--tx-3); font-size: 12px;">3</span>
+      </a>
+      <a href="Global.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg>
+        <span style="flex: 1;">全局</span><span style="color: var(--tx-3); font-size: 12px;">31</span>
+      </a>
+      <a href="Activity.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
+        <span style="flex: 1;">活动</span><span style="color: var(--warn); font-size: 12px;">2</span>
+      </a>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+      <a href="Checkup.dc.html" aria-current="page" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
+        <span>重新体检</span>
+      </a>
+      <div class="fc-navhide" style="padding: 0 8px; font-size: 11px; color: var(--tx-3);">本地优先 · 零遥测</div>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line);">
+      <div style="flex: 1 1 280px; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;">
+        <h1 style="margin: 0; font-size: 17px; font-weight: 600;">体检报告</h1>
+        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 4px; background: var(--ok-dot);"></span>只读扫描完成，未改动任何文件</span>
+      </div>
+      <a href="Main.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">稍后处理</a>
+      <a href="Main.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; background: var(--accent); color: var(--on-accent); text-decoration: none; font-weight: 500;">进入项目</a>
+    </header>
+
+    <!-- 概要条：与项目页预算条同一样式 -->
+    <section aria-label="体检概要" style="padding: 12px 20px 14px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;">
+        <span style="font-weight: 600;">处理进度</span>
+        <span style="font-family: var(--mono); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;">{{doneCount}} / 5</span>
+        <span style="color: var(--tx-3);">扫描了 7 个工具、61 个项目目录，发现 38 项资产</span>
+        <span style="flex: 1;"></span>
+        <span style="color: var(--tx-2);">重复副本 <span style="font-family: var(--mono);">{{dupes}}</span></span>
+        <span style="color: var(--tx-2);">来源未知 <span style="font-family: var(--mono);">2</span></span>
+      </div>
+      <div role="img" aria-label="{{progressAria}}" style="display: flex; gap: 2px; height: 8px; border-radius: 4px; background: var(--bg-hover); overflow: hidden;">
+        <sc-for list="{{segs}}" as="g" hint-placeholder-count="5"><span style="{{g.s}}"></span></sc-for>
+      </div>
+    </section>
+
+    <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+      <!-- 发现列表：与生效上下文列表同一行样式 -->
+      <section aria-label="发现" class="fc-col" style="flex: 999 1 460px; min-width: 0; padding-bottom: 24px;">
+        <div style="display: flex; gap: 12px; padding: 12px 16px 4px; font-size: 11px; color: var(--tx-3); font-weight: 500;">
+          <span style="flex: 0 0 76px;">类别</span>
+          <span style="flex: 1 1 240px;">发现</span>
+          <span style="flex: 0 0 96px;">状态</span>
+        </div>
+        <sc-for list="{{items}}" as="it" hint-placeholder-count="6">
+          <button type="button" class="fc-h" onClick="{{it.pick}}" aria-pressed="{{it.on}}" style="{{it.rowStyle}}">
+            <span style="{{it.tagStyle}}"><span aria-hidden="true" style="{{it.dotStyle}}"></span>{{it.tag}}</span>
+            <span style="{{it.textStyle}}">{{it.text}}</span>
+            <span style="{{it.stateStyle}}">{{it.state}}</span>
+          </button>
+        </sc-for>
+        <p style="margin: 16px 16px 0; font-size: 12px; color: var(--tx-3);">所有动作先预览、可撤销。处理记录留在「活动」里。</p>
+      </section>
+
+      <!-- 检查器：与项目页检查器同一结构 -->
+      <aside aria-label="检查器" class="fc-col {{inspClass}}" style="flex: 1 1 340px; box-sizing: border-box; border-left: 1px solid var(--line); background: var(--bg-subtle); padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
+          <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+          <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">体检发现</span>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600;">{{sel.text}}</h2>
+          <span style="{{sel.badgeStyle}}"><span aria-hidden="true" style="{{sel.dotStyle}}"></span>{{sel.badge}}</span>
+          <p style="margin: 2px 0 0; font-size: 12px; color: var(--tx-2);">{{sel.intro}}</p>
+        </div>
+
+        <section aria-label="涉及的位置" style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">涉及的位置</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden;">
+            <sc-for list="{{sel.lines}}" as="l" hint-placeholder-count="4">
+              <li style="{{l.rowStyle}}">
+                <span style="flex: 1 1 200px; min-width: 0; font-family: var(--mono); font-size: 11px; line-height: 18px; word-break: break-all;">{{l.a}}</span>
+                <span style="flex: 0 0 72px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{l.b}}</span>
+                <span style="{{l.cStyle}}">{{l.c}}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <span style="font-size: 11px; color: var(--tx-3);">{{sel.foot}}</span>
+        </section>
+
+        <sc-if value="{{sel.isOpen}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            <button type="button" class="fc-btn" onClick="{{sel.apply}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">{{sel.applyLabel}}</button>
+            <span style="font-size: 12px; color: var(--tx-3);">应用前会列出变更计划</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{sel.isDone}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 8px; background: var(--ok-weak); color: var(--ok);">
+            <span style="font-weight: 600; display: flex; align-items: center; gap: 6px;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"></path></svg>已处理 · 已留快照</span>
+            <button type="button" class="fc-btn" onClick="{{sel.undo}}" style="align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">撤销</button>
+          </div>
+        </sc-if>
+      </aside>
+    </div>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"density":{"editor":"enum","options":["紧凑","标准"],"default":"紧凑","section":"外观"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = Object.assign({ sel: 'dup', done: {}, navC: false, inspOpen: true }, this.state || {});
+    const set = (o) => this.setState(o);
+    const dark = this.props.dark ?? false;
+    const rowH = (this.props.density ?? '紧凑') === '标准' ? 36 : 30;
+    const TONE = { warn: ['var(--warn)', 'var(--warn-dot)'], info: ['var(--info)', 'var(--info-dot)'], muted: ['var(--tx-2)', 'var(--muted-dot)'], ok: ['var(--ok)', 'var(--ok-dot)'] };
+    const L = (a, b, c, tone) => ({ a, b, c, tone });
+    const F = [
+      { id: 'dup', tone: 'warn', tag: '重复', text: 'project-harness 有 5 份副本，1 份已分叉', applyLabel: '收编到资产库',
+        intro: '按内容哈希归并。4 份相同的副本收为同一版本，分叉的那份另存为独立版本，等你决定去留。',
+        lines: [L('agent-lab/.claude/skills/project-harness', '4d9b1eb', '相同'), L('fangcun/.claude/skills/project-harness', '4d9b1eb', '相同'), L('blog-site/.agents/skills/project-harness', '4d9b1eb', '相同'), L('notes-kit/.claude/skills/project-harness', '4d9b1eb', '相同'), L('evals_studio/.trae/project-harness', 'e81c55a', '已分叉', 'warn')],
+        foot: '原位置替换为受管链接，事前自动备份。' },
+      { id: 'repos', tone: 'warn', tag: '重复', text: '4 个仓库存放着相同的 skill', applyLabel: '以 luyao-skills 为正本',
+        intro: '同一批 skill 出现在 4 个仓库里。指定一个为正本，其余登记为镜像，不删除任何仓库。',
+        lines: [L('~/code/luyao-skills', '最早提交', '建议正本', 'info'), L('~/code/my-skills', '镜像', '内容相同'), L('~/code/agent-skill', '镜像', '内容相同'), L('~/code/harness', '镜像', '内容相同')],
+        foot: '只写入方寸的资产库索引。' },
+      { id: 'tax', tone: 'warn', tag: '全局税', text: '16 个飞书 skill 加载进了每一个项目', applyLabel: '创建套装「飞书办公」',
+        intro: '把这 16 项从全局层移到新套装，再勾选需要它的项目。其他项目的常驻上下文随之减少。',
+        lines: [L('lark-doc · lark-sheet · lark-base …', '16 项', '常驻约 6.4k', 'muted'), L('需要它的项目', '已勾选 1 个', 'client-acme')],
+        foot: '估算值。全局链接移除前自动快照。' },
+      { id: 'spread', tone: 'info', tag: '不一致', text: '31 个全局 skill 在各工具间分发不齐', applyLabel: '标记为已知',
+        intro: '~/.agents/skills 中有 31 个 skill，各工具实际链接的数量不同。',
+        lines: [L('Claude Code', '16 / 31', '缺 15'), L('Windsurf', '20 / 31', '缺 11'), L('Codex', '3 / 31', '缺 28')],
+        foot: '推荐做法：把全局层瘦身后再统一分发。' },
+      { id: 'lock', tone: 'warn', tag: '脱节', text: '全局锁文件与实际目录不一致', applyLabel: '按目录重建锁',
+        intro: '锁文件最后修改于 7 月 5 日，skills 目录 11 月 11 日还在变动。',
+        lines: [L('全局 skills 锁文件', '07-05', '过期', 'warn'), L('~/.agents/skills/', '11-11', '实际状态')],
+        foot: '旧锁备份到活动，可回滚。' },
+      { id: 'secret', tone: 'muted', tag: '密钥', text: '检查已提交文件中的明文密钥', applyLabel: '扫描 61 个仓库',
+        intro: '在已提交的 MCP 配置与环境文件中查找明文 API Key。只读，不上传任何内容。',
+        lines: [L('.mcp.json · .env · config.toml', '61 个仓库', '待扫描')],
+        foot: '发现后可一键迁移到钥匙串。' }
+    ];
+    const items = F.map((f) => {
+      const isDone = !!s.done[f.id];
+      const on = s.sel === f.id;
+      const t = TONE[isDone ? 'ok' : f.tone];
+      const state = isDone ? '已处理' : (f.id === 'secret' ? '尚未扫描' : '待处理');
+      return { tag: f.tag, text: f.text, state, on, pick: () => set({ sel: f.id, inspOpen: true }),
+        rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; width: 100%; min-height: ' + rowH + 'px; padding: 4px 16px; border: 0; text-align: left; color: var(--tx-1); box-sizing: border-box;' + (on ? ' background: var(--bg-selected);' : ' background: transparent;'),
+        tagStyle: 'flex: 0 0 76px; display: flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 500; color: ' + t[0] + ';',
+        dotStyle: 'width: 7px; height: 7px; border-radius: 4px; flex: none; background: ' + t[1] + ';',
+        textStyle: 'flex: 1 1 240px; min-width: 0; font-weight: 500;' + (isDone ? ' color: var(--tx-3); text-decoration: line-through;' : ''),
+        stateStyle: 'flex: 0 0 96px; white-space: nowrap; color: ' + (isDone ? 'var(--ok)' : 'var(--tx-3)') + ';' };
+    });
+    const cur = F.find((f) => f.id === s.sel) || F[0];
+    const cDone = !!s.done[cur.id];
+    const ct = TONE[cDone ? 'ok' : cur.tone];
+    const sel = { text: cur.text, intro: cur.intro, foot: cur.foot, applyLabel: cur.applyLabel,
+      badge: cDone ? '已处理' : cur.tag,
+      badgeStyle: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; color: ' + ct[0] + '; background: var(--bg); border: 1px solid var(--line);',
+      dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + ct[1] + ';',
+      lines: cur.lines.map((l, i) => ({ a: l.a, b: l.b, c: l.c,
+        rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px; font-size: 12px;' + (i > 0 ? ' border-top: 1px solid var(--line);' : ''),
+        cStyle: 'flex: 0 0 auto; color: ' + (l.tone ? TONE[l.tone][0] : 'var(--tx-2)') + ';' + (l.tone ? ' font-weight: 500;' : '') })),
+      isOpen: !cDone, isDone: cDone,
+      apply: () => { const nd = Object.assign({}, s.done); nd[cur.id] = true; const next = F.find((x) => !nd[x.id]); set({ done: nd, sel: next ? next.id : cur.id }); },
+      undo: () => { const u = Object.assign({}, s.done); delete u[cur.id]; set({ done: u }); } };
+    const countable = F.filter((f) => f.id !== 'secret');
+    const doneCount = countable.filter((f) => s.done[f.id]).length;
+    const segs = countable.map((f) => ({ s: 'flex: 1; background: ' + (s.done[f.id] ? 'var(--ok-dot)' : 'transparent') + ';' }));
+    return { rootClass: 'fc fc-shell' + (dark ? ' dark' : ''), items, sel, segs,
+      doneCount: String(doneCount), dupes: s.done.dup ? '0' : '4',
+      progressAria: '已处理 ' + doneCount + ' / 5 项发现',
+      inspClass: s.inspOpen ? '' : 'fc-hidden', closeInsp: () => set({ inspOpen: false }),
+      navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
+      navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';' };
+  }
+}
+</script>
+</body>
+</html>

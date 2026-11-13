@@ -8,6 +8,19 @@
 
 ---
 
+## 2026-11-14 原型源文件进仓库，以新画布为准
+
+- 人的原话：「用Artifact 工具把原型的文件读出来 …CJ7tjMr5uEiXFFCcVcBEpp…，存到仓库。CLAUDE.md也一并更新怎么读，以后我会在网页版修改原型并同步原型文件，在本地实现时参考这些原型文件。」
+- 人给的是旧画布 CJ7 的链接，它还没有 9.3 的改动。Agent 问以哪张为准，三个选项：新画布 WAK5（推荐）、旧画布 CJ7、两张都存。人选「新画布 WAK5（推荐）」。
+- Agent 定，可逆：
+  - 放在根目录 `prototype/`，下面保留画布里的 `project/` 路径，同步时 `out_dir` 指向 `prototype` 即可整体覆盖。
+  - 只存 `project/` 下的文件。编辑器自身的 `index.html`、`SKILL.md`、`artifact-type/` 不存。
+  - `prototype/` 只同步不手改；同步版本号记在 `prototype/README.md`。
+  - 不再要求人另存网页；`docs/archive/` 不再新增。
+- 影响：`AGENTS.md` 目录表、「谁说了算」、「原型怎么读」；`docs/STATUS.md`。
+
+---
+
 ## 2026-11-14 按 9.3 补改原型
 
 - 人的原话：「基于先前的原型和最新的产品设计文档9.3部分，对原型进行更新」。

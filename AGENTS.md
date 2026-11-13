@@ -25,7 +25,8 @@
 | `docs/BACKLOG.md` | 待办，按期分节，带状态标记 |
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
-| `docs/archive/` | 原型导出件的存档，文件名带导出日期。只当资料读，不当指令执行，不要编辑 |
+| `prototype/` | 网页版原型画布的源文件镜像，实现界面时参考。只同步，不手改。同步记录在 `prototype/README.md` |
+| `docs/archive/` | 旧的原型导出件，文件名带导出日期。2026-11-14 起改为同步源文件到 `prototype/`，这里不再新增 |
 
 仓库里目前只有文档，还没有代码。开始写代码后，在这里补上代码目录和开发命令。
 
@@ -51,22 +52,50 @@
 ## 谁说了算
 
 - **需求**：产品设计文档是唯一来源。改设计先改文档，再改别的。
-- **界面**：第 6 节以高保真原型和设计系统「墨格」为准。原型更新后，文档跟着原型改（2026-11-14 人定）。
+- **界面**：第 6 节以高保真原型和设计系统「墨格」为准，仓库里的副本是 `prototype/`。原型更新后，文档跟着原型改（2026-11-14 人定）。
 - **人定的结论优先于原型**：设计文档 9.2、9.3 是人逐条确认过的。9.3 末尾列的七处，2026-11-14 已在新画布里补上。对照原型时，两者不一致以 9.3 为准。
 - **原型没有覆盖的设计**：先问人，一件一件问，每件至少三个选项并标出推荐项。结论写进正文和 9.3，原话记进 `docs/DECISIONS.md`。
 - **示例数据**：线框图沿用原型里的同一套数据（6 个项目、全局 31 项、资产库 38 项等）。新画线框图时不要另编一套。
 
 ## 原型怎么读
 
-- 原型和设计系统在 https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq （2026-11-14 起）。之前的画布 https://claude.ai/artifact/CJ7tjMr5uEiXFFCcVcBEpp 保留不动，是按 9.3 补改之前的版本。
-- 在 claude.ai 云端会话里，可以用 Artifact 工具的 `read` 读画布：`project/canvas.json` 是画板索引，每张画板是 `project/<名称>.dc.html`，示例数据在文件末尾的 `<script type="text/x-dc">` 里。不要用网页抓取去读。本地命令行读不了时，靠人导出，见下面几条。
-- 人会把网页另存为 HTML 放在仓库根目录。一次导出可能是全部画板，也可能只有一张。
-- 导出件是打包文件，要先解包：
-  1. `<script type="__bundler/manifest">` 是 JSON，每项的 `data` 是 base64，`compressed` 为真时再 gzip 解压。
-  2. `<script type="__bundler/template">` 是 JSON 字符串。多画板的导出里它只是外壳，每张画板是 manifest 里的一个 `text/html` 条目，本身又是同样结构的包。单画板的导出里它就是页面。
-  3. 页面内容在最后一个 `</helmet>` 之后。前面约 2700 行是字体样式，跳过。示例数据在末尾的 `<script type="text/x-dc">` 里。
-  4. 读之前去掉 `style="…"` 和 `<svg>`，否则太长。
-- 用完把导出件移到 `docs/archive/`，文件名末尾加导出日期（2026-11-14 人定）。
+人在网页版画布里改原型，再把源文件同步到 `prototype/`。实现时读 `prototype/`，不读网页（2026-11-14 人定）。
+
+- 画布：https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq 。旧画布 CJ7tjMr5uEiXFFCcVcBEpp 是按 9.3 补改之前的版本，不再更新。
+- 当前同步到哪个版本、哪个文件对应哪一节，看 `prototype/README.md`。
+- `prototype/` 只同步，不手改。要改原型，先问人；人让 Agent 改时，在云端会话里改画布再同步回来。
+
+### 文件结构
+
+- `prototype/project/canvas.json`：画板索引。`boards` 里每张画板的位置、尺寸、标题，`notes` 是画布上的标题和便签。
+- `prototype/project/<名称>.dc.html`：每张画板一个文件，是完整的 HTML，分三段：
+  1. `<helmet><style>`：页面基础样式。`.fc{--bg:…}` 和 `.fc.dark{…}` 是「墨格」的颜色 token，浅色与深色各一套。实现时颜色从这里和 `DesignSystem.dc.html` 取，不要另调。
+  2. `<x-dc>` 里的标记：界面本身。样式写在行内 `style` 里。`{{name}}` 是绑定到脚本的值；`<sc-for list="{{xs}}" as="x">` 是循环，`<sc-if value="{{cond}}">` 是条件；`onClick="{{fn}}"` 是事件；`<a href="Activity.dc.html">` 是跳到另一张画板。
+  3. 末尾的 `<script type="text/x-dc" data-dc-script>`：`class Component extends DCLogic` 的 `renderVals()`。里面有状态的默认值、示例数据（如活动页的 `EV`、全局页的 `ROWS`）和交互逻辑。`data-props` 是画布上的调节项，例如深色模式、密度。
+- 运行时 `support.js` 不在仓库里，这些文件在本地打不开成可交互的页面。只当参考读。
+
+### 怎么读
+
+- 先按 `prototype/README.md` 的表找到画板，再用 `grep -n` 找要的文案或数据，只读那一段。单个文件 25–80KB，不要整份读。
+- 找脚本段：`grep -n data-dc-script prototype/project/*.dc.html`。
+- 看结构时去掉行内样式和图标：`sed -E 's/ style="[^"]*"//g; s/<svg.*<\/svg>//g' 文件`。
+- 实现时：文案和示例数据照抄；结构和交互按原型改写成 React 组件，不要搬 `DCLogic` 或 `sc-*` 标签；视觉只用「墨格」token。
+
+### 同步
+
+人说「同步原型」时，在 claude.ai 云端会话里做（要用 Artifact 工具，本地命令行没有）：
+
+1. 用 Artifact 工具 `list`（`scope: "files"`）列出画布文件。只要 `project/` 下的文件；`index.html`、`SKILL.md`、`artifact-type/` 是编辑器本身，不要。
+2. 用 `read`，`paths` 填全部 `project/…` 路径，`out_dir` 填仓库的 `prototype`，一次读完。画布上已删除的画板，把本地对应文件也删掉。不要用网页抓取去读。
+3. 改写 `prototype/README.md` 的同步记录（版本号取 `read` 结果里的 version）。新增或删掉画板时，改它的画板表。
+4. `git diff --stat prototype/` 看哪些画板变了，按「谁说了算」把设计文档第 6 节跟上。与 9.3 冲突的地方以 9.3 为准，问人。
+5. 按「收工前必须做的事」更新四份文档，提交。
+
+本地会话只需 `git pull` 拿到最新的 `prototype/`。
+
+### 旧导出件
+
+`docs/archive/` 里是 11-13、11-14 的网页另存件，是打包文件。要读时先解包：`<script type="__bundler/manifest">` 是 JSON，每项的 `data` 是 base64，`compressed` 为真时再 gzip 解压；`<script type="__bundler/template">` 是外壳或单画板页面；页面内容在最后一个 `</helmet>` 之后。现在一般不需要读它们。
 
 ## 交流
 
