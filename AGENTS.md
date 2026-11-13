@@ -26,6 +26,7 @@
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
 | `prototype/` | 网页版原型画布的源文件镜像，实现界面时参考。只同步，不手改。同步记录在 `prototype/README.md` |
+| `tools/prototype-preview/` | 原型的本地预览器，把 `prototype/` 的画板渲染成可交互的页面。用法见 `prototype/README.md`「本地看」 |
 | `docs/archive/` | 旧的原型导出件，文件名带导出日期。2026-11-14 起改为同步源文件到 `prototype/`，这里不再新增 |
 
 仓库里目前只有文档，还没有代码。开始写代码后，在这里补上代码目录和开发命令。
@@ -79,7 +80,8 @@
   1. `<helmet><style>`：页面基础样式。`.fc{--bg:…}` 和 `.fc.dark{…}` 是「墨格」的颜色 token，浅色与深色各一套。实现时颜色从这里和 `DesignSystem.dc.html` 取，不要另调。
   2. `<x-dc>` 里的标记：界面本身。样式写在行内 `style` 里。`{{name}}` 是绑定到脚本的值；`<sc-for list="{{xs}}" as="x">` 是循环，`<sc-if value="{{cond}}">` 是条件；`onClick="{{fn}}"` 是事件；`<a href="Activity.dc.html">` 是跳到另一张画板。
   3. 末尾的 `<script type="text/x-dc" data-dc-script>`：`class Component extends DCLogic` 的 `renderVals()`。里面有状态的默认值、示例数据（如活动页的 `EV`、全局页的 `ROWS`）和交互逻辑。`data-props` 是画布上的调节项，例如深色模式、密度。
-- 运行时 `support.js` 不在仓库里，这些文件在本地打不开成可交互的页面。只当参考读。
+- 画布的运行时 `support.js` 不在仓库里，直接打开文件没有样式。要看样子，用 `tools/prototype-preview/` 的预览器，用法见 `prototype/README.md`「本地看」。
+- 预览器是自己写的，只实现画板用到的模板语法。画布里新用了别的语法（例如 `<dc-import>`、`<x-import>`）时，同步后预览器可能显示不对，要跟着补。
 
 ### 怎么读
 

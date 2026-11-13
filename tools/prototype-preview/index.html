@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>原型预览</title>
+<style>
+  body { margin: 0; }
+  .pv-index { font: 14px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif; color: #1D1D1F; background: #F8F8F6; }
+  .pv-index main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
+  .pv-index h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+  .pv-index p { margin: 0 0 24px; color: #55555A; }
+  .pv-index ul { margin: 0; padding: 0; list-style: none; border-top: 1px solid #E6E6E2; }
+  .pv-index li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid #E6E6E2; }
+  .pv-index li a:first-child { flex: 1 1 200px; font-weight: 500; color: #3552D4; text-decoration: none; }
+  .pv-index li span { color: #6B6B70; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .pv-index li .alt { color: #55555A; font-size: 12px; }
+  .pv-index pre { white-space: pre-wrap; padding: 12px; border-radius: 8px; background: #FCEBEA; color: #BA2D28; }
+  body:not(.pv-index) #index { display: none; }
+</style>
+</head>
+<body class="pv-index">
+<main id="index">
+  <h1 id="canvasTitle">原型</h1>
+  <p>prototype/project 的本地预览。界面以设计文档为准，这里只用来看样子、文案和示例数据。</p>
+  <ul id="boards"></ul>
+  <pre id="error" hidden></pre>
+</main>
+<div id="mount"></div>
+<script src="dc-preview.js"></script>
+</body>
+</html>

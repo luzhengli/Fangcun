@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-11-14 原型本地预览器
+
+- 人反映本地打开原型没有样式。原因：`.dc.html` 是模板源码，根节点的 `{{rootClass}}` 不替换，token 全部失效，`sc-if` 里的弹窗也全部显示。
+- 新增 `tools/prototype-preview/`（`index.html` + `dc-preview.js`）：读 `prototype/project/` 的画板，实现 `{{}}`、`sc-for`、`sc-if`、事件、`setState` 和画板间跳转。
+- 用 Playwright 渲染七张画板：无报错，无残留 `{{`；抽查了回滚冲突、筛选、勾选、命令面板输入、跨画板链接、深色模式。
+- 用法写进 `prototype/README.md`「本地看」和 `AGENTS.md`。
+
+---
+
 ## 2026-11-14 改为原型跟着设计走
 
 - 人定了迭代顺序：设计 → 原型 → 实现，原型跟着产品设计走。原来「原型更新后文档跟着改」的规则作废。
