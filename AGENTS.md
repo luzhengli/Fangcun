@@ -12,7 +12,7 @@
 | 1 | `docs/STATUS.md` | 每次开工先读：现在在哪、下一步、卡在哪 |
 | 2 | `docs/BACKLOG.md` | 要挑活或查某件事的状态时 |
 | 3 | `docs/product-design.md` 的对应章节 | 要设计或实现某个功能时，按下面的章节索引只读那一节。全文约 890 行，不要通读 |
-| 4 | `docs/DECISIONS.md`、`docs/LOG.md`、`docs/archive/` | 要查某个决定的来由、某天做了什么、原型原件时 |
+| 4 | `docs/DECISIONS.md`、`docs/LOG.md` | 要查某个决定的来由、某天做了什么时 |
 
 ## 目录
 
@@ -26,7 +26,6 @@
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
 | `prototype/` | 网页版原型画布的源文件镜像，实现界面时参考。只同步，不手改。同步记录在 `prototype/README.md` |
-| `docs/archive/` | 旧的原型导出件，文件名带导出日期。2026-11-14 起改为同步源文件到 `prototype/`，这里不再新增 |
 
 仓库里目前只有文档，还没有代码。开始写代码后，在这里补上代码目录和开发命令。
 
@@ -99,10 +98,6 @@
 5. 按「收工前必须做的事」更新四份文档，提交。
 
 本地会话只需 `git pull` 拿到最新的 `prototype/`。
-
-### 旧导出件
-
-`docs/archive/` 里是 11-13、11-14 的网页另存件，是打包文件。要读时先解包：`<script type="__bundler/manifest">` 是 JSON，每项的 `data` 是 base64，`compressed` 为真时再 gzip 解压；`<script type="__bundler/template">` 是外壳或单画板页面；页面内容在最后一个 `</helmet>` 之后。现在一般不需要读它们。
 
 ## 交流
 
