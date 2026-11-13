@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸 · 全局</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc input{font:inherit}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+.fc-btn:hover{filter:brightness(.95)}
+.fc.dark .fc-btn:hover{filter:brightness(1.15)}
+.fc a{color:var(--accent)}
+.fc a:hover{color:var(--tx-1)}
+.fc-navbtn{margin-left:auto}
+.fc-navc{flex:0 0 56px!important;padding-left:8px!important;padding-right:8px!important}
+.fc-navc>div>a,.fc-navc>div>div{justify-content:center;padding-left:0!important;padding-right:0!important}
+.fc-navc>div:first-child{display:none!important}
+.fc-hidden{display:none!important}
+.fc-navc .fc-navbtn{margin-left:0}
+.fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fc-navc .fc-navhide{display:none!important}
+.fc-shell{height:100vh;min-height:640px;overflow:hidden}
+.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+@media (max-width: 900px){.fc-shell{height:auto;overflow:visible;flex-wrap:wrap!important}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
+</style>
+</helmet>
+<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <!-- 窗口工具栏：贯穿整个窗口顶部 -->
+  <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
+    <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin-right: 16px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
+    <button type="button" disabled="" aria-label="后退" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"></path></svg></button>
+    <button type="button" disabled="" aria-label="前进" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg></button>
+    <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
+  </div>
+
+  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+  <!-- 侧栏 -->
+  <nav aria-label="主导航" class="fc-col {{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 2px 6px; height: 28px;">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
+      <span style="font-weight: 600; font-size: 14px; letter-spacing: .02em;">方寸</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <a href="Main.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+        <span style="flex: 1;">项目</span><span style="color: var(--tx-3); font-size: 12px;">6</span>
+      </a>
+      <a href="Library.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg>
+        <span style="flex: 1;">资产库</span><span style="color: var(--tx-3); font-size: 12px;">38</span>
+      </a>
+      <a href="Bundles.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg>
+        <span style="flex: 1;">套装</span><span style="color: var(--tx-3); font-size: 12px;">{{bundleCount}}</span>
+      </a>
+      <a href="Global.dc.html" aria-current="page" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg>
+        <span style="flex: 1;">全局</span><span style="color: var(--tx-3); font-size: 12px;">{{globalCount}}</span>
+      </a>
+      <a href="Activity.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
+        <span style="flex: 1;">活动</span><span style="color: var(--warn); font-size: 12px;">2</span>
+      </a>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+      <a href="Checkup.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
+        <span>重新体检</span>
+      </a>
+      <div class="fc-navhide" style="padding: 0 8px; font-size: 11px; color: var(--tx-3);">本地优先 · 零遥测</div>
+    </div>
+  </nav>
+
+  <!-- 主区 -->
+  <main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <!-- 页头：标题、工具切换、常驻成本 -->
+    <header style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 20px 12px; border-bottom: 1px solid var(--line);">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;">
+        <h1 style="margin: 0; font-size: 17px; font-weight: 600;">全局</h1>
+        <span style="color: var(--tx-3); font-size: 12px; flex: 1 1 200px;">每个项目都会加载这一层，越薄越好</span>
+        <div role="radiogroup" aria-label="目标工具" style="display: inline-flex; padding: 2px; border-radius: 7px; background: var(--bg-hover);">
+          <sc-for list="{{tools}}" as="t" hint-placeholder-count="2">
+            <button type="button" role="radio" aria-checked="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; font-size: 12px;">
+        <span style="color: var(--tx-2);">给每个项目带来常驻 <strong style="font-family: var(--mono); font-weight: 600; color: var(--tx-1);">{{budget.total}}</strong> / 项目预算 20k · 估算值</span>
+        <sc-if value="{{budget.hasSaved}}" hint-placeholder-val="{{false}}">
+          <span style="color: var(--ok); font-weight: 500;">较瘦身前 −{{budget.saved}}</span>
+        </sc-if>
+        <span style="flex: 1;"></span>
+        <span style="display: inline-flex; flex-wrap: wrap; gap: 12px; color: var(--tx-3);">
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: var(--bar-1);"></span>指令 {{budget.ins}}</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: var(--bar-2);"></span>Skill {{budget.skill}}</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: var(--bar-3);"></span>MCP {{budget.mcp}}</span>
+        </span>
+      </div>
+      <div role="img" aria-label="{{budget.aria}}" style="display: flex; gap: 2px; height: 8px; border-radius: 4px; background: var(--bg-hover); overflow: hidden;">
+        <span style="{{budget.s1}}"></span><span style="{{budget.s2}}"></span><span style="{{budget.s3}}"></span>
+      </div>
+    </header>
+
+    <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+      <!-- 列表 -->
+      <section aria-label="全局层资产" class="fc-col" style="flex: 999 1 460px; min-width: 0; display: flex; flex-direction: column;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 20px; border-bottom: 1px solid var(--line);">
+          <div role="group" aria-label="按类型筛选" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+              <button type="button" aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button>
+            </sc-for>
+          </div>
+          <span style="flex: 1;"></span>
+          <span style="font-size: 12px; color: var(--tx-3);">快速选择</span>
+          <button type="button" class="fc-btn" onClick="{{pickRare}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); font-size: 12px;">很少用到 · {{rareCount}}</button>
+          <button type="button" class="fc-btn" onClick="{{pickNever}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); font-size: 12px;">从未使用 · {{neverCount}}</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 20px 4px; font-size: 11px; color: var(--tx-3); font-weight: 500;">
+          <input type="checkbox" checked="{{allOn}}" onChange="{{toggleAll}}" aria-label="全选当前列表" style="flex: none; margin: 0 4px 0 0; accent-color: var(--accent);">
+          <span style="flex: 1; display: flex; flex-wrap: wrap; gap: 4px 12px;">
+            <span style="flex: 1 1 220px;">名称 · 位置</span>
+            <span style="flex: 0 0 64px;">类型</span>
+            <span style="flex: 0 0 112px;">用到它的项目</span>
+            <span style="flex: 0 0 104px;">状态</span>
+            <span style="flex: 0 0 64px; text-align: right;">常驻 ↓</span>
+          </span>
+        </div>
+
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+          <div style="{{r.rowStyle}}">
+            <input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" aria-label="{{r.checkLabel}}" style="flex: none; margin: 0 4px 0 0; accent-color: var(--accent);">
+            <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.cur}}" style="flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 46px; padding: 4px 0; border: 0; background: transparent; text-align: left; color: var(--tx-1);">
+              <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column;">
+                <span style="display: flex; align-items: baseline; gap: 6px; min-width: 0;"><span style="{{r.nameStyle}}">{{r.name}}</span><span style="{{r.countStyle}}">{{r.countText}}</span></span>
+                <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.loc}}</span>
+              </span>
+              <span style="flex: 0 0 64px; color: var(--tx-2);">{{r.kind}}</span>
+              <span style="flex: 0 0 112px; display: flex; align-items: center; gap: 8px;">
+                <span aria-hidden="true" style="flex: 0 0 40px; height: 4px; border-radius: 2px; background: var(--bg-hover); overflow: hidden;"><span style="{{r.useBar}}"></span></span>
+                <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-2);">{{r.useText}}</span>
+              </span>
+              <span style="{{r.statusStyle}}"><span aria-hidden="true" style="{{r.dotStyle}}"></span>{{r.status}}</span>
+              <span style="flex: 0 0 64px; text-align: right; font-family: var(--mono); font-size: 12px; color: var(--tx-1);">{{r.costText}}</span>
+            </button>
+          </div>
+        </sc-for>
+        <sc-if value="{{noRows}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 20px; color: var(--tx-3);">这一类在当前工具的全局层里没有资产。<button type="button" onClick="{{clearFilter}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">清除筛选</button></div>
+        </sc-if>
+        <p style="margin: 0; padding: 12px 20px 20px; font-size: 12px; color: var(--tx-3);">{{otherToolNote}}「用到」依据本机会话记录近 30 天的触发情况，不上传。</p>
+
+        <!-- 批量操作条 -->
+        <sc-if value="{{hasPicked}}" hint-placeholder-val="{{false}}">
+          <div style="position: sticky; bottom: 0; margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 20px; border-top: 1px solid var(--line); background: var(--bg); box-shadow: 0 -6px 16px rgba(0,0,0,.05);">
+            <span style="flex: 1 1 240px;"><strong style="font-weight: 600;">已选 {{pickedText}}</strong><span style="color: var(--tx-2);"> · 每个项目常驻 </span><span style="font-family: var(--mono); color: var(--ok); font-weight: 500;">−{{pickedSave}}</span><span style="color: var(--tx-3);">（估算）</span></span>
+            <button type="button" class="fc-btn" onClick="{{clearPicked}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: transparent; color: var(--tx-2);">取消选择</button>
+            <button type="button" class="fc-btn" onClick="{{openRemove}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">从全局移除…</button>
+            <button type="button" class="fc-btn" onClick="{{openBundle}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">转成套装…</button>
+          </div>
+        </sc-if>
+      </section>
+
+      <!-- 检查器：类型 · 名称 · 状态 → 字段表 → 分区 → 操作 -->
+      <aside aria-label="检查器" class="fc-col {{inspClass}}" style="flex: 1 1 340px; box-sizing: border-box; border-left: 1px solid var(--line); background: var(--bg-subtle); padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
+          <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+          <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">{{d.kindLabel}}</span>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">{{d.name}}</h2>
+          <span style="{{d.badgeStyle}}"><span aria-hidden="true" style="{{d.dotStyle}}"></span>{{d.status}}</span>
+          <p style="margin: 2px 0 0; font-size: 12px; color: var(--tx-2);">{{d.summary}}</p>
+        </div>
+
+        <dl style="margin: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px 12px; font-size: 12px;">
+          <sc-for list="{{d.fields}}" as="f" hint-placeholder-count="5">
+            <dt style="color: var(--tx-3);">{{f.k}}</dt>
+            <dd style="{{f.s}}">{{f.v}}</dd>
+          </sc-for>
+        </dl>
+
+        <section aria-label="建议" style="display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">建议</h3>
+          <div style="{{d.adviceStyle}}">
+            <p style="margin: 0;">{{d.advice}}</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <sc-if value="{{d.canBundle}}" hint-placeholder-val="{{false}}">
+                <button type="button" class="fc-btn" onClick="{{d.doBundle}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">转成套装…</button>
+              </sc-if>
+              <sc-if value="{{d.canRemove}}" hint-placeholder-val="{{false}}">
+                <button type="button" class="fc-btn" onClick="{{d.doRemove}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">从全局移除…</button>
+              </sc-if>
+              <sc-if value="{{d.canAdopt}}" hint-placeholder-val="{{false}}">
+                <a href="Library.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 500; text-decoration: none;">去资产库收编</a>
+              </sc-if>
+            </div>
+          </div>
+          <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">$ fangcun why {{d.cli}} --global</span>
+        </section>
+
+        <section aria-label="用到它的项目" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">用到它的项目 · 近 30 天</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden;">
+            <sc-for list="{{d.projects}}" as="p" hint-placeholder-count="6">
+              <li style="{{p.rowStyle}}">
+                <span style="flex: 1; min-width: 0; font-weight: 500;">{{p.name}}</span>
+                <span style="{{p.tagStyle}}">{{p.tag}}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </section>
+
+        <section aria-label="分发到哪些工具" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">分发到哪些工具</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden;">
+            <sc-for list="{{d.dist}}" as="x" hint-placeholder-count="3">
+              <li style="{{x.rowStyle}}">
+                <span style="flex: 0 0 88px; font-weight: 500;">{{x.tool}}</span>
+                <span style="flex: 1 1 140px; min-width: 0; font-family: var(--mono); font-size: 11px; color: var(--tx-2); word-break: break-all;">{{x.path}}</span>
+                <span style="{{x.tagStyle}}">{{x.state}}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </section>
+
+        <section aria-label="最近活动" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">最近活动</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{d.acts}}" as="a" hint-placeholder-count="3">
+              <li style="display: flex; gap: 10px; align-items: baseline; font-size: 12px;">
+                <span aria-hidden="true" style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transform: translateY(-1px);"></span>
+                <span style="flex: 0 0 64px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{a.when}}</span>
+                <span style="flex: 1; min-width: 0; color: var(--tx-1);">{{a.text}}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <a href="Activity.dc.html" style="align-self: flex-start; font-size: 12px;">在「活动」里查看全部</a>
+        </section>
+      </aside>
+    </div>
+  </main>
+  </div>
+
+  <!-- 变更计划：转成套装 / 从全局移除 -->
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(20,20,22,.28); display: flex; justify-content: center; align-items: flex-start; padding: 64px 16px; box-sizing: border-box; z-index: 5; overflow-y: auto;">
+      <div role="dialog" aria-modal="true" aria-labelledby="gsTitle" style="width: 100%; max-width: 640px; background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden;">
+        <div style="padding: 16px 20px 12px; border-bottom: 1px solid var(--line);">
+          <h2 id="gsTitle" style="margin: 0; font-size: 15px; font-weight: 600;">{{sh.title}}</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: var(--tx-3);">预览先于写入。应用前自动快照，可在「活动」一键回滚。资产库里的正本不受影响。</p>
+        </div>
+
+        <sc-if value="{{sh.isBundle}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line);">
+            <sc-if value="{{sh.showName}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;">
+              <label for="bname" style="flex: 0 0 72px; font-size: 12px; color: var(--tx-2);">套装名称</label>
+              <input id="bname" type="text" value="{{sh.name}}" onChange="{{sh.onName}}" autocomplete="off" style="flex: 1 1 220px; height: 30px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">
+              <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">bundles = ["{{sh.name}}"]</span>
+            </div>
+            </sc-if>
+            <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px;">
+              <legend style="padding: 0 0 8px; font-size: 12px; color: var(--tx-2);">哪些项目需要它 · 已按「用到」预选</legend>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px;">
+                <sc-for list="{{sh.projects}}" as="p" hint-placeholder-count="6">
+                  <label style="{{p.style}}">
+                    <input type="checkbox" checked="{{p.on}}" onChange="{{p.toggle}}" style="margin: 0; accent-color: var(--accent);">
+                    <span style="flex: 1;">{{p.name}}</span>
+                  </label>
+                </sc-for>
+              </div>
+            </fieldset>
+            <sc-if value="{{sh.single}}" hint-placeholder-val="{{false}}">
+              <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 6px;">
+                <legend style="padding: 0 0 8px; font-size: 12px; color: var(--tx-2);">只有一个项目需要它</legend>
+                <sc-for list="{{sh.modes}}" as="m" hint-placeholder-count="2">
+                  <label style="{{m.style}}">
+                    <input type="radio" name="bmode" checked="{{m.on}}" onChange="{{m.pick}}" style="margin: 2px 0 0; accent-color: var(--accent);">
+                    <span style="display: flex; flex-direction: column; gap: 2px;">
+                      <span style="color: var(--tx-1); font-weight: 500;">{{m.label}}</span>
+                      <span style="color: var(--tx-3);">{{m.hint}}</span>
+                    </span>
+                  </label>
+                </sc-for>
+              </fieldset>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <ul style="margin: 0; padding: 8px 0; list-style: none; font-family: var(--mono); font-size: 12px; max-height: 240px; overflow-y: auto;">
+          <sc-for list="{{sh.plan}}" as="c" hint-placeholder-count="4">
+            <li style="display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 20px;">
+              <span style="{{c.opStyle}}">{{c.op}}</span>
+              <span style="flex: 1 1 220px; min-width: 0; color: var(--tx-1); word-break: break-all;">{{c.path}}</span>
+              <span style="flex: 1 1 200px; min-width: 0; color: var(--tx-3); font-family: var(--font);">{{c.note}}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--bg-subtle);">
+          <span style="flex: 1 1 240px; font-size: 12px; color: var(--tx-2);">{{sh.foot}}</span>
+          <button type="button" class="fc-btn" onClick="{{closeSheet}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">取消</button>
+          <button type="button" class="fc-btn" onClick="{{applySheet}}" style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">应用<span style="font-family: var(--mono); font-size: 11px; opacity: .8;">⌘↩</span></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 提示 -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+    <div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 10px; background: #1D1D1F; color: #F2F2F4; box-shadow: var(--shadow-pop); z-index: 7; white-space: nowrap;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5BCB85" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"></path></svg>
+      <span>{{toastText}}</span>
+      <sc-if value="{{toastBundle}}" hint-placeholder-val="{{false}}">
+        <a href="Bundles.dc.html" style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 6px; background: rgba(255,255,255,.14); color: #F2F2F4; text-decoration: none;">去套装页</a>
+      </sc-if>
+      <button type="button" onClick="{{undo}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.14); color: #F2F2F4;">撤销</button>
+      <button type="button" onClick="{{dismissToast}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.14); color: #F2F2F4;">好</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = Object.assign({ tool: 'cc', filter: 'all', sel: 'lark', picked: {}, removed: {}, sheet: null, bname: null, bproj: null, toast: false, toastText: '', toastBundle: false, prev: null, bundles: 3, navC: false, inspOpen: true }, this.state || {});
+    const set = (o) => this.setState(o);
+    const dark = this.props.dark ?? false;
+    const TONE = { neutral: ['var(--tx-2)', 'var(--muted-dot)'], ok: ['var(--ok)', 'var(--ok-dot)'], warn: ['var(--warn)', 'var(--warn-dot)'], info: ['var(--info)', 'var(--info-dot)'], unknown: ['var(--unknown)', 'var(--unknown-dot)'] };
+    const PROJS = ['evals_studio', 'agent-lab', 'fangcun', 'blog-site', 'notes-kit', 'client-acme'];
+    const TOOLN = { cc: 'Claude Code', cx: 'Codex', ws: 'Windsurf' };
+    const SKDIR = { cc: '~/.claude/skills/', cx: '~/.codex/skills/', ws: '~/.codeium/windsurf/skills/' };
+    const k = (n) => n.toFixed(1) + 'k';
+
+    // 全局层：27 个 Skill（其中 16 个飞书 skill 合为一行）、2 个 MCP、2 份指令
+    const R = (id, name, kind, type, count, loc, tools, cost, used, tone, status, x) => Object.assign({ id, name, kind, type, count, loc, tools, cost, used, tone, status }, x);
+    const SK = (id, name, tools, cost, used, tone, status, x) => R(id, name, 'Skill', 'skill', 1, '~/.agents/skills/' + name, tools, cost, used, tone, status, x);
+    const ROWS = [
+      R('lark', 'lark-* 飞书 skill', 'Skill', 'skill', 16, '~/.agents/skills/lark-*', ['cc', 'ws'], 6.4, ['client-acme'], 'info', '建议转套装',
+        { src: 'github:larksuite/skills', ver: '跟随 main · 3f20c9a', cli: 'lark-doc', act: 'bundle',
+          summary: '16 个飞书办公 skill。名称与描述常驻每个项目的上下文，近 30 天只有 client-acme 触发过。',
+          advice: '只有 client-acme 用到。转成套装后，其余 5 个项目每个省下 6.4k 常驻。',
+          acts: [['11-11', '体检发现：16 个飞书 skill 进了每个项目'], ['11-04', '上游更新到 3f20c9a'], ['09-02', '装入全局层']] }),
+      R('playwright', 'playwright', 'MCP', 'mcp', 1, '~/.codex/config.toml · mcp_servers.playwright', ['cx'], 3.6, ['blog-site', 'client-acme'], 'info', '建议转套装',
+        { src: 'npx @playwright/mcp', ver: 'npx -y · 随 npm 最新', cli: 'playwright', act: 'bundle', script: true,
+          summary: '浏览器自动化 MCP 服务。21 个工具定义常驻 Codex 的上下文，只有两个前端项目用到。',
+          advice: '只有 blog-site、client-acme 用到。转成套装后，其余 4 个项目每个省下 3.6k 常驻。',
+          acts: [['10-30', '体检发现：工具定义占 3.6k'], ['08-21', '写入 ~/.codex/config.toml']] }),
+      R('context7', 'context7', 'MCP', 'mcp', 1, '~/.claude.json · mcpServers.context7', ['cc'], 1.9, ['evals_studio', 'agent-lab', 'fangcun', 'blog-site'], 'ok', '多数项目在用',
+        { src: 'npx @upstash/context7-mcp', ver: 'npx -y · 随 npm 最新', cli: 'context7', act: 'keep', script: true,
+          summary: '查询第三方库文档的 MCP 服务。6 个项目里有 4 个经常用到。',
+          advice: '多数项目在用，留在全局合理。若想让 notes-kit 与 client-acme 更轻，可在这两个项目单独停用。',
+          acts: [['11-06', '在 4 个项目被调用'], ['07-14', '写入 ~/.claude.json']] }),
+      R('claudemd', 'CLAUDE.md', '指令', 'ins', 1, '~/.claude/CLAUDE.md', ['cc'], 0.9, PROJS, 'ok', '每个项目都用',
+        { src: '本机', ver: '内容哈希 7c01d2e', cli: 'CLAUDE.md', act: 'keep',
+          summary: '用户级指令：语言偏好、提交规范与个人习惯。Claude Code 在每个项目都会全文加载。',
+          advice: '每个项目都需要，适合留在全局。注意保持精简，它的每一行都按项目缴税。',
+          acts: [['11-09', '内容变更 · 新增 3 行'], ['06-02', '首次发现']] }),
+      R('agentsmd', 'AGENTS.md', '指令', 'ins', 1, '~/.codex/AGENTS.md', ['cx'], 0.6, PROJS, 'ok', '每个项目都用',
+        { src: '本机', ver: '内容哈希 a9e4410', cli: 'AGENTS.md', act: 'keep',
+          summary: 'Codex 的用户级指令。与 ~/.claude/CLAUDE.md 有 70% 内容重复。',
+          advice: '每个项目都需要，适合留在全局。它与 CLAUDE.md 大部分重复，后续版本可改为同一正本的镜像。',
+          acts: [['10-12', '内容变更'], ['06-02', '首次发现']] }),
+      SK('pdf', 'pdf', ['cc', 'ws'], 0.3, ['notes-kit'], 'info', '建议转套装',
+        { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'pdf', act: 'bundle', script: true,
+          summary: '读写 PDF 的 skill，带 4 个 Python 脚本。', advice: '只有 notes-kit 用到。可转成套装，或直接写进 notes-kit 的清单。',
+          acts: [['10-20', '在 notes-kit 被触发'], ['08-03', '装入全局层']] }),
+      SK('pptx', 'pptx', ['cc', 'ws'], 0.3, [], 'warn', '从未使用',
+        { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'pptx', act: 'remove', script: true,
+          summary: '制作演示文稿的 skill，带脚本。', advice: '近 30 天没有任何项目触发它。可以直接从全局移除，资产库仍保留正本，随时可加回。',
+          acts: [['08-03', '装入全局层']] }),
+      SK('docx', 'docx', ['cc', 'ws'], 0.3, [], 'warn', '从未使用',
+        { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'docx', act: 'remove', script: true,
+          summary: '读写 Word 文档的 skill，带脚本。', advice: '近 30 天没有任何项目触发它。可以直接从全局移除，资产库仍保留正本，随时可加回。',
+          acts: [['08-03', '装入全局层']] }),
+      SK('skillc', 'skill-creator', ['cc'], 0.3, ['fangcun'], 'info', '建议转套装',
+        { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'skill-creator', act: 'bundle',
+          summary: '编写与评测 skill 的辅助流程。', advice: '只有 fangcun 用到。建议写进 fangcun 的项目清单，而不是放在全局。',
+          acts: [['11-12', '在 fangcun 被触发'], ['09-18', '装入全局层']] }),
+      SK('prrev', 'pr-review', ['cc', 'cx', 'ws'], 0.3, PROJS, 'unknown', '来源未知',
+        { src: '未知 · 内容哈希 d4410e2', ver: '无版本记录', cli: 'pr-review', act: 'adopt',
+          summary: '每个项目都在用，但内容哈希与任何来源都不匹配，无法追踪版本与更新。', advice: '值得留在全局，但应先收编进资产库，记录来源与版本。',
+          acts: [['11-11', '体检发现 · 来源未知']] }),
+      SK('xlsx', 'xlsx', ['cc', 'ws'], 0.2, [], 'warn', '从未使用',
+        { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'xlsx', act: 'remove', script: true,
+          summary: '读写表格的 skill，带脚本。', advice: '近 30 天没有任何项目触发它。可以直接从全局移除，资产库仍保留正本，随时可加回。',
+          acts: [['08-03', '装入全局层']] }),
+      SK('mermaid', 'mermaid', ['cc', 'ws'], 0.2, [], 'warn', '从未使用',
+        { src: 'local:luyao-skills', ver: '开发模式 · 活链接', cli: 'mermaid', act: 'remove',
+          summary: '生成 Mermaid 图的约定。', advice: '近 30 天没有任何项目触发它。可以直接从全局移除，资产库仍保留正本，随时可加回。',
+          acts: [['07-11', '装入全局层']] }),
+      SK('fed', 'frontend-design', ['cc', 'ws'], 0.2, [], 'neutral', '被覆盖 2 处',
+        { src: 'github:acme/skills', ver: '固定 v1.1.0 · 旧版', cli: 'frontend-design', act: 'remove', shadowed: ['evals_studio', 'blog-site'], struck: true,
+          summary: '全局层里的旧版 v1.1.0。evals_studio 与 blog-site 在项目层固定了 v1.3.0，把它遮蔽了。',
+          advice: '被遮蔽的两个项目用不到它，其余 4 个项目也从未触发。可以从全局移除，项目层的 v1.3.0 不受影响。',
+          acts: [['11-12', 'v1.3.0 发布，2 个项目在项目层升级'], ['09-20', 'v1.1.0 装入全局']] }),
+      SK('wstyle', 'writing-style', ['cc'], 0.2, ['fangcun', 'blog-site', 'notes-kit'], 'ok', '常用',
+        { src: 'local:luyao-skills', ver: '开发模式 · 活链接', cli: 'writing-style', act: 'keep',
+          summary: '中文写作风格约定。', advice: '一半项目在用。留在全局可以接受；若要更精准，可转成「写作」套装。',
+          acts: [['11-12', '在 blog-site 被触发'], ['06-20', '装入全局层']] }),
+      SK('web', 'web-search', ['cc', 'cx'], 0.2, ['evals_studio', 'agent-lab', 'fangcun', 'blog-site', 'client-acme'], 'ok', '常用',
+        { src: 'github:obra/superpowers', ver: '跟随 main · 91c0b2d', cli: 'web-search', act: 'keep',
+          summary: '联网检索的流程约定。', advice: '多数项目在用，留在全局合理。',
+          acts: [['11-13', '在 evals_studio 被触发'], ['06-20', '装入全局层']] }),
+      SK('gitc', 'git-commit', ['cc', 'cx', 'ws'], 0.1, PROJS, 'ok', '每个项目都用',
+        { src: 'local:luyao-skills', ver: '开发模式 · 活链接', cli: 'git-commit', act: 'keep',
+          summary: '提交信息规范。三个工具都已分发，每个项目都用到。', advice: '这正是全局层该放的东西：每个项目都要，且很轻。',
+          acts: [['11-10', '在 6 个项目被触发'], ['05-30', '装入全局层']] })
+    ];
+    const NAMES = { lark: '飞书办公', playwright: '浏览器测试', skillc: '技能开发', pdf: '文档处理' };
+
+    const live = ROWS.filter((r) => !s.removed[r.id]);
+    const inTool = live.filter((r) => r.tools.indexOf(s.tool) >= 0);
+    const shown = inTool.filter((r) => s.filter === 'all' || r.type === s.filter).sort((a, b) => b.cost - a.cost);
+    const otherOnly = live.filter((r) => r.tools.indexOf(s.tool) < 0);
+    const cnt = (list) => list.reduce((n, r) => n + r.count, 0);
+    const sum = (list) => list.reduce((n, r) => n + r.cost, 0);
+
+    // 预算条
+    const byType = (t) => sum(inTool.filter((r) => r.type === t));
+    const total = sum(inTool);
+    const before = sum(ROWS.filter((r) => r.tools.indexOf(s.tool) >= 0));
+    const seg = (v, c) => 'flex: 0 0 ' + (v / 20 * 100).toFixed(2) + '%; background: ' + c + ';' + (v <= 0 ? ' display: none;' : '');
+    const budget = { total: k(total), ins: k(byType('ins')), skill: k(byType('skill')), mcp: k(byType('mcp')),
+      saved: k(before - total), hasSaved: before - total > 0.05,
+      s1: seg(byType('ins'), 'var(--bar-1)'), s2: seg(byType('skill'), 'var(--bar-2)'), s3: seg(byType('mcp'), 'var(--bar-3)'),
+      aria: '全局层常驻约 ' + k(total) + '，项目预算 20k：指令 ' + k(byType('ins')) + '，Skill ' + k(byType('skill')) + '，MCP ' + k(byType('mcp')) };
+
+    const tools = [['cc', 'Claude Code'], ['cx', 'Codex']].map(([id, label]) => {
+      const on = s.tool === id;
+      return { label, on, pick: () => set({ tool: id, picked: {} }),
+        style: 'height: 24px; padding: 0 12px; border: 0; border-radius: 5px; font-size: 12px; ' + (on ? 'background: var(--bg); color: var(--tx-1); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.12);' : 'background: transparent; color: var(--tx-2);') };
+    });
+    const FIL = [['all', '全部'], ['skill', 'Skill'], ['mcp', 'MCP'], ['ins', '指令']];
+    const filters = FIL.map(([id, label]) => {
+      const on = s.filter === id;
+      const n = cnt(inTool.filter((r) => id === 'all' || r.type === id));
+      return { label: label + ' ' + n, on, pick: () => set({ filter: id }),
+        style: 'height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; ' + (on ? 'border: 1px solid var(--accent); background: var(--accent-weak); color: var(--accent); font-weight: 500;' : 'border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-2);') };
+    });
+
+    const picked = shown.filter((r) => s.picked[r.id]);
+    const togglePick = (id) => { const p = Object.assign({}, s.picked); if (p[id]) delete p[id]; else p[id] = true; set({ picked: p }); };
+    const pickWhere = (fn) => { const p = {}; shown.filter(fn).forEach((r) => { p[r.id] = true; }); set({ picked: p }); };
+    const rare = shown.filter((r) => r.tone === 'info');
+    const never = shown.filter((r) => r.tone === 'warn' || r.shadowed);
+
+    const rows = shown.map((r) => {
+      const t = TONE[r.tone];
+      const cur = s.sel === r.id;
+      const n = r.used.length;
+      return { name: r.name, loc: r.loc, kind: r.kind, status: r.status, costText: k(r.cost), on: !!s.picked[r.id], cur,
+        countText: r.count > 1 ? r.count + ' 项' : '', countStyle: r.count > 1 ? 'flex: none; font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);' : 'display: none;',
+        checkLabel: '选择 ' + r.name,
+        toggle: () => togglePick(r.id), pick: () => set({ sel: r.id, inspOpen: true }),
+        useText: n + ' / 6',
+        useBar: 'display: block; height: 100%; width: ' + (n / 6 * 100).toFixed(0) + '%; background: ' + (n === 0 ? 'transparent' : (n <= 2 ? 'var(--warn-dot)' : 'var(--ok-dot)')) + ';',
+        nameStyle: 'min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' + (r.struck ? ' text-decoration: line-through; color: var(--tx-3);' : ''),
+        statusStyle: 'flex: 0 0 104px; display: flex; align-items: center; gap: 6px; color: ' + t[0] + ';',
+        dotStyle: 'flex: none; width: 7px; height: 7px; border-radius: 4px; background: ' + t[1] + ';',
+        rowStyle: 'display: flex; align-items: center; gap: 8px; padding: 0 20px; border-bottom: 1px solid var(--line);' + (cur ? ' background: var(--bg-selected);' : (s.picked[r.id] ? ' background: var(--accent-weak);' : '')) };
+    });
+
+    // 检查器
+    const cur = shown.find((r) => r.id === s.sel) || inTool.find((r) => r.id === s.sel) || shown[0] || inTool[0] || ROWS[0];
+    const ct = TONE[cur.tone];
+    const FS = (kk, v, mono, tone) => ({ k: kk, v, s: 'margin: 0; min-width: 0; word-break: break-all; color: ' + (tone || 'var(--tx-1)') + ';' + (mono ? ' font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') });
+    const rowS = (i) => 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px; font-size: 12px;' + (i > 0 ? ' border-top: 1px solid var(--line);' : '');
+    const tagS = (tone) => 'flex: 0 0 auto; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: ' + TONE[tone][0] + ';';
+    const projects = PROJS.map((p, i) => {
+      const sh = cur.shadowed && cur.shadowed.indexOf(p) >= 0;
+      const used = cur.used.indexOf(p) >= 0;
+      return { name: p, tag: sh ? '被项目层覆盖' : (used ? '用到' : '未用到'), tagStyle: tagS(sh ? 'neutral' : (used ? 'ok' : 'neutral')) + (used || sh ? '' : ' opacity: .8;'), rowStyle: rowS(i) };
+    });
+    const dist = cur.type === 'skill'
+      ? ['cc', 'cx', 'ws'].map((tl, i) => { const has = cur.tools.indexOf(tl) >= 0;
+          return { tool: TOOLN[tl], path: SKDIR[tl] + (cur.id === 'lark' ? 'lark-*' : cur.name), state: has ? '已链接' : '未分发', tagStyle: tagS(has ? 'ok' : 'neutral'), rowStyle: rowS(i) }; })
+      : [{ tool: TOOLN[cur.tools[0]], path: cur.loc.split(' · ')[0], state: cur.type === 'mcp' ? '按键合并' : '全文加载', tagStyle: tagS('ok'), rowStyle: rowS(0) },
+         { tool: '其他工具', path: cur.type === 'mcp' ? '各自的 MCP 配置' : '各自的用户级指令', state: '未配置', tagStyle: tagS('neutral'), rowStyle: rowS(1) }];
+    const openSheet = (mode, ids) => { const p = {}; ids.forEach((id) => { p[id] = true; }); set({ sheet: mode, picked: p, bname: null, bproj: null }); };
+    const d = { name: cur.name, status: cur.status, summary: cur.summary, cli: cur.cli,
+      kindLabel: (cur.kind === 'MCP' ? 'MCP 服务' : (cur.kind === '指令' ? '指令文件' : 'Skill')) + (cur.count > 1 ? ' · ' + cur.count + ' 项' : '') + ' · 全局层',
+      badgeStyle: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; color: ' + ct[0] + '; background: var(--bg); border: 1px solid var(--line);',
+      dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + ct[1] + ';',
+      fields: [FS('位置', cur.loc, true), FS('来源', cur.src, true, cur.tone === 'unknown' ? 'var(--unknown)' : null), FS('版本', cur.ver, true),
+        FS('常驻', k(cur.cost) + ' / 每个项目（估算）', false, cur.cost >= 3 ? 'var(--warn)' : null),
+        FS('用到它', cur.used.length + ' / 6 个项目'), FS('含脚本', cur.script ? (cur.type === 'mcp' ? '启动命令' : '是') : '否', false, cur.script ? 'var(--danger)' : null)],
+      advice: cur.advice,
+      adviceStyle: 'display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; ' + (cur.act === 'keep' ? 'background: var(--bg); border: 1px solid var(--line); color: var(--tx-2);' : (cur.act === 'adopt' ? 'background: var(--unknown-weak); color: var(--unknown);' : 'background: var(--info-weak); color: var(--info);')),
+      canBundle: cur.act === 'bundle', canRemove: cur.act === 'remove' || cur.act === 'bundle', canAdopt: cur.act === 'adopt',
+      doBundle: () => openSheet('bundle', [cur.id]), doRemove: () => openSheet('remove', [cur.id]),
+      projects, dist, acts: cur.acts.map(([when, text]) => ({ when, text })) };
+
+    // 变更计划
+    const sel = ROWS.filter((r) => s.picked[r.id] && !s.removed[r.id]);
+    const selCount = cnt(sel), selSave = sum(sel);
+    const defName = sel.length === 1 ? (NAMES[sel[0].id] || sel[0].name) : (sel.some((r) => r.id === 'lark') ? '飞书办公' : '按需工具');
+    const bname = (s.bname ?? defName) || '新套装';
+    const usedBy = PROJS.filter((p) => sel.some((r) => r.used.indexOf(p) >= 0));
+    const bproj = s.bproj || usedBy;
+    const OP = { '+': 'var(--ok)', '~': 'var(--info)', '−': 'var(--danger)' };
+    const C = (op, path, note) => ({ op, path, note, opStyle: 'flex: 0 0 12px; font-weight: 600; color: ' + OP[op] + ';' });
+    const isBundle = s.sheet === 'bundle';
+    const single = isBundle && bproj.length === 1;
+    const direct = single && !!s.bdirect;
+    const plan = [];
+    if (direct) {
+      plan.push(C('~', '~/code/' + bproj[0] + '/fangcun.toml', '[skills] 直接加入 ' + selCount + ' 项，不建套装'));
+    } else if (isBundle) {
+      plan.push(C('+', '~/.fangcun/bundles/' + bname + '.toml', '新建套装，含 ' + selCount + ' 项'));
+      bproj.forEach((p) => plan.push(C('~', '~/code/' + p + '/fangcun.toml', 'bundles 加入「' + bname + '」')));
+    }
+    const MODE = (id, label, hint) => { const on = (id === 'direct') === direct;
+      return { label, hint, on, pick: () => set({ bdirect: id === 'direct' }),
+        style: 'display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; ' + (on ? 'border: 1px solid var(--accent); background: var(--accent-weak);' : 'border: 1px solid var(--line); background: var(--bg);') }; };
+    const modes = single ? [MODE('bundle', '建套装「' + bname + '」', '以后别的项目要用，加一行 bundles 即可'), MODE('direct', '不建套装，直接写进 ' + bproj[0] + ' 的清单', '计划里不再新建套装文件')] : [];
+    sel.forEach((r) => plan.push(C('−', r.type === 'skill' ? SKDIR[s.tool] + (r.id === 'lark' ? 'lark-*（16 个软链）' : r.name) : r.loc, isBundle ? '移出全局层，已备份' : '移出全局层，资产库保留正本')));
+    const others = 6 - (isBundle ? bproj.length : 0);
+    const sh = { isBundle, name: bname, plan, single, modes, showName: !direct,
+      title: direct ? '把 ' + selCount + ' 项写进 ' + bproj[0] + ' 的清单' : (isBundle ? '把 ' + selCount + ' 项转成套装' : '从全局层移除 ' + selCount + ' 项'),
+      foot: (others > 0 ? others + ' 个项目每个常驻 −' + k(selSave) + '（估算）。' : '') + '不会触碰其他任何文件。',
+      onName: (e) => set({ bname: e.target.value }),
+      projects: PROJS.map((p) => { const on = bproj.indexOf(p) >= 0;
+        return { name: p, on,
+          toggle: () => { const l = bproj.slice(); const i = l.indexOf(p); if (i >= 0) l.splice(i, 1); else l.push(p); set({ bproj: l }); },
+          style: 'display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 10px; border-radius: 6px; cursor: pointer; font-size: 12px; ' + (on ? 'border: 1px solid var(--accent); background: var(--accent-weak);' : 'border: 1px solid var(--line); background: var(--bg);') }; }) };
+    const applySheet = () => {
+      const rm = Object.assign({}, s.removed); sel.forEach((r) => { rm[r.id] = true; });
+      const text = direct ? '已写入 ' + bproj[0] + ' 的清单，未建套装 · 已留快照' : (isBundle ? '已创建套装「' + bname + '」，写入 ' + bproj.length + ' 个项目清单 · 已留快照' : '已从全局层移除 ' + selCount + ' 项 · 已留快照');
+      set({ prev: { removed: s.removed, bundles: s.bundles }, removed: rm, picked: {}, sheet: null, bdirect: false, toast: true, toastText: text, toastBundle: isBundle && !direct, bundles: s.bundles + (isBundle && !direct ? 1 : 0) });
+    };
+
+    return { rootClass: 'fc fc-shell' + (dark ? ' dark' : ''), tools, filters, budget, rows, d, sh,
+      globalCount: cnt(live), bundleCount: s.bundles,
+      noRows: shown.length === 0, clearFilter: () => set({ filter: 'all' }),
+      otherToolNote: otherOnly.length ? '另有 ' + cnt(otherOnly) + ' 项只被' + (s.tool === 'cc' ? ' Codex ' : ' Claude Code 或 Windsurf ') + '加载，切换工具查看。' : '',
+      rareCount: cnt(rare), neverCount: cnt(never),
+      pickRare: () => pickWhere((r) => r.tone === 'info'), pickNever: () => pickWhere((r) => r.tone === 'warn' || !!r.shadowed),
+      allOn: shown.length > 0 && picked.length === shown.length,
+      toggleAll: () => (picked.length === shown.length ? set({ picked: {} }) : pickWhere(() => true)),
+      hasPicked: picked.length > 0, pickedText: cnt(picked) + ' 项', pickedSave: k(sum(picked)),
+      clearPicked: () => set({ picked: {} }),
+      openBundle: () => set({ sheet: 'bundle', bname: null, bproj: null, bdirect: false }), openRemove: () => set({ sheet: 'remove' }),
+      sheetOpen: !!s.sheet, closeSheet: () => set({ sheet: null }), applySheet,
+      toast: s.toast, toastText: s.toastText, toastBundle: s.toastBundle,
+      dismissToast: () => set({ toast: false }),
+      undo: () => (s.prev ? set({ removed: s.prev.removed, bundles: s.prev.bundles, prev: null, toast: true, toastText: '已撤销，恢复到上一快照', toastBundle: false }) : set({ toast: false })),
+      navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
+      navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';',
+      inspClass: s.inspOpen ? '' : 'fc-hidden', closeInsp: () => set({ inspOpen: false }) };
+  }
+}
+</script>
+</body>
+</html>

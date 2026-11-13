@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸 · 项目 evals_studio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--add-bg:#E3F4E8;--del-bg:#FBE7E6;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--add-bg:#173020;--del-bg:#3A1D1C;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc input{font:inherit}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+.fc-btn:hover{filter:brightness(.95)}
+.fc.dark .fc-btn:hover{filter:brightness(1.15)}
+.fc a{color:var(--accent)}
+.fc a:hover{color:var(--tx-1)}
+.fc-navbtn{margin-left:auto}
+.fc-navc{flex:0 0 56px!important;padding-left:8px!important;padding-right:8px!important}
+.fc-navc>div>a,.fc-navc>div>div{justify-content:center;padding-left:0!important;padding-right:0!important}
+.fc-navc>div:first-child{display:none!important}
+.fc-hidden{display:none!important}
+.fc-navc .fc-navbtn{margin-left:0}
+.fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fc-navc .fc-navhide{display:none!important}
+.fc-shell{height:100vh;min-height:640px;overflow:hidden}
+.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+@media (max-width: 900px){.fc-shell{height:auto;overflow:visible;flex-wrap:wrap!important}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
+</style>
+</helmet>
+<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <!-- 窗口工具栏：贯穿整个窗口顶部 -->
+  <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
+    <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin-right: 16px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
+    <button type="button" disabled="" aria-label="后退" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"></path></svg></button>
+    <button type="button" disabled="" aria-label="前进" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg></button>
+    <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
+    <span style="flex: 1;"></span>
+  </div>
+
+  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+  <!-- 侧栏 -->
+  <nav aria-label="主导航" class="fc-col {{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 2px 6px; height: 28px;">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
+      <span style="font-weight: 600; font-size: 14px; letter-spacing: .02em;">方寸</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <a href="Main.dc.html" aria-current="page" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+        <span style="flex: 1;">项目</span><span style="color: var(--tx-3); font-size: 12px;">6</span>
+      </a>
+      <a href="Library.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg>
+        <span style="flex: 1;">资产库</span><span style="color: var(--tx-3); font-size: 12px;">38</span>
+      </a>
+      <a href="Bundles.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg>
+        <span style="flex: 1;">套装</span><span style="color: var(--tx-3); font-size: 12px;">3</span>
+      </a>
+      <a href="Global.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg>
+        <span style="flex: 1;">全局</span><span style="color: var(--tx-3); font-size: 12px;">31</span>
+      </a>
+      <a href="Activity.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
+        <span style="flex: 1;">活动</span><span style="color: var(--warn); font-size: 12px;">2</span>
+      </a>
+    </div>
+
+    <div class="fc-navhide" style="display: flex; flex-direction: column; gap: 1px;">
+      <div style="padding: 0 8px 4px; font-size: 11px; font-weight: 600; color: var(--tx-3);">已登记项目</div>
+      <sc-for list="{{projects}}" as="p" hint-placeholder-count="6">
+        <div style="{{p.style}}">
+          <span aria-hidden="true" style="{{p.dot}}"></span>
+          <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{p.name}}</span>
+          <span style="font-size: 11px; color: var(--tx-3);">{{p.note}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+      <a href="Checkup.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
+        <span>重新体检</span>
+      </a>
+      <div class="fc-navhide" style="padding: 0 8px; font-size: 11px; color: var(--tx-3);">本地优先 · 零遥测</div>
+    </div>
+  </nav>
+
+  <!-- 主区 -->
+  <main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line);">
+      <div style="flex: 1 1 220px; min-width: 0; display: flex; align-items: baseline; gap: 10px;">
+        <h1 style="margin: 0; font-size: 17px; font-weight: 600;">evals_studio</h1>
+        <span style="font-family: var(--mono); font-size: 12px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">~/code/evals_studio</span>
+      </div>
+      <div role="group" aria-label="目标工具" style="display: inline-flex; padding: 2px; border-radius: 7px; background: var(--bg-hover); gap: 2px;">
+        <sc-for list="{{tools}}" as="t" hint-placeholder-count="2">
+          <button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{hasDrift}}" hint-placeholder-val="{{true}}">
+        <button type="button" class="fc-btn" onClick="{{goDrift}}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 14px; border: 0; background: var(--warn-weak); color: var(--warn); font-weight: 500;">
+          <span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 4px; background: var(--warn-dot);"></span>1 处漂移
+        </button>
+      </sc-if>
+      <button type="button" class="fc-btn" onClick="{{openPalette}}" aria-label="命令面板" style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-2);">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.25"></circle><path d="m10.25 10.25 3.25 3.25"></path></svg>
+        <span>搜索资产与动作</span>
+        <span style="font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--tx-3);">⌘K</span>
+      </button>
+      <button type="button" class="fc-btn" onClick="{{openSheet}}" style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 4 4.5L2.5 6"></path><path d="M2.5 3v3h3"></path><path d="M3 9.5a5 5 0 0 0 9 2L13.5 10"></path><path d="M13.5 13v-3h-3"></path></svg>
+        同步<span style="font-variant-numeric: tabular-nums; opacity: .85;">· {{planCount}}</span>
+      </button>
+    </header>
+
+    <!-- 预算条 -->
+    <section aria-label="常驻上下文预算" style="padding: 12px 20px 14px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;">
+        <span style="font-weight: 600;">常驻上下文</span>
+        <span style="font-family: var(--mono); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums;">{{budget.total}}</span>
+        <span style="color: var(--tx-3);">/ 项目预算 20k tokens · 估算值</span>
+        <span style="flex: 1;"></span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--tx-2);"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 2px; background: var(--bar-1);"></span>指令 {{budget.ins}}</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--tx-2);"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 2px; background: var(--bar-2);"></span>Skill {{budget.sk}}</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--tx-2);"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 2px; background: var(--bar-3);"></span>MCP {{budget.mcp}}</span>
+      </div>
+      <div role="img" aria-label="{{budget.aria}}" style="display: flex; gap: 2px; height: 8px; border-radius: 4px; background: var(--bg-hover); overflow: hidden;">
+        <span style="{{budget.w1}}"></span><span style="{{budget.w2}}"></span><span style="{{budget.w3}}"></span>
+      </div>
+    </section>
+
+    <!-- 页签 -->
+    <div role="tablist" aria-label="项目视图" style="display: flex; gap: 4px; padding: 0 16px; border-bottom: 1px solid var(--line);">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button type="button" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+      <!-- 列表 -->
+      <section class="fc-col" style="flex: 999 1 460px; min-width: 0; padding-bottom: 24px;">
+
+        <sc-if value="{{isEffective}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column;">
+            <sc-if value="{{codexNote}}" hint-placeholder-val="{{false}}">
+              <p style="margin: 12px 16px 0; padding: 8px 12px; border-radius: 6px; background: var(--info-weak); color: var(--info); font-size: 12px;">Codex 不读取 CLAUDE.md，只读取 AGENTS.md。切换目标工具后，列表只显示该工具实际加载的内容。</p>
+            </sc-if>
+            <div style="display: flex; gap: 12px; padding: 12px 16px 4px; font-size: 11px; color: var(--tx-3); font-weight: 500;">
+              <span style="flex: 1 1 200px;">名称 · 版本</span>
+              <span style="flex: 0 0 150px;">作用层</span>
+              <span style="flex: 0 0 170px;">状态</span>
+              <span style="flex: 0 0 52px; text-align: right;">常驻</span>
+            </div>
+            <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+              <div style="display: flex; flex-direction: column;">
+                <h2 style="margin: 0; padding: 12px 16px 4px; font-size: 12px; font-weight: 600; color: var(--tx-2); display: flex; justify-content: space-between;"><span>{{g.label}}</span><span style="font-weight: 400; color: var(--tx-3); font-family: var(--mono); font-size: 11px;">{{g.cost}}</span></h2>
+                <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+                  <button type="button" class="fc-h" onClick="{{r.pick}}" aria-pressed="{{r.on}}" style="{{r.rowStyle}}">
+                    <span style="flex: 1 1 200px; min-width: 0; display: flex; align-items: center; gap: 8px;">
+                      <span style="{{r.nameStyle}}">{{r.name}}</span>
+                      <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap;">{{r.version}}</span>
+                    </span>
+                    <span style="flex: 0 0 150px; display: flex; align-items: center; gap: 7px; color: var(--tx-2);">
+                      <span aria-hidden="true" style="display: inline-flex; gap: 2px;">
+                        <sc-for list="{{r.marks}}" as="m" hint-placeholder-count="4"><span style="{{m.s}}"></span></sc-for>
+                      </span>
+                      <span style="white-space: nowrap;">{{r.layer}}</span>
+                    </span>
+                    <span style="{{r.statusStyle}}">
+                      <span aria-hidden="true" style="{{r.dotStyle}}"></span>{{r.status}}
+                    </span>
+                    <span style="flex: 0 0 52px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{r.cost}}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-for>
+            <div style="display: flex; flex-direction: column;">
+              <h2 style="margin: 0; padding: 12px 16px 2px; font-size: 12px; font-weight: 600; color: var(--tx-2); display: flex; align-items: center; gap: 8px;">其他加载项<span style="font-size: 11px; font-weight: 500; padding: 0 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">只看不管</span></h2>
+              <p style="margin: 0; padding: 0 16px 6px; font-size: 12px; color: var(--tx-3);">插件、Hook、斜杠命令、子代理也会被 Agent 加载。列在这里是为了看清全貌；当前版本方寸不修改它们，也不计入上方预算。</p>
+              <sc-for list="{{others}}" as="o" hint-placeholder-count="4">
+                <div style="{{o.rowStyle}}">
+                  <span style="flex: 1 1 200px; min-width: 0; display: flex; align-items: center; gap: 8px;">
+                    <span style="flex: none; font-size: 11px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--tx-2);">{{o.kind}}</span>
+                    <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{o.name}}</span>
+                  </span>
+                  <span style="flex: 0 0 150px; display: flex; align-items: center; gap: 7px; color: var(--tx-2);">
+                    <span aria-hidden="true" style="display: inline-flex; gap: 2px;"><sc-for list="{{o.marks}}" as="m" hint-placeholder-count="4"><span style="{{m.s}}"></span></sc-for></span>
+                    <span style="white-space: nowrap;">{{o.layer}}</span>
+                  </span>
+                  <span style="flex: 0 0 170px; display: flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--tx-3);">
+                    <span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 4px; flex: none; background: var(--muted-dot);"></span>{{o.note}}
+                  </span>
+                  <span style="flex: 0 0 52px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{o.cost}}</span>
+                </div>
+              </sc-for>
+              <p style="margin: 8px 16px 0; font-size: 11px; color: var(--tx-3);">{{othersFoot}}</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isManifest}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+            <p style="margin: 0; color: var(--tx-2); max-width: 720px;">清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。下面三个文件共同决定「生效上下文」里看到的结果。</p>
+            <div role="group" aria-label="清单文件" style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <sc-for list="{{mfiles}}" as="f" hint-placeholder-count="3">
+                <button type="button" class="fc-btn" aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">
+                  <span style="font-family: var(--mono); font-weight: 500;">{{f.name}}</span>
+                  <span style="font-size: 12px; color: var(--tx-2);">{{f.role}}</span>
+                  <span style="{{f.tagStyle}}">{{f.tag}}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-top: 4px; border-top: 1px solid var(--line);">
+              <span style="flex: 1 1 280px; padding-top: 8px; color: var(--tx-2); font-size: 12px;">{{mf.desc}}</span>
+              <div role="group" aria-label="显示方式" style="display: inline-flex; margin-top: 8px; padding: 2px; border-radius: 7px; background: var(--bg-hover); gap: 2px;">
+                <sc-for list="{{mviews}}" as="v" hint-placeholder-count="2">
+                  <button type="button" aria-pressed="{{v.on}}" onClick="{{v.pick}}" style="{{v.style}}">{{v.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+            <sc-if value="{{mIsTable}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <sc-for list="{{mf.sections}}" as="sec" hint-placeholder-count="4">
+                  <section style="display: flex; flex-direction: column; gap: 6px;">
+                    <h3 style="margin: 0; font-size: 12px; font-weight: 600; color: var(--tx-2);">{{sec.title}}</h3>
+                    <div style="border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow-x: auto;">
+                      <table style="width: 100%; min-width: 520px; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
+                        <thead>
+                          <tr style="background: var(--bg-subtle);">
+                            <th scope="col" style="width: 26%; padding: 6px 12px; text-align: left; font-size: 11px; font-weight: 500; color: var(--tx-3);">{{sec.h1}}</th>
+                            <th scope="col" style="width: 38%; padding: 6px 12px; text-align: left; font-size: 11px; font-weight: 500; color: var(--tx-3);">{{sec.h2}}</th>
+                            <th scope="col" style="padding: 6px 12px; text-align: left; font-size: 11px; font-weight: 500; color: var(--tx-3);">{{sec.h3}}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <sc-for list="{{sec.rows}}" as="row" hint-placeholder-count="3">
+                            <tr style="border-top: 1px solid var(--line);">
+                              <td style="{{row.sa}}">{{row.a}}</td>
+                              <td style="{{row.sb}}">{{row.b}}</td>
+                              <td style="{{row.sc}}">{{row.c}}<sc-if value="{{row.hasNote}}" hint-placeholder-val="{{false}}"><span style="display: block; margin-top: 2px; font-family: var(--font); font-size: 11px; color: var(--tx-3);">{{row.note}}</span></sc-if></td>
+                            </tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{mIsSrc}}" hint-placeholder-val="{{false}}">
+              <div style="border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); padding: 10px 0; font-family: var(--mono); font-size: 12px; line-height: 20px;">
+                <sc-for list="{{mf.lines}}" as="l" hint-placeholder-count="16">
+                  <div style="display: flex; gap: 14px; min-height: 20px; padding: 0 14px;">
+                    <span aria-hidden="true" style="flex: 0 0 22px; text-align: right; color: var(--tx-3); user-select: none;">{{l.n}}</span>
+                    <span style="{{l.s}}">{{l.t}}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{isHistory}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 8px 0;">
+            <sc-for list="{{history}}" as="h" hint-placeholder-count="4">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 16px; border-bottom: 1px solid var(--line);">
+                <span style="font-family: var(--mono); font-size: 12px; color: var(--tx-3); flex: 0 0 44px;">{{h.id}}</span>
+                <span style="flex: 1 1 260px; min-width: 0;"><span style="font-weight: 500;">{{h.title}}</span><span style="color: var(--tx-3);"> · {{h.when}}</span></span>
+                <sc-if value="{{h.current}}" hint-placeholder-val="{{false}}">
+                  <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--ok-weak); color: var(--ok);">当前磁盘状态</span>
+                </sc-if>
+                <sc-if value="{{h.canRoll}}" hint-placeholder-val="{{true}}">
+                  <button type="button" class="fc-btn" onClick="{{h.roll}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">回滚到此</button>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+
+      <!-- 检查器 -->
+      <aside aria-label="检查器" class="fc-col {{inspClass}}" style="flex: 1 1 320px; box-sizing: border-box; border-left: 1px solid var(--line); background: var(--bg-subtle); padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
+          <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+          <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">{{sel.kind}}</span>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">{{sel.name}}</h2>
+          <span style="{{sel.badgeStyle}}"><span aria-hidden="true" style="{{sel.dotStyle}}"></span>{{sel.status}}</span>
+        </div>
+
+        <dl style="margin: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px 12px; font-size: 12px;">
+          <sc-for list="{{sel.fields}}" as="f" hint-placeholder-count="4">
+            <dt style="color: var(--tx-3);">{{f.k}}</dt>
+            <dd style="{{f.s}}">{{f.v}}</dd>
+          </sc-for>
+        </dl>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">为什么是这个状态</span>
+          <p style="margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); font-size: 12px; line-height: 1.65; white-space: pre-line; color: var(--tx-1);">{{sel.why}}</p>
+          <span style="font-size: 11px; color: var(--tx-3);">命令行同款：<span style="font-family: var(--mono);">fangcun why {{sel.name}}</span></span>
+        </div>
+
+        <!-- 漂移处理 -->
+        <sc-if value="{{sel.isDriftOpen}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 4px; border-top: 1px solid var(--line);">
+            <h3 style="margin: 12px 0 0; font-size: 13px; font-weight: 600;">副本已被修改</h3>
+            <p style="margin: 0; color: var(--tx-2); font-size: 12px;">Agent 在本项目修改了 SKILL.md，相对 4d9b1eb 多 3 行、少 1 行。</p>
+            <div style="border-radius: 6px; border: 1px solid var(--line); overflow: hidden; font-family: var(--mono); font-size: 11px; line-height: 1.7;">
+              <div style="padding: 2px 10px; background: var(--code-bg); color: var(--tx-3);">@@ SKILL.md · 第 14 行 @@</div>
+              <div style="padding: 0 10px; color: var(--tx-2);">  ## 收尾检查</div>
+              <div style="padding: 0 10px; background: var(--del-bg); color: var(--danger);">- 运行全部测试后再提交。</div>
+              <div style="padding: 0 10px; background: var(--add-bg); color: var(--ok);">+ 先运行受影响的测试，再运行全部测试。</div>
+              <div style="padding: 0 10px; background: var(--add-bg); color: var(--ok);">+ 提交前检查 fangcun status 无漂移。</div>
+              <div style="padding: 0 10px; background: var(--add-bg); color: var(--ok);">+ 新增依赖时同步更新 fangcun.toml。</div>
+            </div>
+            <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 6px;">
+              <legend style="padding: 0 0 6px; font-size: 12px; color: var(--tx-2);">怎么处理这份修改？</legend>
+              <sc-for list="{{driftOpts}}" as="o" hint-placeholder-count="3">
+                <label style="{{o.style}}">
+                  <input type="radio" name="drift" checked="{{o.on}}" onChange="{{o.pick}}" style="margin: 2px 0 0; accent-color: var(--accent);">
+                  <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">{{o.title}}</span><span style="font-size: 12px; color: var(--tx-2);">{{o.desc}}</span></span>
+                </label>
+              </sc-for>
+            </fieldset>
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button type="button" class="fc-btn" onClick="{{confirmDrift}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">预览并应用</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{sel.isDriftDone}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 8px; background: var(--ok-weak); color: var(--ok);">
+            <span style="font-weight: 600; display: flex; align-items: center; gap: 6px;"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"></path></svg>{{driftDone.title}}</span>
+            <span style="font-size: 12px; color: var(--tx-1);">{{driftDone.desc}}</span>
+            <sc-if value="{{driftDone.showProjects}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--bg); color: var(--tx-1); border: 1px solid var(--line);">agent-lab</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--bg); color: var(--tx-1); border: 1px solid var(--line);">fangcun</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--bg); color: var(--tx-1); border: 1px solid var(--line);">blog-site</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--bg); color: var(--tx-1); border: 1px solid var(--line);">notes-kit</span>
+              </div>
+            </sc-if>
+            <button type="button" class="fc-btn" onClick="{{undoDrift}}" style="align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">撤销</button>
+          </div>
+        </sc-if>
+
+        <!-- 可更新 -->
+        <sc-if value="{{sel.isUpdate}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
+            <h3 style="margin: 0; font-size: 13px; font-weight: 600;">a1b2c3 → b7e9f0</h3>
+            <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+              <li style="display: flex; gap: 8px; align-items: baseline;"><span style="font-family: var(--mono); color: var(--tx-3);">~</span><span style="flex: 1;">SKILL.md 描述改写</span><span style="font-family: var(--mono); color: var(--tx-3);">+3 −1</span></li>
+              <li style="display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; background: var(--danger-weak); color: var(--danger);"><span style="font-family: var(--mono);">+</span><span style="flex: 1;"><span style="font-weight: 600;">脚本变更</span> · scripts/run-tests.sh 新增，会执行命令</span><span style="font-family: var(--mono);">+22</span></li>
+            </ul>
+            <fieldset style="margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+              <legend style="padding: 0 4px; font-size: 12px; font-weight: 600; color: var(--tx-1);">受影响的项目 · 同一版本 a1b2c3</legend>
+              <label style="display: flex; align-items: center; gap: 8px; min-height: 24px; color: var(--tx-3);">
+                <input type="checkbox" checked="" disabled="" style="margin: 0; accent-color: var(--accent);">
+                <span style="flex: 1; color: var(--tx-1);">evals_studio</span>
+                <span>本项目</span>
+              </label>
+              <sc-for list="{{tddOthers}}" as="p" hint-placeholder-count="2">
+                <label style="display: flex; align-items: center; gap: 8px; min-height: 24px; cursor: pointer; color: var(--tx-3);">
+                  <input type="checkbox" checked="{{p.checked}}" onChange="{{p.toggle}}" style="margin: 0; accent-color: var(--accent);">
+                  <span style="flex: 1; color: var(--tx-1);">{{p.name}}</span>
+                  <span>{{p.note}}</span>
+                </label>
+              </sc-for>
+              <span style="color: var(--tx-3);">勾选的项目一起加入同步计划，每个项目各留一个快照。</span>
+            </fieldset>
+            <sc-if value="{{tddQueued}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--info);">{{tddQueuedText}}<button type="button" onClick="{{toggleTdd}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">撤回</button></div>
+            </sc-if>
+            <sc-if value="{{tddNotQueued}}" hint-placeholder-val="{{true}}">
+              <button type="button" class="fc-btn" onClick="{{toggleTdd}}" style="align-self: flex-start; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">{{tddBtnLabel}}</button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- 全局税 -->
+        <sc-if value="{{sel.isUnused}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
+            <h3 style="margin: 0; font-size: 13px; font-weight: 600;">全局税：每个项目都在缴</h3>
+            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">16 个飞书 skill 的名称与描述常驻上下文，本项目从未触发。停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+            <sc-if value="{{larkOff}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--info);">已加入同步计划 · 预计常驻减少 6.4k<button type="button" onClick="{{toggleLark}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">撤回</button></div>
+            </sc-if>
+            <sc-if value="{{larkOn}}" hint-placeholder-val="{{true}}">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="fc-btn" onClick="{{toggleLark}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">在本项目停用</button>
+                <button type="button" class="fc-btn" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">改为套装「飞书办公」</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- 被覆盖 -->
+        <sc-if value="{{sel.isOverridden}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
+            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">项目层有同名 skill。Claude Code 只加载项目层版本，这份全局副本不生效，常驻成本为 0。</p>
+            <button type="button" class="fc-btn" onClick="{{goOverrider}}" style="align-self: flex-start; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">查看覆盖它的项</button>
+          </div>
+        </sc-if>
+
+        <!-- 来源未知 -->
+        <sc-if value="{{sel.isUnknown}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
+            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">在 ~/.agents/skills 中发现，内容哈希与资产库里任何来源都不匹配。收编后才能追踪版本与更新。</p>
+            <a href="Library.dc.html" class="fc-btn" style="align-self: flex-start; display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">在资产库中收编</a>
+          </div>
+        </sc-if>
+
+        <!-- 通用信息：每一项都有 -->
+        <section aria-label="作用层叠加" style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">在哪一层声明 · 谁覆盖谁</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden;">
+            <sc-for list="{{sel.stack}}" as="st" hint-placeholder-count="4">
+              <li style="{{st.style}}">
+                <span aria-hidden="true" style="display: inline-flex; gap: 2px;"><sc-for list="{{st.marks}}" as="m" hint-placeholder-count="4"><span style="{{m.s}}"></span></sc-for></span>
+                <span style="flex: 0 0 32px; color: var(--tx-2);">{{st.layer}}</span>
+                <span style="{{st.valStyle}}">{{st.val}}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <span style="font-size: 11px; color: var(--tx-3);">从上到下优先级递增，下层覆盖上层。</span>
+        </section>
+
+        <section aria-label="上下文占用" style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+            <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">上下文占用</h3>
+            <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-2);">{{sel.shareText}}</span>
+          </div>
+          <div role="img" aria-label="{{sel.shareText}}" style="height: 6px; border-radius: 3px; background: var(--bg-hover); overflow: hidden;"><span style="{{sel.shareBar}}"></span></div>
+        </section>
+
+        <section aria-label="物化到的文件" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">写入了哪些文件</h3>
+          <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px;">
+            <sc-for list="{{sel.files}}" as="f" hint-placeholder-count="2">
+              <li style="padding: 5px 8px; border-radius: 6px; background: var(--code-bg); font-family: var(--mono); font-size: 11px; line-height: 16px; color: var(--tx-1); word-break: break-all;">{{f.p}}</li>
+            </sc-for>
+          </ul>
+        </section>
+
+        <section aria-label="最近活动" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">最近活动</h3>
+          <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{sel.acts}}" as="a" hint-placeholder-count="3">
+              <li style="display: flex; gap: 10px; align-items: baseline; font-size: 12px;">
+                <span aria-hidden="true" style="flex: none; width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transform: translateY(-1px);"></span>
+                <span style="flex: 0 0 64px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{a.when}}</span>
+                <span style="flex: 1; min-width: 0; color: var(--tx-1);">{{a.text}}</span>
+              </li>
+            </sc-for>
+          </ol>
+        </section>
+      </aside>
+    </div>
+  </main>
+  </div>
+
+  <!-- 同步计划 -->
+  <sc-if value="{{sheet}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(20,20,22,.28); display: flex; justify-content: center; align-items: flex-start; padding: 72px 16px; box-sizing: border-box; z-index: 5;">
+      <div role="dialog" aria-modal="true" aria-labelledby="planTitle" style="width: 100%; max-width: 640px; background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden;">
+        <div style="padding: 16px 20px 12px; border-bottom: 1px solid var(--line);">
+          <h2 id="planTitle" style="margin: 0; font-size: 15px; font-weight: 600;">即将对 evals_studio 做 {{planCount}} 处变更</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: var(--tx-3);">预览先于写入。应用前自动快照，可在「历史」一键回滚。</p>
+        </div>
+        <ul style="margin: 0; padding: 8px 0; list-style: none; font-family: var(--mono); font-size: 12px;">
+          <sc-for list="{{plan}}" as="c" hint-placeholder-count="4">
+            <li style="display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 20px;">
+              <span style="{{c.opStyle}}">{{c.op}}</span>
+              <span style="flex: 1 1 220px; min-width: 0; color: var(--tx-1);">{{c.path}}</span>
+              <span style="flex: 1 1 220px; min-width: 0; color: var(--tx-3); font-family: var(--font);">{{c.note}}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--bg-subtle);">
+          <span style="flex: 1 1 200px; font-size: 12px; color: var(--tx-2);">不会触碰其他任何文件。</span>
+          <button type="button" class="fc-btn" onClick="{{closeSheet}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">取消</button>
+          <button type="button" class="fc-btn" onClick="{{applySync}}" style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">应用<span style="font-family: var(--mono); font-size: 11px; opacity: .8;">⌘↩</span></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 命令面板 -->
+  <sc-if value="{{palette}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(20,20,22,.18); display: flex; justify-content: center; align-items: flex-start; padding: 96px 16px; box-sizing: border-box; z-index: 6;">
+      <div role="dialog" aria-modal="true" aria-label="命令面板" style="width: 100%; max-width: 560px; background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--line);">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="color: var(--tx-3);"><circle cx="7" cy="7" r="4.25"></circle><path d="m10.25 10.25 3.25 3.25"></path></svg>
+          <label for="pq" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">搜索资产、项目、动作</label>
+          <input id="pq" type="text" value="{{query}}" onChange="{{onQuery}}" placeholder="搜索资产、项目、动作" autocomplete="off" style="flex: 1; height: 46px; border: 0; outline: none; background: transparent; color: var(--tx-1); font-size: 15px;">
+          <button type="button" onClick="{{closePalette}}" style="height: 24px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-3); font-family: var(--mono); font-size: 11px;">esc</button>
+        </div>
+        <div style="padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: 340px; overflow-y: auto;">
+          <sc-for list="{{results}}" as="x" hint-placeholder-count="6">
+            <button type="button" class="fc-h" onClick="{{x.pick}}" style="display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--tx-1); text-align: left;">
+              <span style="flex: 0 0 34px; font-size: 11px; color: var(--tx-3);">{{x.kind}}</span>
+              <span style="flex: 1; font-weight: 500;">{{x.name}}</span>
+              <span style="font-size: 12px; color: var(--tx-3);">{{x.hint}}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{noResults}}" hint-placeholder-val="{{false}}">
+            <p style="margin: 0; padding: 14px 10px; color: var(--tx-3);">没有匹配项。试试 tdd、同步或体检。</p>
+          </sc-if>
+        </div>
+        <div style="display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--bg-subtle); font-size: 11px; color: var(--tx-3);">
+          <span>↑↓ 选择</span><span>↩ 打开</span><span>⌘↩ 加入清单</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 提示 -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+    <div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 10px; background: #1D1D1F; color: #F2F2F4; box-shadow: var(--shadow-pop); z-index: 7; white-space: nowrap;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5BCB85" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"></path></svg>
+      <span>{{toastText}}</span>
+      <button type="button" onClick="{{dismissToast}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.14); color: #F2F2F4;">好</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"density":{"editor":"enum","options":["紧凑","标准"],"default":"紧凑","section":"外观"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  st() {
+    return Object.assign({
+      tool: 'claude', tab: 'effective', sel: 'harness', drift: null, driftPick: 'promote',
+      tddQueued: false, tddAlso: {}, larkOff: false, sheet: false, palette: false, query: '',
+      toast: false, toastText: '', synced: false, current: '#127', mfile: 'toml', mview: 'table', navC: false, inspOpen: true
+    }, this.state || {});
+  }
+  renderVals() {
+    const s = this.st();
+    const set = (o) => this.setState(o);
+    const dark = this.props.dark ?? false;
+    const rowH = (this.props.density ?? '紧凑') === '标准' ? 36 : 30;
+
+    const LAYERS = { global: ['全局', 0], bundle: ['套装 · 工程基线', 1], project: ['项目', 2], local: ['个人', 3] };
+    const TONE = {
+      neutral: ['var(--tx-2)', 'var(--muted-dot)'], ok: ['var(--ok)', 'var(--ok-dot)'], warn: ['var(--warn)', 'var(--warn-dot)'],
+      info: ['var(--info)', 'var(--info-dot)'], muted: ['var(--tx-3)', 'var(--muted-dot)'], unknown: ['var(--unknown)', 'var(--unknown-dot)']
+    };
+    const marks = (i) => [0, 1, 2, 3].map((k) => ({ s: 'width: 6px; height: 6px; border-radius: 1.5px; box-sizing: border-box; ' + (k === i ? 'background: var(--accent);' : 'border: 1px solid var(--line-strong);') }));
+
+    const driftDoneMap = {
+      promote: { title: '已回流到来源', status: '已回流 · 9c1f2a', desc: '修改已写回 local:luyao-skills，生成新版本 9c1f2a。另有 4 个项目使用 project-harness，它们会出现在「活动」的待处理里，逐个决定是否跟进。', showProjects: true },
+      discard: { title: '已丢弃修改', status: '已恢复 · 4d9b1eb', desc: '副本已恢复为 4d9b1eb。被丢弃的修改备份在「活动」里，随时可以找回。', showProjects: false },
+      fork: { title: '已分叉为项目专属', status: '项目分叉 · f3a07d', desc: '另存为 project-harness@evals_studio，清单改为指向分叉版本，不再跟随来源更新。', showProjects: false }
+    };
+
+    const R = {
+      agents: { name: 'AGENTS.md', version: '', layer: 'project', tone: 'neutral', status: '正本', cost: '2.4k', kind: '指令文件', fields: [['路径', 'AGENTS.md', 1], ['角色', '正本，其他指令文件由它生成'], ['大小', '96 行']], why: '项目清单把 AGENTS.md 指定为正本，所以它对本项目生效。\n其他指令文件都从它生成。' },
+      claude: { name: 'CLAUDE.md', version: '', layer: 'project', tone: 'neutral', status: '镜像自 AGENTS.md', cost: '0.1k', kind: '指令文件', fields: [['路径', 'CLAUDE.md', 1], ['内容', '@AGENTS.md（引用，不复制）'], ['生成', '由方寸物化']], why: '这份文件由方寸自动生成，内容只有一行对 AGENTS.md 的引用。\n要改指令请编辑 AGENTS.md，不要直接改它。' },
+      harness: { name: 'project-harness', version: '7月版 · 4d9b1eb', layer: 'project', tone: 'warn', status: '已漂移', cost: '0.4k', kind: 'Skill', drift: true, fields: [['来源', 'local:luyao-skills', 1], ['版本', 'pin 4d9b1eb', 1], ['物化', '链接 → ~/.fangcun/lib', 1], ['使用中', '5 个项目']], why: '项目清单固定使用 4d9b1eb 版本。\n但项目里的这份副本被改动过，和锁定的版本对不上，所以标为漂移。' },
+      tdd: { name: 'tdd', version: 'a1b2c3', layer: 'bundle', tone: 'info', status: '可更新 ↑ b7e9f0', cost: '0.2k', kind: 'Skill', update: true, fields: [['来源', 'github:obra/superpowers', 1], ['跟随', 'track main', 1], ['套装', '工程基线'], ['含脚本', '是 · 1 个']], why: '它来自本项目启用的套装「工程基线」。\n套装设定跟随上游 main 分支。上游出了新版本 b7e9f0，你确认后才会更新。' },
+      fedp: { name: 'frontend-design', version: 'v1.3.0', layer: 'project', tone: 'neutral', status: '覆盖全局同名项', cost: '0.2k', kind: 'Skill', fields: [['来源', 'github:acme/skills', 1], ['版本', 'pin v1.3.0', 1], ['覆盖', '全局 frontend-design']], why: '项目清单里声明了它。\n全局也装了一个同名 skill，同名时以项目里的为准，所以生效的是这一份。' },
+      lark: { name: 'lark-doc …等 16 项', version: '', layer: 'global', tone: 'muted', status: '本项目从未使用', cost: '6.4k', kind: 'Skill · 16 项', unused: true, fields: [['位置', '~/.claude/skills', 1], ['来源', '~/.agents/skills', 1], ['触发', '近 30 天 0 次']], why: '它们装在全局目录里，而全局的东西会加载进每一个项目。\n本项目没有用到它们，近 30 天也从未触发，却一直占着上下文。' },
+      prrev: { name: 'pr-review', version: '', layer: 'global', tone: 'unknown', status: '来源未知', cost: '0.3k', kind: 'Skill', unknown: true, fields: [['位置', '~/.agents/skills/pr-review', 1], ['来源', '未知'], ['含脚本', '否']], why: '它装在全局目录里，所以对本项目也生效。\n方寸查不到它从哪来，无法判断版本，也没法提醒更新。' },
+      fedg: { name: 'frontend-design', version: 'v1.1.0', layer: 'global', tone: 'muted', status: '被项目同名项覆盖', cost: '0', kind: 'Skill', overridden: true, struck: true, fields: [['位置', '~/.claude/skills', 1], ['版本', 'v1.1.0', 1], ['生效', '否']], why: '它没有生效。\n本项目里有一个同名 skill，同名时以项目里的为准，这份全局版本被挡住，不会加载。' },
+      github: { name: 'github', version: 'server-github', layer: 'project', tone: 'neutral', status: '密钥在钥匙串', cost: '4.8k', kind: 'MCP 服务', fields: [['命令', 'npx -y @modelcontextprotocol/server-github', 1], ['密钥', 'GITHUB_TOKEN → 钥匙串'], ['写入', '.mcp.json 按键合并', 1]], why: '项目清单里声明了这个 MCP 服务，所以它对本项目生效。\nGitHub 令牌存在钥匙串里，配置文件只写引用，不写明文。' }
+    };
+
+    if (s.drift) { R.harness.tone = 'ok'; R.harness.status = driftDoneMap[s.drift].status; }
+    if (s.tddQueued) { R.tdd.status = '待同步 ↑ b7e9f0'; }
+    if (s.larkOff) { R.lark.status = '已停用（待同步）'; R.lark.struck = true; R.lark.cost = '0'; }
+
+    const layout = s.tool === 'claude'
+      ? [['指令', ['agents', 'claude']], ['Skills', ['harness', 'tdd', 'fedp', 'lark', 'prrev', 'fedg']], ['MCP', ['github']]]
+      : [['指令', ['agents']], ['Skills', ['harness', 'tdd', 'fedp']], ['MCP', ['github']]];
+    const num = (c) => parseFloat(c) || 0;
+    const fmt = (n) => (Math.round(n * 10) / 10).toFixed(1) + 'k';
+
+    const groups = layout.map(([label, ids]) => {
+      const rows = ids.map((id) => {
+        const r = R[id];
+        const on = s.sel === id;
+        const [tc, dc] = TONE[r.tone];
+        return {
+          name: r.name, version: r.version, layer: LAYERS[r.layer][0], marks: marks(LAYERS[r.layer][1]),
+          status: r.status, cost: r.cost === '0' ? '—' : r.cost, on,
+          pick: () => set({ sel: id, inspOpen: true }),
+          rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; width: 100%; min-height: ' + rowH + 'px; padding: 4px 16px; border: 0; text-align: left; color: var(--tx-1); box-sizing: border-box;' + (on ? ' background: var(--bg-selected);' : ' background: transparent;'),
+          nameStyle: 'font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' + (r.struck ? ' text-decoration: line-through; color: var(--tx-3);' : ''),
+          statusStyle: 'flex: 0 0 170px; display: flex; align-items: center; gap: 6px; white-space: nowrap; color: ' + tc + ';',
+          dotStyle: 'width: 7px; height: 7px; border-radius: 4px; flex: none; background: ' + dc + ';'
+        };
+      });
+      const total = ids.reduce((a, id) => a + num(R[id].cost), 0);
+      return { label, rows, cost: '常驻 ' + fmt(total) };
+    });
+
+    const sum = (ids) => ids.reduce((a, id) => a + num(R[id].cost), 0);
+    const ins = sum(layout[0][1]), sk = sum(layout[1][1]), mcp = sum(layout[2][1]);
+    const tot = ins + sk + mcp;
+    const pct = (v) => Math.max(0, Math.min(100, (v / 20) * 100)).toFixed(1) + '%';
+    const budget = {
+      total: fmt(tot), ins: fmt(ins), sk: fmt(sk), mcp: fmt(mcp),
+      aria: '常驻上下文估算 ' + fmt(tot) + '，占项目预算 20k 的 ' + Math.round(tot / 20 * 100) + '%',
+      w1: 'width: ' + pct(ins) + '; background: var(--bar-1);',
+      w2: 'width: ' + pct(sk) + '; background: var(--bar-2);',
+      w3: 'width: ' + pct(mcp) + '; background: var(--bar-3);'
+    };
+
+    const visible = layout.reduce((a, g) => a.concat(g[1]), []);
+    const selId = visible.indexOf(s.sel) >= 0 ? s.sel : 'harness';
+    const r = R[selId];
+    const [stc, sdc] = TONE[r.tone];
+    const STK = {
+      agents: ['', '', '生效 · 正本', ''], claude: ['', '', '生效 · 生成的镜像', ''],
+      harness: ['', '', '生效 · 固定 4d9b1eb', ''], tdd: ['', '生效 · 来自「工程基线」', '', ''],
+      fedp: ['同名 v1.1.0 · 被遮蔽', '', '生效 · v1.3.0', ''],
+      lark: [s.larkOff ? '已安装 · 被本项目停用' : '生效 · 16 项', '', s.larkOff ? '本项目停用（待同步）' : '', ''],
+      prrev: ['生效 · 来源未知', '', '', ''], fedg: ['v1.1.0 · 被遮蔽', '', '同名 v1.3.0 生效', ''],
+      github: ['', '', '生效 · 密钥在钥匙串', '']
+    };
+    const LNAMES = ['全局', '套装', '项目', '个人'];
+    const stackOut = (STK[selId] || ['', '', '', '']).map((v, k) => {
+      const muted = v.indexOf('遮蔽') >= 0 || v.indexOf('已安装') === 0;
+      const warn = !muted && v.indexOf('停用') >= 0;
+      const eff = !muted && !warn && v.indexOf('生效') >= 0;
+      return { layer: LNAMES[k], val: v || '未声明', marks: marks(k),
+        style: 'display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px;' + (k > 0 ? ' border-top: 1px solid var(--line);' : '') + (eff ? ' background: var(--ok-weak);' : (warn ? ' background: var(--warn-weak);' : '')),
+        valStyle: 'flex: 1; min-width: 0; ' + (eff ? 'color: var(--ok); font-weight: 500;' : (warn ? 'color: var(--warn); font-weight: 500;' : (muted ? 'color: var(--tx-3); text-decoration: line-through;' : 'color: var(--tx-3);'))) };
+    });
+    const FILES = {
+      agents: ['AGENTS.md'], claude: ['CLAUDE.md · 内容为 @AGENTS.md'],
+      harness: ['.agents/skills/project-harness → 资产库', '.claude/skills/project-harness → .agents/skills/project-harness'],
+      tdd: ['.agents/skills/tdd → 资产库', '.claude/skills/tdd → .agents/skills/tdd'],
+      fedp: ['.agents/skills/frontend-design → 资产库', '.claude/skills/frontend-design → .agents/skills/frontend-design'],
+      lark: ['~/.claude/skills/lark-*（16 个链接，全局）'], prrev: ['~/.claude/skills/pr-review → ~/.agents/skills/pr-review'],
+      fedg: ['~/.claude/skills/frontend-design（全局，未加载）'], github: ['.mcp.json → mcpServers.github（按键合并）', 'Codex 配置 → github（按键合并）']
+    };
+    const filesOut = (FILES[selId] || []).map((p) => ({ p }));
+    const ACT = {
+      agents: [['11-13', '同步 · 内容未变'], ['11-01', '正本更新到 5e2a7c1']], claude: [['11-10', '由方寸生成镜像']],
+      harness: [['5 分钟前', '检测到漂移 · 多 3 行、少 1 行'], ['11-11', '收编进资产库'], ['07-02', '固定到 4d9b1eb']],
+      tdd: [['11-12', '上游新提交 b7e9f0'], ['10-28', '升级到 a1b2c3']], fedp: [['11-12', '升级 v1.1.0 → v1.3.0']],
+      lark: [['近 30 天', '本项目触发 0 次'], ['07-05', '装入全局']], prrev: [['11-11', '体检发现 · 来源未知']],
+      fedg: [['11-12', '项目层同名项升级后开始遮蔽'], ['09-20', '装入全局']], github: [['11-10', '密钥迁入钥匙串'], ['11-10', '写入 .mcp.json']]
+    };
+    if (s.drift && selId === 'harness') ACT.harness.unshift(['刚刚', driftDoneMap[s.drift].title]);
+    const actsOut = (ACT[selId] || []).map(([when, text]) => ({ when, text }));
+    const myCost = num(r.cost);
+    const sharePct = tot > 0 ? Math.round(myCost / tot * 100) : 0;
+    const shareText = myCost > 0 ? r.cost + ' · 占本项目常驻 ' + sharePct + '%' : '不占用常驻上下文';
+    const shareBar = 'display: block; height: 100%; width: ' + Math.max(0, Math.min(100, sharePct)) + '%; background: ' + (sharePct >= 30 ? 'var(--warn-dot)' : 'var(--bar-1)') + ';';
+    const sel = {
+      name: r.name, kind: r.kind, status: r.status,
+      badgeStyle: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; color: ' + stc + '; background: var(--bg); border: 1px solid var(--line);',
+      dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + sdc + ';',
+      fields: [['作用层', LAYERS[r.layer][0]], ['常驻', r.cost === '0' ? '不计入' : r.cost + ' tokens（估算）']].concat(r.fields).map((f) => ({ k: f[0], v: f[1], s: 'margin: 0; min-width: 0; word-break: break-all; color: var(--tx-1);' + (f[2] ? ' font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') })),
+      why: r.why,
+      isDriftOpen: !!r.drift && !s.drift, isDriftDone: !!r.drift && !!s.drift,
+      isUpdate: !!r.update, isUnused: !!r.unused, isOverridden: !!r.overridden, isUnknown: !!r.unknown,
+      stack: stackOut, files: filesOut, acts: actsOut, shareText, shareBar
+    };
+
+    const OPTS = [
+      ['promote', '回流到来源', '写回 local:luyao-skills 生成新版本，再决定其他 4 个项目是否跟进。'],
+      ['discard', '丢弃修改', '恢复为锁定的 4d9b1eb，修改备份进「活动」。'],
+      ['fork', '分叉为项目专属', '另存为本项目专属版本，不再跟随来源。']
+    ];
+    const driftOpts = OPTS.map(([id, title, desc]) => {
+      const on = s.driftPick === id;
+      return { title, desc, on, pick: () => set({ driftPick: id }),
+        style: 'display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; cursor: pointer; background: var(--bg); border: 1px solid ' + (on ? 'var(--accent)' : 'var(--line)') + ';' + (on ? ' box-shadow: 0 0 0 1px var(--accent);' : '') };
+    });
+
+    const plan = [
+      { op: '+', path: '.agents/skills/tdd', note: '链接到 tdd@' + (s.tddQueued ? 'b7e9f0' : 'a1b2c3') },
+      { op: '+', path: '.claude/skills/tdd', note: '相对链接到 .agents/skills/tdd' },
+      { op: '~', path: '.mcp.json', note: '新增键 mcpServers.github' },
+      { op: '−', path: '.trae/project-harness', note: '改由资产库管理，已备份' }
+    ];
+    const TDD_OTHERS = [['agent-lab', '跟随 main · 链接'], ['fangcun', '跟随 main · 入库']];
+    const tddOthers = TDD_OTHERS.map(([name, note], i) => ({ name, note, id: 'tddp' + i, checked: !!s.tddAlso[name],
+      toggle: () => { const a = Object.assign({}, s.tddAlso); a[name] = !a[name]; set({ tddAlso: a, synced: false }); } }));
+    const tddPicked = tddOthers.filter((p) => p.checked);
+    if (s.tddQueued) tddPicked.forEach((p) => plan.push({ op: '~', path: p.name + '/.agents/skills/tdd', note: '改到 b7e9f0 · 另留该项目的快照' }));
+    if (s.larkOff) plan.push({ op: '~', path: 'fangcun.toml', note: '停用全局 lark-* 16 项（仅本项目）' });
+    if (s.larkOff) plan.push({ op: '−', path: '.claude/skills/lark-*', note: '16 个全局链接从本项目视图移除' });
+    const OPC = { '+': 'var(--ok)', '~': 'var(--warn)', '−': 'var(--danger)' };
+    const planOut = s.synced ? [] : plan.map((c) => Object.assign({}, c, { opStyle: 'flex: 0 0 12px; font-weight: 600; color: ' + OPC[c.op] + ';' }));
+    const planCount = s.synced ? 0 : plan.length;
+
+    const MAN = [
+      '# fangcun.toml —— 提交到 git', '[project]', 'targets = ["claude-code", "codex"]', 'mode    = "link"                 # link 或 vendor', '',
+      'bundles = ["工程基线"]', '', '[skills]',
+      'project-harness = { source = "local:luyao-skills", pin = "4d9b1eb" }',
+      'frontend-design = { source = "github:acme/skills", pin = "v1.3.0" }', '',
+      '[mcp.github]', 'command = "npx"', 'args    = ["-y", "@modelcontextprotocol/server-github"]',
+      'env     = { GITHUB_TOKEN = "secret:github-token" }   # 值在钥匙串', '',
+      '[instructions]', 'canonical = "AGENTS.md"          # 正本', 'mirror    = ["CLAUDE.md"]        # 生成为对正本的引用'
+    ];
+    if (s.larkOff) MAN.push('', '[disable]', 'global = ["lark-*"]              # 仅本项目停用');
+    const manifest = MAN.map((t) => ({ t, s: t.charAt(0) === '#' ? 'color: var(--tx-3);' : (t.charAt(0) === '[' ? 'color: var(--accent); font-weight: 500;' : 'color: var(--tx-1);') }));
+    const lineify = (arr) => arr.map((t, i) => ({ n: String(i + 1), t: t, s: 'flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; ' + (t.charAt(0) === '#' ? 'color: var(--tx-3);' : (t.charAt(0) === '[' ? 'color: var(--accent); font-weight: 500;' : 'color: var(--tx-1);')) }));
+    const cs = (isMono, tone) => 'padding: 8px 12px; vertical-align: top; text-align: left; word-break: break-word; ' + (isMono ? 'font-family: var(--mono); font-size: 11px; line-height: 18px; ' : '') + 'color: ' + (tone || 'var(--tx-1)') + ';';
+    const RW = (a, b, c, note, o) => { o = o || {}; return { a, b, c, note: note || '', hasNote: !!note, sa: cs(o.am !== false, o.at) + ' font-weight: 500;', sb: cs(o.bm !== false, 'var(--tx-2)'), sc: cs(!!o.cm, o.ct) }; };
+    const SEC = (title, h1, h2, h3, rows) => ({ title, h1, h2, h3, rows });
+    const tomlSkills = [
+      RW('project-harness', 'local:luyao-skills', '固定 4d9b1eb'),
+      RW('frontend-design', 'github:acme/skills', '固定 v1.3.0'),
+      RW('tdd', 'github:obra/superpowers', '跟随 main 分支', '来自套装「工程基线」')
+    ];
+    if (s.larkOff) tomlSkills.push(RW('lark-*（16 项）', '全局层', '本项目停用', '待同步', { ct: 'var(--warn)' }));
+    const MF = {
+      toml: { name: 'fangcun.toml', role: '项目清单', tag: '提交到 git', tone: 'ok',
+        desc: '项目清单。同事克隆仓库后运行 fangcun sync，就能还原完全相同的环境。界面上的改动最终都写回这个文件。',
+        sections: [
+          SEC('项目设置', '设置', '值', '含义', [
+            RW('目标工具', 'claude-code, codex', '两个工具都按本清单物化', '', { am: false }),
+            RW('物化方式', 'link', '项目目录里放软链，指向资产库', '团队项目可改为 vendor，实体文件入库', { am: false }),
+            RW('套装', '工程基线', '套装里的资产一并生效', '', { am: false, bm: false })
+          ]),
+          SEC('Skills', '名称', '来源', '版本策略', tomlSkills),
+          SEC('MCP 服务', '名称', '启动命令', '密钥', [
+            RW('github', 'npx -y @modelcontextprotocol/server-github', 'GITHUB_TOKEN 存在钥匙串', '文件里只写引用 secret:github-token')
+          ]),
+          SEC('指令文件', '角色', '文件', '说明', [
+            RW('正本', 'AGENTS.md', '手工编辑这一份', '', { am: false }),
+            RW('镜像', 'CLAUDE.md', '自动生成，内容是对 AGENTS.md 的引用', '', { am: false })
+          ])
+        ],
+        lines: lineify(MAN) },
+      lock: { name: 'fangcun.lock', role: '版本锁', tag: '提交 · 自动生成', tone: 'info',
+        desc: '由方寸根据清单解析生成，记录每项资产确切的提交与内容哈希。每次同步都会校验哈希，来源被篡改会被拦下。不要手工编辑。',
+        sections: [
+          SEC('已解析的版本', '资产', '解析到', '内容哈希', [
+            RW('project-harness', '4d9b1eb', 'sha256:4d9b…7c21', '', { cm: true }),
+            RW('frontend-design', 'v1.3.0 → c03d1f2', 'sha256:c03d…a9e0', '', { cm: true }),
+            RW('tdd', 'main → a1b2c3', 'sha256:a1b2…3f08', '上游已有 b7e9f0，尚未升级', { cm: true }),
+            RW('github', 'npx 启动命令', 'sha256:7a1e…0b44', '启动命令一变，升级时会高亮提示', { cm: true, bm: false })
+          ])
+        ],
+        lines: lineify(['# fangcun.lock —— 由方寸生成，请勿手工编辑', 'version = 1', '', '[[asset]]', 'name   = "project-harness"', 'source = "local:luyao-skills"', 'commit = "4d9b1eb"', 'hash   = "sha256:4d9b…7c21"', '', '[[asset]]', 'name   = "frontend-design"', 'source = "github:acme/skills"', 'tag    = "v1.3.0"', 'commit = "c03d1f2"', 'hash   = "sha256:c03d…a9e0"', '', '[[asset]]', 'name   = "tdd"', 'source = "github:obra/superpowers"', 'track  = "main"', 'commit = "a1b2c3"', 'hash   = "sha256:a1b2…3f08"', '', '[[mcp]]', 'name    = "github"', 'command = "npx -y @modelcontextprotocol/server-github"', 'hash    = "sha256:7a1e…0b44"']) },
+      local: { name: 'fangcun.local.toml', role: '个人覆盖', tag: '不提交', tone: 'muted',
+        desc: '只属于你的覆盖，已自动加入 .gitignore。它优先于项目清单，但只在你的机器上生效，同事看不到。',
+        sections: [
+          SEC('个人覆盖', '项', '值', '效果', [
+            RW('追加 skill', 'debug-notes · local:~/my-skills', '开发模式，改完立即可见', '只在你的机器上加载', { am: false }),
+            RW('停用', 'pr-review', '你本人不加载这个全局 skill', '', { am: false })
+          ])
+        ],
+        lines: lineify(['# fangcun.local.toml —— 不提交，只属于你', '[skills]', 'debug-notes = { source = "local:~/my-skills", dev = true }', '', '[disable]', 'global = ["pr-review"]']) }
+    };
+    const WEAK = { ok: ['var(--ok)', 'var(--ok-weak)'], info: ['var(--info)', 'var(--info-weak)'], muted: ['var(--tx-2)', 'var(--bg-hover)'] };
+    const mfiles = ['toml', 'lock', 'local'].map((id) => {
+      const f = MF[id]; const on = s.mfile === id; const w = WEAK[f.tone];
+      return { name: f.name, role: f.role, tag: f.tag, on, pick: () => set({ mfile: id }),
+        style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 180px; padding: 8px 12px; border-radius: 8px; text-align: left; color: var(--tx-1); ' + (on ? 'border: 1px solid var(--accent); background: var(--accent-weak); box-shadow: 0 0 0 1px var(--accent);' : 'border: 1px solid var(--line); background: var(--bg);'),
+        tagStyle: 'margin-top: 4px; font-size: 11px; padding: 0 6px; border-radius: 4px; color: ' + w[0] + '; background: ' + (on ? 'var(--bg)' : w[1]) + ';' };
+    });
+    const mf = MF[s.mfile] || MF.toml;
+    const mviews = [['table', '结构化'], ['src', '源文件']].map(([id, label]) => {
+      const on = s.mview === id;
+      return { label, on, pick: () => set({ mview: id }),
+        style: 'height: 24px; padding: 0 10px; border: 0; border-radius: 5px; font-size: 12px; font-weight: 500; ' + (on ? 'background: var(--bg); color: var(--tx-1); box-shadow: 0 1px 2px rgba(0,0,0,.12);' : 'background: transparent; color: var(--tx-2);') };
+    });
+
+    const HIST = [
+      { id: '#127', title: '同步 3 处变更', when: '11-13 10:42' },
+      { id: '#126', title: '升级 frontend-design → v1.3.0', when: '11-12 18:05' },
+      { id: '#125', title: '收编 project-harness', when: '11-11 09:30' },
+      { id: '#124', title: '登记项目，生成清单与锁', when: '11-10 16:12' }
+    ];
+    if (s.synced) HIST.unshift({ id: '#128', title: '同步 ' + plan.length + ' 处变更', when: '刚刚' });
+    const history = HIST.map((h) => ({ id: h.id, title: h.title, when: h.when, current: h.id === s.current, canRoll: h.id !== s.current,
+      roll: () => set({ current: h.id, toast: true, toastText: '已回滚到快照 ' + h.id + '，磁盘状态逐字节一致' }) }));
+
+    const TABS = [['effective', '生效上下文'], ['manifest', '清单'], ['history', '历史']];
+    const tabs = TABS.map(([id, label]) => {
+      const on = s.tab === id;
+      return { label, on, pick: () => set({ tab: id }),
+        style: 'height: 36px; padding: 0 10px; border: 0; background: transparent; margin-bottom: -1px; border-bottom: 2px solid ' + (on ? 'var(--accent)' : 'transparent') + '; color: ' + (on ? 'var(--tx-1)' : 'var(--tx-2)') + '; font-weight: ' + (on ? '600' : '400') + ';' };
+    });
+
+    const tools = [['claude', 'Claude Code'], ['codex', 'Codex']].map(([id, label]) => {
+      const on = s.tool === id;
+      return { label, on, pick: () => set({ tool: id }),
+        style: 'height: 24px; padding: 0 10px; border: 0; border-radius: 5px; font-size: 12px; font-weight: 500; ' + (on ? 'background: var(--bg); color: var(--tx-1); box-shadow: 0 1px 2px rgba(0,0,0,.12);' : 'background: transparent; color: var(--tx-2);') };
+    });
+
+    const PROJ = [
+      ['evals_studio', 'warn', '漂移'], ['agent-lab', 'ok', ''], ['fangcun', 'info', '可更新'], ['blog-site', 'ok', ''], ['notes-kit', 'ok', ''], ['client-acme', 'ok', '']
+    ];
+    const projects = PROJ.map(([name, tone, note], i) => {
+      const t = name === 'evals_studio' && s.drift ? 'ok' : tone;
+      return { name, note: name === 'evals_studio' && s.drift ? '' : note,
+        dot: 'width: 7px; height: 7px; border-radius: 4px; flex: none; background: ' + TONE[t][1] + ';',
+        style: 'display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 6px;' + (i === 0 ? ' color: var(--tx-1); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line-strong);' : ' color: var(--tx-2);') };
+    });
+
+    const ALL = [
+      { kind: '资产', name: 'tdd', hint: '套装 · 可更新', go: () => set({ palette: false, tab: 'effective', sel: 'tdd' }) },
+      { kind: '资产', name: 'project-harness', hint: '项目 · 已漂移', go: () => set({ palette: false, tab: 'effective', sel: 'harness' }) },
+      { kind: '资产', name: 'lark-doc', hint: '全局 · 16 项', go: () => set({ palette: false, tab: 'effective', tool: 'claude', sel: 'lark' }) },
+      { kind: '资产', name: 'github', hint: 'MCP · 项目', go: () => set({ palette: false, tab: 'effective', sel: 'github' }) },
+      { kind: '动作', name: '同步 evals_studio', hint: planCount + ' 处变更', go: () => set({ palette: false, sheet: true }) },
+      { kind: '动作', name: '查看清单 fangcun.toml', hint: '', go: () => set({ palette: false, tab: 'manifest' }) },
+      { kind: '动作', name: '查看历史与回滚', hint: '', go: () => set({ palette: false, tab: 'history' }) }
+    ];
+    const q = (s.query || '').trim().toLowerCase();
+    const results = ALL.filter((x) => !q || (x.name + x.hint + x.kind).toLowerCase().indexOf(q) >= 0).map((x) => ({ kind: x.kind, name: x.name, hint: x.hint, pick: x.go }));
+
+    const dd = s.drift ? driftDoneMap[s.drift] : driftDoneMap.promote;
+    const OTH = s.tool === 'claude'
+      ? [['插件', 'code-review-kit', 0, '含 2 个斜杠命令', '0.3k'], ['插件', 'notify', 0, '含 1 个 Hook', '—'], ['Hook', 'PostToolUse · 格式化代码', 2, '会执行脚本', '—'], ['斜杠命令', '/release', 2, '按需加载', '0.1k']]
+      : [['自定义提示', 'review', 0, '按需加载', '—']];
+    const others = OTH.map(([kind, name, li, note, cost]) => ({ kind, name, note, cost, layer: ['全局', '套装', '项目', '个人'][li], marks: marks(li),
+      rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: ' + rowH + 'px; padding: 4px 16px; box-sizing: border-box; color: var(--tx-1);' }));
+    const othersFoot = s.tool === 'claude' ? '未发现子代理。将在后续版本纳入管理。' : 'Codex 没有发现插件或 Hook。将在后续版本纳入管理。';
+
+    return {
+      rootClass: 'fc fc-shell' + (dark ? ' dark' : ''), others, othersFoot,
+      navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
+      navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';',
+      inspClass: (s.inspOpen || s.sel !== s.closedSel) ? '' : 'fc-hidden', closeInsp: () => set({ inspOpen: false, closedSel: s.sel }),
+      projects, tools, tabs, groups, budget, sel, driftOpts, history, manifest, results, mfiles, mf, mviews,
+      mIsTable: s.mview === 'table', mIsSrc: s.mview === 'src',
+      plan: planOut, planCount,
+      isEffective: s.tab === 'effective', isManifest: s.tab === 'manifest', isHistory: s.tab === 'history',
+      codexNote: s.tool === 'codex',
+      hasDrift: !s.drift,
+      tddQueued: s.tddQueued, tddNotQueued: !s.tddQueued, tddOthers,
+      tddQueuedText: '已加入同步计划 · ' + (tddPicked.length ? '共 ' + (tddPicked.length + 1) + ' 个项目' : '仅本项目'),
+      tddBtnLabel: tddPicked.length ? '审阅后加入同步计划 · ' + (tddPicked.length + 1) + ' 个项目' : '审阅后加入同步计划',
+      larkOff: s.larkOff, larkOn: !s.larkOff,
+      driftDone: { title: dd.title, desc: dd.desc, showProjects: dd.showProjects },
+      sheet: s.sheet, palette: s.palette, query: s.query, noResults: results.length === 0,
+      toast: s.toast, toastText: s.toastText,
+      goDrift: () => set({ tab: 'effective', sel: 'harness' }),
+      goOverrider: () => set({ sel: 'fedp' }),
+      confirmDrift: () => set({ drift: s.driftPick, toast: true, toastText: driftDoneMap[s.driftPick].title + ' · 已留快照，可撤销' }),
+      undoDrift: () => set({ drift: null }),
+      toggleTdd: () => set({ tddQueued: !s.tddQueued, synced: false }),
+      toggleLark: () => set({ larkOff: !s.larkOff, synced: false }),
+      openSheet: () => set({ sheet: true, palette: false }),
+      closeSheet: () => set({ sheet: false }),
+      applySync: () => planCount === 0
+        ? set({ sheet: false })
+        : set({ sheet: false, synced: true, current: '#128', toast: true, toastText: '已同步 ' + planCount + ' 处变更 · 快照 #128' }),
+      openPalette: () => set({ palette: true, query: '' }),
+      closePalette: () => set({ palette: false }),
+      onQuery: (e) => set({ query: e.target.value }),
+      dismissToast: () => set({ toast: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

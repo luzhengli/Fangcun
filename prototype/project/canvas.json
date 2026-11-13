@@ -1,0 +1,22 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-11-13T23:10:00Z"},
+  "title": "Fangcun 设计系统与原型",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 1600, "y": 0, "w": 1440, "h": 900, "title": "项目 · 生效上下文", "expand": "fill", "is_interactive": true},
+    "DesignSystem.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 3400, "title": "方寸设计系统 · 墨格", "expand": "fill"},
+    "Checkup.dc.html": {"x": 1600, "y": 1020, "w": 1440, "h": 900, "title": "首次启动 · 体检报告", "expand": "fill", "is_interactive": true},
+    "Library.dc.html": {"x": 1600, "y": 2040, "w": 1440, "h": 900, "title": "资产库 · 资产详情", "expand": "fill", "is_interactive": true},
+    "Bundles.dc.html": {"x": 1600, "y": 3060, "w": 1440, "h": 900, "title": "套装 · 资产组合", "expand": "fill", "is_interactive": true},
+    "Global.dc.html": {"x": 1600, "y": 4080, "w": 1440, "h": 900, "title": "全局 · 瘦身", "expand": "fill", "is_interactive": true},
+    "Activity.dc.html": {"x": 1600, "y": 5100, "w": 1440, "h": 900, "title": "活动 · 时间线与回滚", "expand": "fill", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "DesignSystem.dc.html", "Checkup.dc.html", "Library.dc.html", "Bundles.dc.html", "Global.dc.html", "Activity.dc.html"],
+  "notes": {
+    "dsTitle": {"x": 0, "y": -300, "text": "设计系统：从产品方案提取", "kind": "title1", "maxW": 1440},
+    "protoTitle": {"x": 1600, "y": -300, "text": "高保真原型：Mac 主窗口", "kind": "title1", "maxW": 1440}
+  },
+  "designSystems": []
+}

@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸设计系统 · 墨格</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--add-bg:#E3F4E8;--del-bg:#FBE7E6;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--add-bg:#173020;--del-bg:#3A1D1C;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+.fc-btn:hover{filter:brightness(.95)}
+.fc.dark .fc-btn:hover{filter:brightness(1.15)}
+.fc a{color:var(--accent)}
+.fc a:hover{color:var(--tx-1)}
+</style>
+</helmet>
+<div class="{{rootClass}}" style="background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased;">
+<div style="max-width: 1280px; margin: 0 auto; padding: 72px 40px 96px; display: flex; flex-direction: column; gap: 80px;">
+
+  <!-- 封面 -->
+  <header style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-end; justify-content: space-between; padding-bottom: 40px; border-bottom: 1px solid var(--line);">
+    <div style="flex: 1 1 520px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <svg width="40" height="40" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
+        <span style="font-size: 13px; color: var(--tx-3); font-family: var(--mono);">fangcun-ds · v0.1 · 2026-11-13</span>
+      </div>
+      <h1 style="margin: 0; font-size: 44px; line-height: 1.15; font-weight: 600; letter-spacing: -.01em;">方寸设计系统：墨格</h1>
+      <p style="margin: 0; max-width: 680px; font-size: 16px; color: var(--tx-2);">从 docs/product-design.md 提取。代码库尚无界面代码，系统依据方案第 6.10 节的视觉基调、第 4 节的概念模型和第 6 节的线框图建立：原生 macOS 质感，Linear 与 Raycast 式信息密度，状态用颜色点加短标签表达。</p>
+    </div>
+    <div style="flex: 0 1 380px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid var(--line);"><div style="font-size: 11px; color: var(--tx-3);">基准字号</div><div style="font-size: 20px; font-weight: 600;">13 px</div></div>
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid var(--line);"><div style="font-size: 11px; color: var(--tx-3);">行高（紧凑）</div><div style="font-size: 20px; font-weight: 600;">30 px</div></div>
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid var(--line);"><div style="font-size: 11px; color: var(--tx-3);">间距基数</div><div style="font-size: 20px; font-weight: 600;">4 px</div></div>
+      <div style="padding: 14px; border-radius: 10px; border: 1px solid var(--line);"><div style="font-size: 11px; color: var(--tx-3);">强调色</div><div style="font-size: 20px; font-weight: 600;">黛蓝 1 种</div></div>
+    </div>
+  </header>
+
+  <!-- 原则 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">01</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">原则</h2></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+      <div style="padding: 20px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-weight: 600; font-size: 15px;">先看见，再管理</span>
+        <span style="color: var(--tx-2);">每一行都回答三件事：来自哪一层、什么版本、什么状态。层级刻度、状态点、版本号是行的固定三件套。</span>
+      </div>
+      <div style="padding: 20px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-weight: 600; font-size: 15px;">密而不乱</span>
+        <span style="color: var(--tx-2);">13 px 正文、30 px 行高、细分隔线。用灰阶层次分组，不用卡片阴影堆砌。强调色只给可操作的东西。</span>
+      </div>
+      <div style="padding: 20px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-weight: 600; font-size: 15px;">预览、确认、可撤销</span>
+        <span style="color: var(--tx-2);">所有落盘动作走同一套模式：变更计划 → 应用 ⌘↩ → 提示条带撤销。用户只学一次。</span>
+      </div>
+      <div style="padding: 20px; border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-weight: 600; font-size: 15px;">文件即真相</span>
+        <span style="color: var(--tx-2);">路径、哈希、清单片段一律等宽字体原样展示。界面是 fangcun.toml 的编辑器，不藏文件。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 色彩 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">02</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">色彩</h2><span style="color: var(--tx-3);">浅色 / 深色成对定义，跟随系统外观</span></div>
+
+    <h3 style="margin: 0; font-size: 15px; font-weight: 600;">中性与强调</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+      <sc-for list="{{neutrals}}" as="c" hint-placeholder-count="10">
+        <div style="border-radius: 10px; border: 1px solid var(--line); overflow: hidden;">
+          <div style="display: flex; height: 64px;"><span style="{{c.light}}"></span><span style="{{c.dark}}"></span></div>
+          <div style="padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-family: var(--mono); font-size: 12px; font-weight: 500;">{{c.token}}</span>
+            <span style="font-size: 12px; color: var(--tx-2);">{{c.use}}</span>
+            <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{c.hex}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <h3 style="margin: 16px 0 0; font-size: 15px; font-weight: 600;">状态语义</h3>
+    <p style="margin: 0; color: var(--tx-2); max-width: 760px;">六种状态，每种三档：文字色（≥ 4.5:1）、圆点色、浅底。状态永远是「圆点 + 短标签」，从不只靠颜色；漂移用橙、可更新用蓝，避免红绿对立。</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px;">
+      <sc-for list="{{states}}" as="c" hint-placeholder-count="6">
+        <div style="{{c.card}}">
+          <span style="{{c.pill}}"><span aria-hidden="true" style="{{c.dot}}"></span>{{c.label}}</span>
+          <span style="font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--tx-1);">{{c.token}}</span>
+          <span style="font-size: 12px; color: var(--tx-2);">{{c.use}}</span>
+          <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{c.hex}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <h3 style="margin: 16px 0 0; font-size: 15px; font-weight: 600;">预算条三色</h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center;">
+      <div style="flex: 1 1 420px; display: flex; gap: 2px; height: 12px; border-radius: 6px; background: var(--bg-hover); overflow: hidden;">
+        <span style="width: 12%; background: var(--bar-1);"></span><span style="width: 37%; background: var(--bar-2);"></span><span style="width: 24%; background: var(--bar-3);"></span>
+      </div>
+      <span style="color: var(--tx-2);">同一色相、三档明度：指令 <span style="font-family: var(--mono);">bar-1</span> · Skill <span style="font-family: var(--mono);">bar-2</span> · MCP <span style="font-family: var(--mono);">bar-3</span>。色弱用户靠明度区分。</span>
+    </div>
+  </section>
+
+  <!-- 字体 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">03</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">字体</h2><span style="color: var(--tx-3);">系统字体优先，非 Mac 回落 Inter + Noto Sans SC</span></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+      <div style="padding: 16px 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; color: var(--tx-3);">--font · 界面</span>
+        <span style="font-family: var(--mono); font-size: 12px; color: var(--tx-2);">-apple-system, SF Pro Text, PingFang SC, Inter, Noto Sans SC</span>
+      </div>
+      <div style="padding: 16px 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; color: var(--tx-3);">--mono · 路径、哈希、清单、键位</span>
+        <span style="font-family: var(--mono); font-size: 12px; color: var(--tx-2);">SF Mono, ui-monospace, JetBrains Mono, Menlo</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; border-top: 1px solid var(--line);">
+      <sc-for list="{{type}}" as="t" hint-placeholder-count="8">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; padding: 14px 0; border-bottom: 1px solid var(--line);">
+          <span style="flex: 0 0 150px; font-family: var(--mono); font-size: 12px; color: var(--tx-3);">{{t.token}}</span>
+          <span style="flex: 0 0 120px; font-family: var(--mono); font-size: 12px; color: var(--tx-3);">{{t.spec}}</span>
+          <span style="{{t.style}}">{{t.sample}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 间距、圆角、阴影 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">04</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">间距、圆角、层级</h2></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-weight: 600;">间距 · 4 px 基数</span>
+        <sc-for list="{{space}}" as="sp" hint-placeholder-count="9">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="flex: 0 0 64px; font-family: var(--mono); font-size: 12px; color: var(--tx-3);">{{sp.token}}</span>
+            <span style="{{sp.bar}}"></span>
+            <span style="font-size: 12px; color: var(--tx-2);">{{sp.use}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-weight: 600;">圆角</span>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+          <sc-for list="{{radii}}" as="rd" hint-placeholder-count="6">
+            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+              <span style="{{rd.box}}"></span>
+              <span style="font-family: var(--mono); font-size: 12px;">{{rd.token}}</span>
+              <span style="font-size: 12px; color: var(--tx-3);">{{rd.use}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-weight: 600;">层级</span>
+        <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 10px; background: var(--bg-sidebar);">
+          <div style="padding: 12px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line);"><span style="font-family: var(--mono); font-size: 12px;">z0 · 平面</span><span style="color: var(--tx-3); font-size: 12px;"> · 1px 分隔线，无阴影</span></div>
+          <div style="padding: 12px 14px; border-radius: 10px; background: var(--bg); box-shadow: var(--shadow-pop);"><span style="font-family: var(--mono); font-size: 12px;">z1 · 浮层</span><span style="color: var(--tx-3); font-size: 12px;"> · 命令面板、变更计划、提示条</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 签名元素 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">05</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">签名元素：层级刻度</h2></div>
+    <p style="margin: 0; color: var(--tx-2); max-width: 760px;">「方寸」取方格之意。作用域四层，用四个 6 px 小方格表示，实心格是该项所在的层。从左到右是全局 → 套装 → 项目 → 个人，下层覆盖上层，越靠右优先级越高。标志也由「方中之方」构成。</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+      <sc-for list="{{layers}}" as="ly" hint-placeholder-count="4">
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span aria-hidden="true" style="display: inline-flex; gap: 2px;"><sc-for list="{{ly.marks}}" as="m" hint-placeholder-count="4"><span style="{{m.s}}"></span></sc-for></span>
+            <span style="font-weight: 600;">{{ly.name}}</span>
+          </div>
+          <span style="font-size: 12px; color: var(--tx-2);">{{ly.desc}}</span>
+          <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{ly.file}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 组件 -->
+  <section style="display: flex; flex-direction: column; gap: 28px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">06</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">组件</h2></div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-weight: 600;">按钮 · 高 28 px</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+          <button type="button" class="fc-btn" style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">应用<span style="font-family: var(--mono); font-size: 11px; opacity: .8;">⌘↩</span></button>
+          <button type="button" class="fc-btn" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">取消</button>
+          <button type="button" class="fc-btn" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--danger-weak); color: var(--danger); font-weight: 500;">删除快照</button>
+          <button type="button" style="height: 28px; padding: 0 4px; border: 0; background: none; color: var(--accent); text-decoration: underline;">撤销</button>
+          <button type="button" class="fc-btn" aria-label="同步" style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 4 4.5L2.5 6"></path><path d="M2.5 3v3h3"></path><path d="M3 9.5a5 5 0 0 0 9 2L13.5 10"></path><path d="M13.5 13v-3h-3"></path></svg></button>
+        </div>
+        <span style="font-size: 12px; color: var(--tx-3);">主要 · 次要 · 危险 · 文字链 · 图标。一屏最多一个主要按钮。</span>
+      </div>
+
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-weight: 600;">状态标签 · 圆点 + 短标签</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px 16px;">
+          <sc-for list="{{states}}" as="c" hint-placeholder-count="6">
+            <span style="{{c.inline}}"><span aria-hidden="true" style="{{c.dot}}"></span>{{c.label}}</span>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 14px; background: var(--warn-weak); color: var(--warn); font-weight: 500;"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 4px; background: var(--warn-dot);"></span>1 处漂移</span>
+          <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--ok-weak); color: var(--ok); align-self: center;">提交到 git</span>
+          <span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2); align-self: center;">只读</span>
+        </div>
+      </div>
+
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-weight: 600;">分段控件 · 目标工具切换</span>
+        <div role="group" aria-label="目标工具" style="align-self: flex-start; display: inline-flex; padding: 2px; border-radius: 7px; background: var(--bg-hover); gap: 2px;">
+          <sc-for list="{{seg}}" as="t" hint-placeholder-count="2">
+            <button type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+        <span style="font-weight: 600; margin-top: 6px;">键位</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--tx-2);">
+          <span style="font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--tx-3);">⌘K</span><span>命令面板</span>
+          <span style="font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--tx-3);">⌘↩</span><span>应用</span>
+          <span style="font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--tx-3);">esc</span><span>关闭</span>
+        </div>
+      </div>
+
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-weight: 600;">变更行 · 计划与差异</span>
+        <div style="font-family: var(--mono); font-size: 12px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; gap: 12px;"><span style="color: var(--ok); font-weight: 600;">+</span><span style="flex: 1;">.agents/skills/tdd</span><span style="color: var(--tx-3); font-family: var(--font);">新增</span></div>
+          <div style="display: flex; gap: 12px;"><span style="color: var(--warn); font-weight: 600;">~</span><span style="flex: 1;">.mcp.json</span><span style="color: var(--tx-3); font-family: var(--font);">按键合并</span></div>
+          <div style="display: flex; gap: 12px;"><span style="color: var(--danger); font-weight: 600;">−</span><span style="flex: 1;">.trae/project-harness</span><span style="color: var(--tx-3); font-family: var(--font);">已备份</span></div>
+        </div>
+        <div style="border-radius: 6px; border: 1px solid var(--line); overflow: hidden; font-family: var(--mono); font-size: 11px; line-height: 1.7;">
+          <div style="padding: 0 10px; background: var(--del-bg); color: var(--danger);">- 运行全部测试后再提交。</div>
+          <div style="padding: 0 10px; background: var(--add-bg); color: var(--ok);">+ 先运行受影响的测试，再运行全部测试。</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 6px; background: var(--danger-weak); color: var(--danger); font-size: 12px;"><span style="font-weight: 600;">脚本变更</span><span style="flex: 1;">scripts/run-tests.sh 新增，会执行命令</span></div>
+      </div>
+    </div>
+
+    <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px;">
+      <span style="font-weight: 600;">资产行 · 生效上下文的基本单位</span>
+      <div style="border-radius: 8px; border: 1px solid var(--line); overflow: hidden;">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+          <div style="{{r.rowStyle}}">
+            <span style="flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 8px;"><span style="{{r.nameStyle}}">{{r.name}}</span><span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{r.version}}</span></span>
+            <span style="flex: 0 0 150px; display: flex; align-items: center; gap: 7px; color: var(--tx-2);"><span aria-hidden="true" style="display: inline-flex; gap: 2px;"><sc-for list="{{r.marks}}" as="m" hint-placeholder-count="4"><span style="{{m.s}}"></span></sc-for></span>{{r.layer}}</span>
+            <span style="{{r.statusStyle}}"><span aria-hidden="true" style="{{r.dotStyle}}"></span>{{r.status}}</span>
+            <span style="flex: 0 0 52px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{r.cost}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <span style="font-size: 12px; color: var(--tx-3);">名称 · 版本 ｜ 层级刻度 · 作用层 ｜ 状态 ｜ 常驻估算。选中行用 bg-selected，悬停叠 4% 灰幕；被覆盖项加删除线并降为三级文字。</span>
+    </div>
+  </section>
+
+  <!-- 图标 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">07</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">图标</h2><span style="color: var(--tx-3);">16 px 网格 · 1.5 px 描边 · 圆角端点 · 继承文字色</span></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px;">
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg><span style="font-size: 12px; color: var(--tx-2);">项目</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg><span style="font-size: 12px; color: var(--tx-2);">资产库</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg><span style="font-size: 12px; color: var(--tx-2);">套装</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" aria-hidden="true"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg><span style="font-size: 12px; color: var(--tx-2);">全局</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg><span style="font-size: 12px; color: var(--tx-2);">活动</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg><span style="font-size: 12px; color: var(--tx-2);">体检</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 4 4.5L2.5 6"></path><path d="M2.5 3v3h3"></path><path d="M3 9.5a5 5 0 0 0 9 2L13.5 10"></path><path d="M13.5 13v-3h-3"></path></svg><span style="font-size: 12px; color: var(--tx-2);">同步</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10V2.5M5 5.5l3-3 3 3"></path><path d="M3 10.5v2a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-2"></path></svg><span style="font-size: 12px; color: var(--tx-2);">回流</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4.5" cy="3.5" r="1.5"></circle><circle cx="4.5" cy="12.5" r="1.5"></circle><circle cx="11.5" cy="5.5" r="1.5"></circle><path d="M4.5 5v6M11.5 7c0 2.5-2 3.5-7 4"></path></svg><span style="font-size: 12px; color: var(--tx-2);">分叉</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" aria-hidden="true"><circle cx="5.5" cy="10.5" r="2.5"></circle><path d="m7.3 8.7 5.2-5.2M10.5 5.5l1.5 1.5"></path></svg><span style="font-size: 12px; color: var(--tx-2);">钥匙串</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5 14 13H2z"></path><path d="M8 6.5v3M8 11.2v.1"></path></svg><span style="font-size: 12px; color: var(--tx-2);">警示</span></div>
+      <div style="padding: 16px 12px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px;"><svg width="24" height="24" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.25"></circle><path d="m10.25 10.25 3.25 3.25"></path></svg><span style="font-size: 12px; color: var(--tx-2);">搜索</span></div>
+    </div>
+  </section>
+
+  <!-- 文案 -->
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 14px;"><span style="font-family: var(--mono); color: var(--tx-3);">08</span><h2 style="margin: 0; font-size: 24px; font-weight: 600;">词汇与语气</h2></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-weight: 600;">固定术语</span>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 12px; font-size: 12px;">
+          <span style="font-weight: 500;">资产</span><span style="color: var(--tx-2);">Skill、MCP 服务、指令文件</span>
+          <span style="font-weight: 500;">物化</span><span style="color: var(--tx-2);">写入各工具原生位置，界面动词用「同步」</span>
+          <span style="font-weight: 500;">漂移</span><span style="color: var(--tx-2);">受管副本被改动</span>
+          <span style="font-weight: 500;">回流 / 丢弃 / 分叉</span><span style="color: var(--tx-2);">漂移的三个出口，顺序固定</span>
+          <span style="font-weight: 500;">固定 / 跟随</span><span style="color: var(--tx-2);">Pin / Track</span>
+          <span style="font-weight: 500;">常驻</span><span style="color: var(--tx-2);">始终占上下文的估算 tokens，永远标「估算」</span>
+        </div>
+      </div>
+      <div style="padding: 20px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-weight: 600;">语气</span>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+          <div style="display: flex; gap: 8px;"><span style="color: var(--ok); font-weight: 600;">用</span><span>不会触碰其他任何文件。</span></div>
+          <div style="display: flex; gap: 8px;"><span style="color: var(--danger); font-weight: 600;">不用</span><span style="color: var(--tx-2);">别担心！我们会非常小心地处理你的文件～</span></div>
+          <div style="display: flex; gap: 8px;"><span style="color: var(--ok); font-weight: 600;">用</span><span>project-harness 有 5 份副本，1 份已分叉。</span></div>
+          <div style="display: flex; gap: 8px;"><span style="color: var(--danger); font-weight: 600;">不用</span><span style="color: var(--tx-2);">检测到一些潜在的重复问题。</span></div>
+        </div>
+        <span style="font-size: 12px; color: var(--tx-3);">陈述事实，给出数字，按钮写动作。</span>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"$preview":{"width":1440,"height":3400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = Object.assign({ seg: 'claude' }, this.state || {});
+    const dark = this.props.dark ?? false;
+    const N = [
+      ['bg', '窗口底', '#FFFFFF', '#1C1C1E'], ['bg-sidebar', '侧栏', '#F2F2F0', '#232325'], ['bg-subtle', '检查器、卡片', '#F8F8F6', '#202022'],
+      ['bg-hover', '悬停、分段底', '#EDEDEA', '#2A2A2D'], ['bg-selected', '选中行', '#E8EDFC', '#27304F'], ['line', '分隔线', '#E6E6E2', '#323235'],
+      ['line-strong', '控件描边', '#D0D0CB', '#46464B'], ['tx-1', '主文字', '#1D1D1F', '#ECECEE'], ['tx-2', '次文字', '#55555A', '#B0B0B6'],
+      ['tx-3', '三级文字', '#6B6B70', '#93939A'], ['accent', '黛蓝 · 唯一强调', '#3552D4', '#7D93FF'], ['accent-weak', '强调浅底', '#ECF0FD', '#252D4A']
+    ];
+    const neutrals = N.map(([t, use, l, d]) => ({ token: '--' + t, use, hex: l + ' / ' + d,
+      light: 'flex: 1; background: ' + l + ';', dark: 'flex: 1; background: ' + d + '; border-left: 1px solid rgba(127,127,127,.25);' }));
+    const S = [
+      ['ok', '已同步', '与锁一致、已回流', '#1B7A43 · dot #2EA457'], ['warn', '已漂移', '受管副本被修改', '#985200 · dot #E58A00'],
+      ['info', '可更新', '上游有新版本', '#3552D4 · dot #4C6EF5'], ['danger', '脚本变更', '升级含命令、明文密钥', '#BA2D28 · dot #E5484D'],
+      ['unknown', '来源未知', '无来源记录', '#6B43C2 · dot #8E62F0'], ['muted', '被覆盖', '遮蔽、停用、从未使用', 'tx-3 · dot #A3A3A8']
+    ];
+    const states = S.map(([k, label, use, hex]) => {
+      const tc = k === 'muted' ? 'var(--tx-3)' : 'var(--' + k + ')';
+      const dc = k === 'muted' ? 'var(--muted-dot)' : 'var(--' + k + '-dot)';
+      const wk = k === 'muted' ? 'var(--bg-hover)' : 'var(--' + k + '-weak)';
+      return { label, use, hex, token: '--' + k,
+        card: 'padding: 14px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px;',
+        pill: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; font-weight: 500; background: ' + wk + '; color: ' + tc + ';',
+        inline: 'display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: ' + tc + ';',
+        dot: 'width: 7px; height: 7px; border-radius: 4px; background: ' + dc + ';' };
+    });
+    const T = [
+      ['display', '28 / 34 · 600', 'font-size: 28px; line-height: 34px; font-weight: 600;', '方寸之间，上下文井然'],
+      ['title-1', '22 / 28 · 600', 'font-size: 22px; line-height: 28px; font-weight: 600;', '体检完成 · 扫描了 7 个工具'],
+      ['title-2', '17 / 22 · 600', 'font-size: 17px; line-height: 22px; font-weight: 600;', 'evals_studio'],
+      ['title-3', '15 / 20 · 600', 'font-size: 15px; line-height: 20px; font-weight: 600;', '即将对 evals_studio 做 4 处变更'],
+      ['body', '13 / 19 · 400', 'font-size: 13px; line-height: 19px;', '每一行都能回答来自哪一层、什么版本、什么状态。'],
+      ['body-strong', '13 / 19 · 500', 'font-size: 13px; line-height: 19px; font-weight: 500;', 'project-harness'],
+      ['small', '12 / 18 · 400', 'font-size: 12px; line-height: 18px; color: var(--tx-2);', '不会触碰其他任何文件。'],
+      ['caption', '11 / 16 · 600', 'font-size: 11px; line-height: 16px; font-weight: 600; color: var(--tx-3);', '已登记项目'],
+      ['mono', '12 / 18 · 400', 'font-family: var(--mono); font-size: 12px; line-height: 18px;', '.agents/skills/tdd  tdd@a1b2c3']
+    ];
+    const type = T.map(([token, spec, style, sample]) => ({ token, spec, style: 'flex: 1 1 360px; min-width: 0; ' + style, sample }));
+    const SP = [['sp-1', 2, '图标与文字微调'], ['sp-2', 4, '刻度格间距'], ['sp-3', 6, '圆点与标签'], ['sp-4', 8, '控件内间距'], ['sp-5', 12, '行内列间距'], ['sp-6', 16, '面板内边距'], ['sp-7', 20, '页边距'], ['sp-8', 24, '区块间距'], ['sp-9', 32, '大区块']];
+    const space = SP.map(([token, px, use]) => ({ token: token + ' ' + px, use, bar: 'flex: none; width: ' + (px * 3) + 'px; height: 10px; border-radius: 2px; background: var(--bar-2);' }));
+    const RD = [['r-xs 2', 2, '刻度格'], ['r-sm 4', 4, '键位、标记'], ['r-md 6', 6, '按钮、行'], ['r-lg 8', 8, '代码块、选项'], ['r-xl 10', 10, '卡片'], ['r-2xl 12', 12, '浮层']];
+    const radii = RD.map(([token, r, use]) => ({ token, use, box: 'width: 56px; height: 40px; border: 1.5px solid var(--accent); background: var(--accent-weak); border-radius: ' + r + 'px;' }));
+    const marks = (i) => [0, 1, 2, 3].map((k) => ({ s: 'width: 6px; height: 6px; border-radius: 1.5px; box-sizing: border-box; ' + (k === i ? 'background: var(--accent);' : 'border: 1px solid var(--line-strong);') }));
+    const LY = [
+      ['全局基线', '尽量薄，只放每个项目都要的', '~/.claude · ~/.codex'], ['套装', '按项目类型、客户、场景复用', 'bundles = ["工程基线"]'],
+      ['项目清单', '提交到 git，团队共享', 'fangcun.toml · fangcun.lock'], ['个人覆盖', '不提交，只属于你', 'fangcun.local.toml']
+    ];
+    const layers = LY.map(([name, desc, file], i) => ({ name, desc, file, marks: marks(i) }));
+    const RW = [
+      ['project-harness', '4d9b1eb', '项目', 2, 'warn', '已漂移', '0.4k', false],
+      ['tdd', 'a1b2c3', '套装 · 工程基线', 1, 'info', '可更新 ↑ b7e9f0', '0.2k', false],
+      ['pr-review', '', '全局', 0, 'unknown', '来源未知', '0.3k', false],
+      ['frontend-design', 'v1.1.0', '全局', 0, 'muted', '被项目同名项覆盖', '—', true]
+    ];
+    const rows = RW.map(([name, version, layer, li, tone, status, cost, struck], i) => {
+      const tc = tone === 'muted' ? 'var(--tx-3)' : 'var(--' + tone + ')';
+      const dc = tone === 'muted' ? 'var(--muted-dot)' : 'var(--' + tone + '-dot)';
+      return { name, version, layer, status, cost, marks: marks(li),
+        rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 30px; padding: 4px 16px;' + (i === 0 ? ' background: var(--bg-selected);' : '') + (i < RW.length - 1 ? ' border-bottom: 1px solid var(--line);' : ''),
+        nameStyle: 'font-weight: 500;' + (struck ? ' text-decoration: line-through; color: var(--tx-3);' : ''),
+        statusStyle: 'flex: 0 0 170px; display: flex; align-items: center; gap: 6px; color: ' + tc + ';',
+        dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + dc + ';' };
+    });
+    const seg = [['claude', 'Claude Code'], ['codex', 'Codex']].map(([id, label]) => {
+      const on = s.seg === id;
+      return { label, on, pick: () => this.setState({ seg: id }),
+        style: 'height: 24px; padding: 0 10px; border: 0; border-radius: 5px; font-size: 12px; font-weight: 500; ' + (on ? 'background: var(--bg); color: var(--tx-1); box-shadow: 0 1px 2px rgba(0,0,0,.12);' : 'background: transparent; color: var(--tx-2);') };
+    });
+    return { rootClass: 'fc' + (dark ? ' dark' : ''), neutrals, states, type, space, radii, layers, rows, seg };
+  }
+}
+</script>
+</body>
+</html>

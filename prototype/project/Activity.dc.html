@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸 · 活动</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc input,.fc select{font:inherit}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+.fc-btn:hover{filter:brightness(.95)}
+.fc.dark .fc-btn:hover{filter:brightness(1.15)}
+.fc a{color:var(--accent)}
+.fc a:hover{color:var(--tx-1)}
+.fc-navbtn{margin-left:auto}
+.fc-navc{flex:0 0 56px!important;padding-left:8px!important;padding-right:8px!important}
+.fc-navc>div>a,.fc-navc>div>div{justify-content:center;padding-left:0!important;padding-right:0!important}
+.fc-navc>div:first-child{display:none!important}
+.fc-hidden{display:none!important}
+.fc-navc .fc-navbtn{margin-left:0}
+.fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fc-navc .fc-navhide{display:none!important}
+.fc-shell{height:100vh;min-height:640px;overflow:hidden}
+.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+@media (max-width: 900px){.fc-shell{height:auto;overflow:visible;flex-wrap:wrap!important}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
+</style>
+</helmet>
+<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <!-- 窗口工具栏：贯穿整个窗口顶部 -->
+  <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
+    <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin-right: 16px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
+    <button type="button" disabled="" aria-label="后退" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"></path></svg></button>
+    <button type="button" disabled="" aria-label="前进" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg></button>
+    <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
+  </div>
+
+  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+  <!-- 侧栏 -->
+  <nav aria-label="主导航" class="fc-col {{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 2px 6px; height: 28px;">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
+      <span style="font-weight: 600; font-size: 14px; letter-spacing: .02em;">方寸</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1px;">
+      <a href="Main.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
+        <span style="flex: 1;">项目</span><span style="color: var(--tx-3); font-size: 12px;">6</span>
+      </a>
+      <a href="Library.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg>
+        <span style="flex: 1;">资产库</span><span style="color: var(--tx-3); font-size: 12px;">38</span>
+      </a>
+      <a href="Bundles.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg>
+        <span style="flex: 1;">套装</span><span style="color: var(--tx-3); font-size: 12px;">3</span>
+      </a>
+      <a href="Global.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg>
+        <span style="flex: 1;">全局</span><span style="color: var(--tx-3); font-size: 12px;">31</span>
+      </a>
+      <a href="Activity.dc.html" aria-current="page" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="color: var(--accent);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
+        <span style="flex: 1;">活动</span><span style="color: var(--warn); font-size: 12px;">{{pendingCount}}</span>
+      </a>
+    </div>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+      <a href="Checkup.dc.html" class="fc-h" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; color: var(--tx-1); text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--tx-2);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
+        <span>重新体检</span>
+      </a>
+      <div class="fc-navhide" style="padding: 0 8px; font-size: 11px; color: var(--tx-3);">本地优先 · 零遥测</div>
+    </div>
+  </nav>
+
+  <!-- 主区 -->
+  <main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <header style="flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 20px; border-bottom: 1px solid var(--line);">
+      <h1 style="margin: 0; font-size: 17px; font-weight: 600;">活动</h1>
+      <span style="flex: 1 1 240px; color: var(--tx-3); font-size: 12px;">所有项目的落盘记录 · 每次写入都留快照，可一键回滚</span>
+      <label for="projSel" style="display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tx-3);">项目
+        <select id="projSel" value="{{projValue}}" onChange="{{onProj}}" style="{{projStyle}}">
+          <option value="all">全部项目（6）</option>
+          <option value="evals_studio">evals_studio</option>
+          <option value="agent-lab">agent-lab</option>
+          <option value="fangcun">fangcun</option>
+          <option value="blog-site">blog-site</option>
+          <option value="notes-kit">notes-kit</option>
+          <option value="client-acme">client-acme</option>
+          <option value="global">全局层</option>
+        </select>
+      </label>
+    </header>
+
+    <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+      <!-- 列表 -->
+      <section aria-label="活动时间线" class="fc-col" style="flex: 999 1 460px; min-width: 0; padding-bottom: 24px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 20px; border-bottom: 1px solid var(--line);">
+          <div role="group" aria-label="按类型筛选" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <sc-for list="{{filters}}" as="f" hint-placeholder-count="7">
+              <button type="button" aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 20px 2px; font-size: 11px; color: var(--tx-3); font-weight: 500;">
+          <span style="flex: 0 0 44px;">时间</span><span style="flex: 0 0 44px;">类型</span><span style="flex: 1 1 220px;">事件 · 项目</span><span style="flex: 0 0 56px;">快照</span><span style="flex: 0 0 84px;">状态</span>
+        </div>
+
+        <!-- 待处理：与时间线同一行式，只在分组标题上用橙色提示 -->
+        <sc-if value="{{hasPending}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; flex-direction: column;">
+            <h3 style="display: flex; align-items: center; gap: 6px; margin: 0; padding: 14px 20px 6px; font-size: 11px; font-weight: 600; color: var(--warn);"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 3px; background: var(--warn-dot);"></span>待处理 · {{pendingShown}}</h3>
+            <sc-for list="{{pendingRows}}" as="e" hint-placeholder-count="2">
+              <button type="button" class="fc-h" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="{{e.rowStyle}}">
+                <span style="flex: 0 0 44px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{e.time}}</span>
+                <span style="flex: 0 0 44px;"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
+                <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column;">
+                  <span style="{{e.titleStyle}}">{{e.title}}</span>
+                  <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.meta}}</span>
+                </span>
+                <span style="flex: 0 0 56px; font-family: var(--mono); font-size: 11px; color: var(--tx-2);">{{e.snap}}</span>
+                <span style="{{e.statusStyle}}"><span aria-hidden="true" style="{{e.dotStyle}}"></span>{{e.status}}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-for list="{{days}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column;">
+            <h3 style="margin: 0; padding: 14px 20px 6px; font-size: 11px; font-weight: 600; color: var(--tx-3);">{{g.label}}</h3>
+            <sc-for list="{{g.items}}" as="e" hint-placeholder-count="3">
+              <button type="button" class="fc-h" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="{{e.rowStyle}}">
+                <span style="flex: 0 0 44px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{e.time}}</span>
+                <span style="flex: 0 0 44px;"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
+                <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column;">
+                  <span style="{{e.titleStyle}}">{{e.title}}</span>
+                  <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.meta}}</span>
+                </span>
+                <span style="flex: 0 0 56px; font-family: var(--mono); font-size: 11px; color: var(--tx-2);">{{e.snap}}</span>
+                <span style="{{e.statusStyle}}"><span aria-hidden="true" style="{{e.dotStyle}}"></span>{{e.status}}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{noEvents}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 20px; color: var(--tx-3);">没有符合筛选的活动。<button type="button" onClick="{{clearFilters}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">清除筛选</button></div>
+        </sc-if>
+        <p style="margin: 0; padding: 16px 20px 0; font-size: 12px; color: var(--tx-3);">更早的记录保留在 ~/.fangcun/journal，命令行可用 <span style="font-family: var(--mono);">fangcun log</span> 查看。</p>
+      </section>
+
+      <!-- 检查器 -->
+      <aside aria-label="检查器" class="fc-col {{inspClass}}" style="flex: 1 1 340px; box-sizing: border-box; border-left: 1px solid var(--line); background: var(--bg-subtle); padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
+          <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+          <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">{{d.kindLabel}}</span>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">{{d.title}}</h2>
+          <span style="{{d.badgeStyle}}"><span aria-hidden="true" style="{{d.dotStyle}}"></span>{{d.status}}</span>
+          <p style="margin: 2px 0 0; font-size: 12px; color: var(--tx-2);">{{d.summary}}</p>
+        </div>
+
+        <dl style="margin: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px 12px; font-size: 12px;">
+          <sc-for list="{{d.fields}}" as="f" hint-placeholder-count="4">
+            <dt style="color: var(--tx-3);">{{f.k}}</dt>
+            <dd style="{{f.s}}">{{f.v}}</dd>
+          </sc-for>
+        </dl>
+
+        <section aria-label="变更明细" style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line);">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">{{d.changesTitle}}</h3>
+          <ul style="margin: 0; padding: 4px 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-family: var(--mono); font-size: 11px; line-height: 1.6;">
+            <sc-for list="{{d.changes}}" as="c" hint-placeholder-count="3">
+              <li style="display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 4px 10px;">
+                <span style="{{c.opStyle}}">{{c.op}}</span>
+                <span style="flex: 1 1 160px; min-width: 0; color: var(--tx-1); word-break: break-all;">{{c.path}}</span>
+                <span style="flex: 1 1 100%; padding-left: 22px; color: var(--tx-3); font-family: var(--font); font-size: 11px;">{{c.note}}</span>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+
+        <section aria-label="命令行" style="display: flex; flex-direction: column; gap: 6px;">
+          <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">命令行</h3>
+          <code style="display: block; padding: 8px 10px; border-radius: 6px; background: var(--code-bg); font-family: var(--mono); font-size: 11px; color: var(--tx-1); white-space: pre-wrap; word-break: break-all;">{{d.cli}}</code>
+        </section>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 4px;">
+          <sc-if value="{{d.canRollback}}" hint-placeholder-val="{{false}}">
+            <button type="button" class="fc-btn" onClick="{{openRollback}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">回滚到此之前…</button>
+          </sc-if>
+          <sc-if value="{{d.isRolled}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 12px; color: var(--tx-3);">这次变更已被回滚，磁盘状态与上一快照一致。</span>
+          </sc-if>
+          <sc-if value="{{d.expired}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%;">
+              <button type="button" class="fc-btn" disabled="" aria-describedby="expNote" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg-subtle); color: var(--tx-3); cursor: not-allowed;">回滚到此之前…</button>
+              <span id="expNote" style="font-size: 12px; line-height: 18px; color: var(--tx-3);">{{d.expiredNote}}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{d.isSecret}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 12px; line-height: 18px; color: var(--tx-3);">密钥记录不能回滚，钥匙串条目保持现状。要撤销，用「替换」或「删除」再记一条。</span>
+          </sc-if>
+          <sc-if value="{{d.goProject}}" hint-placeholder-val="{{false}}">
+            <a href="Main.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 500; text-decoration: none;">{{d.goLabel}}</a>
+          </sc-if>
+          <sc-if value="{{d.goCheckup}}" hint-placeholder-val="{{false}}">
+            <a href="Checkup.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">打开体检报告</a>
+          </sc-if>
+          <sc-if value="{{d.goGlobal}}" hint-placeholder-val="{{false}}">
+            <a href="Global.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">去全局页</a>
+          </sc-if>
+        </div>
+      </aside>
+    </div>
+  </main>
+  </div>
+
+  <!-- 回滚预览 -->
+  <sc-if value="{{sheet}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; background: rgba(20,20,22,.28); display: flex; justify-content: center; align-items: flex-start; padding: 72px 16px; box-sizing: border-box; z-index: 5;">
+      <div role="dialog" aria-modal="true" aria-labelledby="rbTitle" style="width: 100%; max-width: 640px; background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden;">
+        <div style="padding: 16px 20px 12px; border-bottom: 1px solid var(--line);">
+          <h2 id="rbTitle" style="margin: 0; font-size: 15px; font-weight: 600;">{{rb.title}}</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: var(--tx-3);">{{rb.sub}}</p>
+        </div>
+        <sc-if value="{{rb.blocked}}" hint-placeholder-val="{{false}}">
+          <div role="alert" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 20px 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-weak); color: var(--warn); font-size: 12px; line-height: 18px;">
+            <span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 4px; background: var(--warn-dot);"></span>
+            <span style="flex: 1 1 320px; min-width: 0;">{{rb.blockText}}</span>
+            <button type="button" class="fc-btn" onClick="{{rb.goBlocker}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); font-size: 12px;">查看那条记录</button>
+          </div>
+        </sc-if>
+        <ul style="margin: 0; padding: 8px 0; list-style: none; font-family: var(--mono); font-size: 12px;">
+          <sc-for list="{{rb.plan}}" as="c" hint-placeholder-count="3">
+            <li style="display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 20px;">
+              <span style="{{c.opStyle}}">{{c.op}}</span>
+              <span style="{{c.pathStyle}}">{{c.path}}</span>
+              <span style="{{c.noteStyle}}"><sc-if value="{{c.later}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="flex: none; width: 7px; height: 7px; border-radius: 4px; background: var(--warn-dot);"></span></sc-if>{{c.note}}</span>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--bg-subtle);">
+          <span style="flex: 1 1 200px; font-size: 12px; color: var(--tx-2);">回滚本身也会留一个快照，可以再撤销。</span>
+          <button type="button" class="fc-btn" onClick="{{closeSheet}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">取消</button>
+          <button type="button" class="fc-btn" onClick="{{applyRollback}}" disabled="{{rb.blocked}}" style="{{rb.applyStyle}}">回滚<span style="font-family: var(--mono); font-size: 11px; opacity: .8;">⌘↩</span></button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 提示 -->
+  <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+    <div role="status" style="position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border-radius: 10px; background: #1D1D1F; color: #F2F2F4; box-shadow: var(--shadow-pop); z-index: 7; white-space: nowrap;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5BCB85" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"></path></svg>
+      <span>{{toastText}}</span>
+      <button type="button" onClick="{{undo}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.14); color: #F2F2F4;">撤销</button>
+      <button type="button" onClick="{{dismissToast}}" style="height: 26px; padding: 0 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.14); color: #F2F2F4;">好</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = Object.assign({ type: 'all', proj: 'all', sel: 'e127', rolled: {}, sheet: false, toast: false, toastText: '', prev: null, navC: false, inspOpen: true }, this.state || {});
+    const set = (o) => this.setState(o);
+    const dark = this.props.dark ?? false;
+    const TONE = { neutral: ['var(--tx-2)', 'var(--muted-dot)'], ok: ['var(--ok)', 'var(--ok-dot)'], warn: ['var(--warn)', 'var(--warn-dot)'], info: ['var(--info)', 'var(--info-dot)'], danger: ['var(--danger)', 'var(--danger-dot)'], unknown: ['var(--unknown)', 'var(--unknown-dot)'] };
+    const TYPE = { sync: '同步', drift: '漂移', upgrade: '升级', update: '可更新', adopt: '收编', rollback: '回滚', checkup: '体检', verify: '校验', secret: '密钥' };
+    const TRIG = { ui: '桌面应用', cli: '命令行', watch: '文件监听', boot: '首次启动', up: '上游检查' };
+    const DAYS = { d13: '今天 · 11-13', d12: '昨天 · 11-12', d11: '11-11 周二', d10: '11-10 周一', d09: '10-09 周四' };
+    const DATE = { d13: '11-13', d12: '11-12', d11: '11-11', d10: '11-10', d09: '10-09' };
+
+    const E = (id, day, time, type, projs, title, x) => Object.assign({ id, day, time, type, projs, title, tone: 'ok', status: '已应用', snap: '', trigger: 'ui', changes: [], inverse: [] }, x);
+    const EV = [
+      E('drift1', 'd13', '11:37', 'drift', ['evals_studio'], 'project-harness 的副本被修改',
+        { tone: 'warn', status: '待处理', trigger: 'watch', pending: true, cta: '去处理',
+          summary: 'Agent 在工作时改进了项目里的 skill 副本。改动还留在副本里，等你决定回流、丢弃或分叉。',
+          changes: [['~', '.agents/skills/project-harness/SKILL.md', '+12 −3 行 · 与正本 4d9b1eb 不一致']],
+          cli: '$ fangcun status\nevals_studio  1 处漂移  project-harness' }),
+      E('e127', 'd13', '10:42', 'sync', ['evals_studio'], '同步 3 处变更',
+        { snap: '#127', prevSnap: '#126',
+          summary: '加入工程基线套装里的 tdd，并为 Claude Code 写入 github MCP 配置。',
+          changes: [['+', '.agents/skills/tdd', '链接到 tdd@a1b2c3'], ['+', '.claude/skills/tdd', '相对链接到 .agents/skills/tdd'], ['~', '.mcp.json', '新增键 mcpServers.github']],
+          inverse: [['−', '.agents/skills/tdd', '移除链接'], ['−', '.claude/skills/tdd', '移除链接'], ['~', '.mcp.json', '删除键 mcpServers.github，其余键不动']],
+          cli: '$ fangcun sync\n3 处变更 · 快照 #127' }),
+      E('k1', 'd13', '10:38', 'secret', ['evals_studio'], 'github-token 迁入钥匙串',
+        { tone: 'ok', status: '已应用', secret: true,
+          summary: '为 github MCP 存入访问令牌。这里只记名称和位置，从不记值。提交进仓库的 .mcp.json 只含 secret:github-token 引用。',
+          changes: [['+', '钥匙串 · fangcun / github-token', '存入 · 值不记录'], ['=', '.mcp.json', 'env.GITHUB_TOKEN = secret:github-token']],
+          cli: '$ fangcun secret set github-token\n已存入钥匙串' }),
+      E('a41', 'd13', '09:15', 'sync', ['client-acme'], '更新锁并同步，修复 CI',
+        { snap: '#41', prevSnap: '#40', trigger: 'cli',
+          summary: '重新解析清单，把新增的 playwright 写进锁，再物化到项目目录。下一次校验应能通过。',
+          changes: [['~', 'fangcun.lock', '新增 playwright 条目'], ['~', '.mcp.json', '新增键 mcpServers.playwright']],
+          inverse: [['~', 'fangcun.lock', '移除 playwright 条目'], ['~', '.mcp.json', '删除键 mcpServers.playwright']],
+          cli: '$ fangcun lock && fangcun sync\n2 处变更 · 快照 #41' }),
+      E('ci1', 'd12', '21:30', 'verify', ['client-acme'], '校验失败：锁与清单不一致',
+        { tone: 'danger', status: '失败', trigger: 'cli', goProject: true, cta: '',
+          summary: '提交前钩子在本机运行校验。fangcun.toml 新增了 playwright，但 fangcun.lock 没有更新，--frozen 模式下拒绝物化。',
+          changes: [['~', 'fangcun.toml', '[mcp.playwright] 已声明'], ['=', 'fangcun.lock', '缺少 playwright 条目']],
+          cli: '$ fangcun sync --frozen\n错误：锁与清单不一致（1 项）' }),
+      E('e126', 'd12', '18:05', 'upgrade', ['evals_studio', 'blog-site'], '升级 frontend-design v1.1.0 → v1.3.0',
+        { snap: '#126 · #63', prevSnap: '#125 · #62',
+          summary: '从活动的待处理项进入，在项目页检查器里勾选两个项目一起升级。差异里没有脚本或命令变更。',
+          changes: [['~', 'evals_studio/fangcun.lock', 'frontend-design → v1.3.0'], ['~', 'evals_studio/.agents/skills/frontend-design', '改链到 v1.3.0'], ['~', 'blog-site/.agents/skills/frontend-design', '入库文件更新为 v1.3.0']],
+          inverse: [['~', 'evals_studio/.agents/skills/frontend-design', '改链回 v1.1.0'], ['~', 'blog-site/.agents/skills/frontend-design', '还原为 v1.1.0 的文件'], ['~', '两个项目的 fangcun.lock', '还原']],
+          cli: '$ fangcun update frontend-design --projects evals_studio,blog-site' }),
+      E('tdd1', 'd12', '16:20', 'update', ['evals_studio', 'agent-lab', 'fangcun'], 'tdd 上游有新提交 b7e9f0',
+        { tone: 'info', status: '待处理', trigger: 'up', pending: true, cta: '查看差异', goProject: true,
+          summary: '跟随 main 的 tdd 有新版本。差异里新增了一个脚本，需要你确认后才会更新。',
+          changes: [['~', 'SKILL.md', '+8 −2 行'], ['+', 'scripts/run-tests.sh', '新增脚本 · 会执行命令']],
+          cli: '$ fangcun update tdd --dry-run' }),
+      E('b90', 'd12', '14:02', 'rollback', ['agent-lab'], '回滚到快照 #88',
+        { snap: '#90', prevSnap: '#89', tone: 'neutral', status: '已应用',
+          summary: '撤销 skill-b 的升级。磁盘状态与快照 #88 逐字节一致，v2.1.0 仍保留在资产库。',
+          changes: [['~', 'fangcun.lock', 'skill-b → v1.0.0'], ['~', '.agents/skills/skill-b', '改链回 v1.0.0']],
+          inverse: [['~', 'fangcun.lock', 'skill-b → v2.1.0'], ['~', '.agents/skills/skill-b', '改链到 v2.1.0']],
+          cli: '$ fangcun rollback #88' }),
+      E('b89', 'd12', '13:40', 'upgrade', ['agent-lab'], '升级 skill-b v1.0.0 → v2.1.0',
+        { snap: '#89', prevSnap: '#88', rolledBy: true,
+          summary: '升级后 agent-lab 的测试流程失败，随后在 14:02 回滚。',
+          changes: [['~', 'fangcun.lock', 'skill-b → v2.1.0'], ['~', '.agents/skills/skill-b', '改链到 v2.1.0']],
+          cli: '$ fangcun update skill-b' }),
+      E('g1', 'd12', '10:10', 'sync', ['global'], '全局层：frontend-design 被 2 个项目覆盖',
+        { tone: 'neutral', status: '已记录', trigger: 'watch', goGlobal: true,
+          summary: '两个项目在项目层固定了 v1.3.0，全局的 v1.1.0 在那里被遮蔽。没有写入任何文件。',
+          changes: [['=', '~/.agents/skills/frontend-design', 'v1.1.0 · 被遮蔽']],
+          cli: '$ fangcun why frontend-design --global' }),
+      E('h125', 'd11', '09:30', 'adopt', ['evals_studio', 'agent-lab', 'fangcun', 'blog-site', 'notes-kit'], '收编 project-harness：5 份副本归并为 1 份正本',
+        { snap: '#125 等 5 个', prevSnap: '收编前',
+          summary: '4 份相同副本替换为受管链接；evals_studio/.trae 里已分叉的那份另存为分叉版本 e81c55a，事前全部备份。',
+          changes: [['+', '~/.fangcun/lib/project-harness@4d9b1eb', '正本入库'], ['~', '4 个项目的 .agents/skills/project-harness', '替换为受管链接'], ['−', 'evals_studio/.trae/project-harness', '改由资产库管理，已备份']],
+          inverse: [['~', '4 个项目的 .agents/skills/project-harness', '还原为独立副本'], ['+', 'evals_studio/.trae/project-harness', '从备份还原']],
+          cli: '$ fangcun adopt project-harness' }),
+      E('chk1', 'd11', '09:12', 'checkup', ['global'], '首次体检：扫描 7 个工具、61 个项目目录',
+        { tone: 'neutral', status: '只读', trigger: 'boot', goCheckup: true,
+          summary: '只读扫描，未改动任何文件。报出 5 项发现：重复副本、全局税、分发不齐、锁脱节、明文密钥待扫描。',
+          changes: [['=', '~/.claude、~/.codex 等 7 处', '只读'], ['=', '61 个项目目录', '只读']],
+          cli: '$ fangcun doctor' }),
+      E('e124', 'd10', '16:12', 'sync', ['evals_studio'], '登记项目，生成清单与锁',
+        { snap: '#124', prevSnap: '登记前',
+          summary: '从目录现状反推清单：识别出 2 份指令、5 个 skill、1 个 MCP。fangcun.local.toml 已加入 .gitignore。',
+          changes: [['+', 'fangcun.toml', '项目清单'], ['+', 'fangcun.lock', '版本锁'], ['+', 'fangcun.local.toml', '个人覆盖，不提交'], ['~', '.gitignore', '新增一行']],
+          inverse: [['−', 'fangcun.toml', ''], ['−', 'fangcun.lock', '', 'e126'], ['−', 'fangcun.local.toml', ''], ['~', '.gitignore', '删除那一行']],
+          cli: '$ fangcun init --from-existing' }),
+      E('old1', 'd09', '16:30', 'sync', ['client-acme'], '登记项目，生成清单与锁',
+        { snap: '#1', prevSnap: '登记前', trigger: 'cli', expired: true,
+          summary: '在终端登记 client-acme，从目录现状反推清单：识别出 1 份指令、3 个 skill。',
+          changes: [['+', 'fangcun.toml', '项目清单'], ['+', 'fangcun.lock', '版本锁'], ['~', '.gitignore', '新增一行']],
+          inverse: [['−', 'fangcun.toml', ''], ['−', 'fangcun.lock', ''], ['~', '.gitignore', '删除那一行']],
+          cli: '$ fangcun init --from-existing' })
+    ];
+
+    const SL = (p) => (p && p.charAt(0) === '#' ? '快照 ' + p : p);
+    // 回滚产生的新事件
+    const live = EV.slice();
+    Object.keys(s.rolled).forEach((id) => {
+      const src = EV.find((e) => e.id === id);
+      live.unshift(E('rb-' + id, 'd13', '刚刚', 'rollback', src.projs, '回滚到' + SL(src.prevSnap),
+        { snap: '#' + (128 + Object.keys(s.rolled).indexOf(id)), tone: 'neutral', summary: '撤销「' + src.title + '」。磁盘状态与' + SL(src.prevSnap) + '逐字节一致。', changes: src.inverse, cli: '$ fangcun rollback ' + (src.prevSnap.charAt(0) === '#' ? src.prevSnap.split(' ')[0] : '--before ' + src.snap.split(' ')[0]) }));
+    });
+
+    const match = (e) => (s.type === 'all' || e.type === s.type || (s.type === 'upgrade' && e.type === 'update')) && (s.proj === 'all' || e.projs.indexOf(s.proj) >= 0);
+    const shown = live.filter(match);
+    const FIL = [['all', '全部'], ['sync', '同步'], ['drift', '漂移'], ['upgrade', '升级'], ['adopt', '收编'], ['rollback', '回滚'], ['checkup', '体检'], ['verify', '校验'], ['secret', '密钥']];
+    const filters = FIL.map(([id, label]) => {
+      const on = s.type === id;
+      return { label, on, pick: () => set({ type: id }),
+        style: 'height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12px; ' + (on ? 'border: 1px solid var(--accent); background: var(--accent-weak); color: var(--accent); font-weight: 500;' : 'border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-2);') };
+    });
+    const projLabel = (e) => e.projs[0] === 'global' ? '全局层' : (e.projs.length > 2 ? e.projs[0] + ' 等 ' + e.projs.length + ' 个项目' : e.projs.join('、'));
+    const statusOf = (e) => (s.rolled[e.id] || e.rolledBy) ? ['neutral', '已回滚'] : [e.tone, e.status];
+
+    const rowOf = (e) => {
+      const [tone, status] = statusOf(e); const t = TONE[tone]; const on = s.sel === e.id;
+      return { time: e.time, typeLabel: TYPE[e.type], title: e.title, meta: projLabel(e) + ' · ' + TRIG[e.trigger], snap: e.snap ? e.snap.split(' ')[0] : '—', status, on,
+        pick: () => set({ sel: e.id, inspOpen: true }),
+        titleStyle: 'font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' + (status === '已回滚' ? ' text-decoration: line-through; color: var(--tx-3);' : ''),
+        statusStyle: 'flex: 0 0 84px; display: flex; align-items: center; gap: 6px; color: ' + t[0] + ';',
+        dotStyle: 'flex: none; width: 7px; height: 7px; border-radius: 4px; background: ' + t[1] + ';',
+        rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; width: 100%; min-height: 46px; padding: 4px 20px; border: 0; border-bottom: 1px solid var(--line); text-align: left; color: var(--tx-1); box-sizing: border-box;' + (on ? ' background: var(--bg-selected);' : ' background: transparent;') }; };
+    const days = ['d13', 'd12', 'd11', 'd10', 'd09'].map((dk) => ({ label: DAYS[dk], items: shown.filter((e) => e.day === dk && !e.pending).map(rowOf) })).filter((g) => g.items.length);
+    const pendingRows = shown.filter((e) => e.pending).map((e) => Object.assign(rowOf(e), { time: e.day === 'd13' ? e.time : '昨天' }));
+
+    const pendingList = EV.filter((e) => e.pending);
+
+    // 检查器
+    const cur = live.find((e) => e.id === s.sel) || shown[0] || live[0];
+    const [ctone, cstatus] = statusOf(cur); const ct = TONE[ctone];
+    const FS = (k, v, mono) => ({ k, v, s: 'margin: 0; min-width: 0; word-break: break-all; color: var(--tx-1);' + (mono ? ' font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') });
+    const OP = { '+': 'var(--ok)', '~': 'var(--info)', '−': 'var(--danger)', '=': 'var(--tx-3)' };
+    const C = ([op, path, note, laterId]) => {
+      const later = laterId && !s.rolled[laterId] ? live.find((e) => e.id === laterId) : null;
+      return { op, path, note: later ? '快照 ' + later.snap.split(' ')[0] + ' 之后也改过这个文件' : note, later: !!later,
+        opStyle: 'flex: 0 0 12px; font-weight: 600; color: ' + OP[op] + ';',
+        pathStyle: 'flex: 1 1 220px; min-width: 0; word-break: break-all; color: ' + (later ? 'var(--warn)' : 'var(--tx-1)') + ';',
+        noteStyle: 'flex: 1 1 200px; min-width: 0; font-family: var(--font); display: flex; align-items: center; gap: 6px; color: ' + (later ? 'var(--warn)' : 'var(--tx-3)') + ';' }; };
+    const isRolled = cstatus === '已回滚';
+    const expired = !!cur.expired && !!cur.snap && !isRolled;
+    const d = { title: cur.title, status: cstatus, summary: cur.summary, cli: cur.cli,
+      kindLabel: TYPE[cur.type] + (cur.snap ? ' · 快照 ' + cur.snap : ''),
+      badgeStyle: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; color: ' + ct[0] + '; background: var(--bg); border: 1px solid var(--line);',
+      dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + ct[1] + ';',
+      fields: [FS('项目', cur.projs[0] === 'global' ? '全局层' : cur.projs.join('、')), FS('时间', DATE[cur.day] + ' ' + cur.time, true), FS('触发', TRIG[cur.trigger]), FS('快照', cur.secret ? '无，钥匙串条目不留快照' : (cur.snap ? cur.snap + (expired ? ' · 已过期' : '') : '无，未写入文件'), !!cur.snap)],
+      changesTitle: cur.snap ? '写入了哪些文件' : '涉及的文件',
+      changes: cur.changes.map(([op, path, note]) => C([op, path, note])),
+      canRollback: !!cur.snap && cur.inverse.length > 0 && !isRolled && !expired && cur.time !== '刚刚',
+      expired, isSecret: !!cur.secret,
+      expiredNote: '快照 ' + (cur.snap || '').split(' ')[0] + ' 已过期，备份已清理。快照默认保留 30 天，每个项目至少保留最近 20 个，可在设置里调整。记录仍在。',
+      isRolled, goProject: !!cur.goProject || cur.type === 'drift', goLabel: cur.type === 'drift' ? '去处理漂移' : (cur.type === 'update' ? '查看差异' : '打开项目'),
+      goCheckup: !!cur.goCheckup, goGlobal: !!cur.goGlobal };
+
+    const rb = { title: '把 ' + (cur.projs.length > 1 ? cur.projs.length + ' 个项目' : cur.projs[0]) + ' 回滚到' + SL(cur.prevSnap || ''),
+      sub: '撤销「' + cur.title + '」。预览先于写入，只动这次变更写过的文件。', plan: cur.inverse.map(C) };
+    const blockers = [];
+    cur.inverse.forEach((c) => { const id = c[3]; if (id && !s.rolled[id] && blockers.indexOf(id) < 0) blockers.push(id); });
+    const firstBlock = blockers.length ? live.find((e) => e.id === blockers[0]) : null;
+    rb.blocked = !!firstBlock;
+    rb.blockCount = rb.plan.filter((c) => c.later).length;
+    rb.blockText = firstBlock ? rb.blockCount + ' 个文件被后来的变更改过。先回滚「' + firstBlock.title + '」（快照 ' + firstBlock.snap + '），再回滚这一条。不做自动合并。' : '';
+    rb.goBlocker = () => firstBlock && set({ sheet: false, sel: firstBlock.id, type: 'all', proj: 'all', inspOpen: true });
+    rb.applyStyle = 'display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: 6px; border: 0; font-weight: 500; ' + (firstBlock ? 'background: var(--bg-hover); color: var(--tx-3); cursor: not-allowed;' : 'background: var(--accent); color: var(--on-accent);');
+
+    return { rootClass: 'fc fc-shell' + (dark ? ' dark' : ''), filters, days, pendingRows, d, rb,
+      pendingCount: pendingList.length, pendingShown: pendingRows.length, hasPending: pendingRows.length > 0,
+      noEvents: days.length === 0 && pendingRows.length === 0, clearFilters: () => set({ type: 'all', proj: 'all' }),
+      projValue: s.proj, onProj: (e) => set({ proj: e.target.value }),
+      projStyle: 'height: 26px; max-width: 200px; padding: 0 6px; border-radius: 6px; font-size: 12px; ' + (s.proj === 'all' ? 'border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);' : 'border: 1px solid var(--accent); background: var(--accent-weak); color: var(--accent);'),
+      sheet: s.sheet, openRollback: () => set({ sheet: true }), closeSheet: () => set({ sheet: false }),
+      applyRollback: () => { if (rb.blocked) return; const r = Object.assign({}, s.rolled); r[cur.id] = true; set({ prev: { rolled: s.rolled, sel: cur.id }, rolled: r, sheet: false, sel: 'rb-' + cur.id, type: 'all', toast: true, toastText: '已回滚到' + SL(cur.prevSnap) + '，磁盘状态逐字节一致' }); },
+      toast: s.toast, toastText: s.toastText, dismissToast: () => set({ toast: false }),
+      undo: () => (s.prev ? set({ rolled: s.prev.rolled, prev: null, sel: s.prev.sel, toast: true, toastText: '已撤销回滚' }) : set({ toast: false })),
+      navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
+      navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';',
+      inspClass: s.inspOpen ? '' : 'fc-hidden', closeInsp: () => set({ inspOpen: false }) };
+  }
+}
+</script>
+</body>
+</html>
