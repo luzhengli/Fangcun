@@ -14,6 +14,10 @@ python3 -m http.server 8000
 
 在仓库根目录运行，然后打开 http://localhost:8000/tools/prototype-preview/ 。目录页列出全部画板，每张都有浅色和深色两个入口。画板可以点，画板之间的链接也能跳。地址参数 `dark=1` 是深色，`density=标准` 是项目页、体检页的标准密度。
 
+预览器遇到不认识的写法时，页面底部会出一条橙色提示，这时以源文件和截图为准。
+
+不想跑预览器时，直接看 `screens/`：每张画板默认状态的截图（1440 宽，浅色），每次同步时由 `tools/prototype-preview/check.js` 重新生成。
+
 ## 同步记录
 
 每次同步改写这一节。
@@ -29,6 +33,7 @@ python3 -m http.server 8000
 | 文件 | 画板 | 设计文档 |
 | --- | --- | --- |
 | `project/canvas.json` | 画板索引：位置、尺寸、标题、便签 | — |
+| `screens/<名称>.png` | 各画板默认状态的截图，同步时生成 | — |
 | `project/DesignSystem.dc.html` | 方寸设计系统 · 墨格 | 6.10 |
 | `project/Main.dc.html` | 项目 · 生效上下文 | 6.3 |
 | `project/Checkup.dc.html` | 首次启动 · 体检报告 | 6.2 |

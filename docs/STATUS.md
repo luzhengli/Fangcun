@@ -10,6 +10,7 @@
 - **原型换了画布**：https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq 。它是旧画布的七张画板加上 9.3 的七处改动和封面引用 6.6 → 6.10。旧画布 CJ7tjMr5uEiXFFCcVcBEpp 保留不动。
 - **原型源文件已进仓库**：`prototype/project/` 是新画布的镜像，同步记录在 `prototype/README.md`（版本 1794610127-a083）。以后人在网页版改，再同步进来；本地实现时读这里。
 - **原型可以在本地看了**：`tools/prototype-preview/` 是自己写的预览器。在仓库根目录运行 `python3 -m http.server 8000`，打开 http://localhost:8000/tools/prototype-preview/ 。直接双击 `.dc.html` 没有样式，这是正常的。
+- **原型同步要过检查**：同步后运行 `node tools/prototype-preview/check.js`，七张画板都要通过，截图写进 `prototype/screens/`。不通过先补预览器。本地实现时先看截图，再读源文件。
 
 | 画板 | 文档章节 | 这次改了没有 |
 | --- | --- | --- |
