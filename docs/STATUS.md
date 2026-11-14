@@ -4,7 +4,7 @@
 
 ## 现在在哪
 
-M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-10、M0-13 至 M0-18 完成；M0-11、M0-12 各差一步人的动作。出口标准本机实测：`fangcun doctor` 约 7 秒，零配置，`~/.fangcun` 没有建，没有写任何文件。
+M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成；只剩 M0-12 等人批准 Codex 操作桌面。出口标准本机实测：`fangcun doctor` 约 7 秒，零配置，`~/.fangcun` 没有建，没有写任何文件。
 
 - **能用的**：
   - 命令行：`pnpm cli -- doctor`、`status`、`why <资产> [--global]`、`log`。写入命令仍返回「当前是只读模式」。
@@ -12,18 +12,17 @@ M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-10、
   - 适配器：Claude Code、Codex 完整支持；Cursor、Copilot CLI、Gemini CLI、opencode、Windsurf、Trae 只读扫描。体检扫 8 个工具。
   - 本机实测：8 个项目、39 项资产；18 个 lark-* skill 只有 Xuanji 用过，10 个全局 skill 近 30 天没人用，Claude Code 只读到 31 个全局 skill 里的 16 个，`~/.agents/.skill-lock.json` 07-05 后没更新。
 - **检查**：`pnpm check` 全过（Rust 86 个测试，含两组适配器回归样例；前端 12 个）。按 ci.yml 在只含要提交文件的干净副本里跑过四步，全过。四个页面用示例数据和原型截图对过，也用本机真实数据截图看过（`pnpm screens --snapshot`）。
-- **git**：全部改动都没提交，本地 main 比远端多两个提交，没有推送。
+- **git**：全部改动在分支 `m0-readonly`，已推送，PR #5 等人合并。CI 第一次运行两项都过。
 
 ## 下一步
 
-1. **M0-11**：人决定提交和推送，推送后看 CI 第一次运行。本地模拟已全过。
+1. 人看 PR #5，合并到 main。
 2. **M0-12**：在 Codex 里批准它用 computer use 操作 Fangcun（和系统设置），再跑一遍检查；或人用 `pnpm dev` 自己看窗口按钮对齐、工具栏拖动、深色模式。debug 包在 `target/debug/bundle/macos/Fangcun.app`。
 3. 人看「要人定」的 D-18 至 D-22。**D-19 最要紧**：Claude Code 的 skill 同名时全局盖过项目，和 4.3「下层覆盖上层」相反，影响 M1 物化怎么做。
 4. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。
 
 ## 卡在哪
 
-- **M0-11**：要推送才有 CI。
 - **M0-12**：Codex CLI 0.167.0 的 computer use 能起来、也找到了 Fangcun 窗口，但非交互运行时自动审批拒绝了对 Fangcun 和系统设置的访问。按 `AGENTS.md`，Claude Code 不能自己操作桌面。
 - **要人定的设计**：D-15、D-18 至 D-22，实现已按推荐项或最保守的做法先做，见 DECISIONS。设计文档没有改。
 - **D-09、D-16、D-17** 照旧，不卡开发。

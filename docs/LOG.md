@@ -9,7 +9,8 @@
 - 只读扫描的适配器：Cursor、Copilot CLI、Gemini CLI、opencode、Windsurf、Trae，体检现在扫 8 个工具。Trae 官方页读不出，用二手来源，标了待核实。
 - 实测 Codex：同名 MCP 项目层赢、按字段合并；未受信任项目的 `.codex/config.toml` 不读。适配器格式加了 `requires`、`mcp-merge`、`path-vars`、`skill-switches`、`extra-names`、`import-depth`、`install-index`、规则扩展名，回归样例跟着加。
 - 真实数据：`ipc_snapshot` 示例加 `pnpm screens --snapshot`，四个页面用本机数据截图看过。CI 在干净副本里按 ci.yml 跑过，修了一处格式错误。
-- 没做：M0-12 的 Codex 找到了窗口，但自动审批拒绝操作 Fangcun 与系统设置，要人批准；真正的 CI 要推送。
+- 人选了开分支提 PR：分支 `m0-readonly`，PR #5，CI 第一次运行两项都过（M0-11 完成）。
+- 没做：M0-12 的 Codex 找到了窗口，但自动审批拒绝操作 Fangcun 与系统设置，人说去批准，批准后重跑。
 
 ---
 
