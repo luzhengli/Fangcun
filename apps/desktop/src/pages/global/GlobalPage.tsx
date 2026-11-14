@@ -20,6 +20,7 @@ function statusOf(row: GlobalRow): { tone: Tone; label: string } {
     "suggest-bundle": { tone: "info", label: "建议转套装" },
     "never-used": { tone: "warn", label: "从未使用" },
     overridden: { tone: "muted", label: `被覆盖 ${row.overridden} 处` },
+    "same-name-conflict": { tone: "muted", label: `同名冲突 ${row.conflicts} 处` },
     "unknown-source": { tone: "unknown", label: "来源未知" },
     common: { tone: "ok", label: "常用" },
     "most-projects": { tone: "ok", label: "多数项目在用" },
@@ -165,7 +166,12 @@ export function GlobalPage() {
                 onClick={() =>
                   pick(
                     data.rows
-                      .filter((r) => r.status === "never-used" || r.status === "overridden")
+                      .filter(
+                        (r) =>
+                          r.status === "never-used" ||
+                          r.status === "overridden" ||
+                          r.status === "same-name-conflict",
+                      )
                       .map((r) => r.id),
                   )
                 }
@@ -397,7 +403,9 @@ function RowInspector({
                     ? `用到 · ${p.triggers} 次`
                     : p.mark === "overridden"
                       ? "被项目层覆盖"
-                      : "未用到"}
+                      : p.mark === "conflict"
+                        ? "同名冲突"
+                        : "未用到"}
                 </span>
               </li>
             ))}

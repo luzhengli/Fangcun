@@ -79,6 +79,7 @@ function R(
     usedBy: used.length,
     status,
     overridden: shadowed.length,
+    conflicts: 0,
     hasScripts: x.script ?? false,
     command: null,
     usage: PROJS.map((p) => ({

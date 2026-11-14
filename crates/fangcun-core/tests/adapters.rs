@@ -7,6 +7,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use fangcun_core::global::{GlobalStatus, UseMark};
 use fangcun_core::journal::RecordFilter;
 use fangcun_core::model::{AssetKind, AssetState, ObservedKind, Scope, Timestamp, ToolId};
 use fangcun_core::paths::FangcunHome;
@@ -184,6 +185,19 @@ fn claude_code_reads_what_the_docs_say() {
     let project_fd = find(&context, "frontend-design", Scope::Project);
     assert_eq!(project_fd.state, Some(AssetState::Overridden));
     assert!(global_fd.counted && !project_fd.counted);
+    // 全局页：项目层的同名项没能盖过全局，是「同名冲突」，不是「被覆盖」（D-19）。
+    let global = kernel
+        .global_overview(&ToolId::from(ToolId::CLAUDE_CODE))
+        .expect("全局页");
+    let row = global
+        .rows
+        .iter()
+        .find(|r| r.name == "frontend-design")
+        .expect("全局 frontend-design");
+    assert_eq!(row.status, GlobalStatus::SameNameConflict);
+    assert_eq!((row.conflicts, row.overridden), (1, 0));
+    assert!(row.usage.iter().any(|u| u.mark == UseMark::Conflict));
+    assert!(row.advice.contains("全局这一份生效"), "{}", row.advice);
     let lark = find(&context, "lark-doc", Scope::Global);
     assert_eq!(lark.triggers, Some(1), "会话记录里触发过一次");
 
@@ -262,6 +276,16 @@ fn codex_reads_what_the_docs_say() {
     let global_tdd = find(&context, "tdd", Scope::Global);
     let project_tdd = find(&context, "tdd", Scope::Project);
     assert!(global_tdd.counted && project_tdd.counted);
+    let global = kernel
+        .global_overview(&ToolId::from(ToolId::CODEX))
+        .expect("全局页");
+    let row = global
+        .rows
+        .iter()
+        .find(|r| r.members.iter().any(|m| m == "tdd"))
+        .expect("全局 tdd");
+    assert_eq!(row.status, GlobalStatus::SameNameConflict);
+    assert!(row.advice.contains("两份都加载"), "{}", row.advice);
     assert_eq!(global_tdd.source.as_deref(), Some("obra/superpowers"));
     // [[skills.config]] 按名称停用了 grill-me。
     let grill = find(&context, "grill-me", Scope::Global);
