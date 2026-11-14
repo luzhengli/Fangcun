@@ -113,7 +113,7 @@ body{margin:0}
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px; padding: 8px 20px 2px; font-size: 11px; color: var(--tx-3); font-weight: 500;">
-          <span style="flex: 0 0 44px;">时间</span><span style="flex: 0 0 44px;">类型</span><span style="flex: 1 1 220px;">事件 · 项目</span><span style="flex: 0 0 56px;">快照</span><span style="flex: 0 0 84px;">状态</span>
+          <span style="flex: 0 0 44px;">时间</span><span style="flex: 0 0 52px;">类型</span><span style="flex: 1 1 220px;">事件 · 项目</span><span style="flex: 0 0 56px;">快照</span><span style="flex: 0 0 84px;">状态</span>
         </div>
 
         <!-- 待处理：与时间线同一行式，只在分组标题上用橙色提示 -->
@@ -123,7 +123,7 @@ body{margin:0}
             <sc-for list="{{pendingRows}}" as="e" hint-placeholder-count="2">
               <button type="button" class="fc-h" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="{{e.rowStyle}}">
                 <span style="flex: 0 0 44px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{e.time}}</span>
-                <span style="flex: 0 0 44px;"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
+                <span style="flex: 0 0 52px;"><span style="white-space: nowrap; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
                 <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column;">
                   <span style="{{e.titleStyle}}">{{e.title}}</span>
                   <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.meta}}</span>
@@ -140,7 +140,7 @@ body{margin:0}
             <sc-for list="{{g.items}}" as="e" hint-placeholder-count="3">
               <button type="button" class="fc-h" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="{{e.rowStyle}}">
                 <span style="flex: 0 0 44px; font-family: var(--mono); font-size: 11px; color: var(--tx-3);">{{e.time}}</span>
-                <span style="flex: 0 0 44px;"><span style="font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
+                <span style="flex: 0 0 52px;"><span style="white-space: nowrap; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);">{{e.typeLabel}}</span></span>
                 <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column;">
                   <span style="{{e.titleStyle}}">{{e.title}}</span>
                   <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.meta}}</span>

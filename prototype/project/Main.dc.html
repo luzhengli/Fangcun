@@ -85,6 +85,14 @@ body{margin:0}
           <span style="font-size: 11px; color: var(--tx-3);">{{p.note}}</span>
         </div>
       </sc-for>
+      <div style="padding: 12px 8px 4px; font-size: 11px; font-weight: 600; color: var(--tx-3);">近 30 天的项目</div>
+      <sc-for list="{{recentProjects}}" as="p" hint-placeholder-count="1">
+        <div style="{{p.style}}">
+          <span aria-hidden="true" style="{{p.dot}}"></span>
+          <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{p.name}}</span>
+          <span style="font-size: 11px; color: var(--tx-3);">{{p.note}}</span>
+        </div>
+      </sc-for>
     </div>
 
     <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
@@ -807,6 +815,10 @@ class Component extends DCLogic {
     const PROJ = [
       ['evals_studio', 'warn', '漂移'], ['agent-lab', 'ok', ''], ['fangcun', 'info', '可更新'], ['blog-site', 'ok', ''], ['notes-kit', 'ok', ''], ['client-acme', 'ok', '']
     ];
+    const RECENT = [['luyao-skills', '未登记']];
+    const recentProjects = RECENT.map(([name, note]) => ({ name, note,
+      dot: 'width: 7px; height: 7px; border-radius: 4px; flex: none; box-sizing: border-box; border: 1px solid var(--muted-dot);',
+      style: 'display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 6px; color: var(--tx-2);' }));
     const projects = PROJ.map(([name, tone, note], i) => {
       const t = name === 'evals_studio' && s.drift ? 'ok' : tone;
       return { name, note: name === 'evals_studio' && s.drift ? '' : note,
@@ -839,7 +851,7 @@ class Component extends DCLogic {
       navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
       navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';',
       inspClass: (s.inspOpen || s.sel !== s.closedSel) ? '' : 'fc-hidden', closeInsp: () => set({ inspOpen: false, closedSel: s.sel }),
-      projects, tools, tabs, groups, budget, sel, driftOpts, history, manifest, results, mfiles, mf, mviews,
+      projects, recentProjects, tools, tabs, groups, budget, sel, driftOpts, history, manifest, results, mfiles, mf, mviews,
       mIsTable: s.mview === 'table', mIsSrc: s.mview === 'src',
       plan: planOut, planCount,
       isEffective: s.tab === 'effective', isManifest: s.tab === 'manifest', isHistory: s.tab === 'history',

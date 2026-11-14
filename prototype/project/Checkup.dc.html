@@ -222,7 +222,8 @@ class Component extends DCLogic {
         rowStyle: 'display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 10px; font-size: 12px;' + (i > 0 ? ' border-top: 1px solid var(--line);' : ''),
         cStyle: 'flex: 0 0 auto; color: ' + (l.tone ? TONE[l.tone][0] : 'var(--tx-2)') + ';' + (l.tone ? ' font-weight: 500;' : '') })),
       isOpen: !cDone, isDone: cDone,
-      apply: () => { const nd = Object.assign({}, s.done); nd[cur.id] = true; const next = F.find((x) => !nd[x.id]); set({ done: nd, sel: next ? next.id : cur.id }); },
+      apply: () => { const nd = Object.assign({}, s.done); nd[cur.id] = true; const next = F.find((x) => !nd[x.id]); set({ done: nd, sel: cur.id });
+        if (next) setTimeout(() => { const st = this.state || {}; if (st.done && st.done[cur.id] && st.sel === cur.id) this.setState({ sel: next.id }); }, 1500); },
       undo: () => { const u = Object.assign({}, s.done); delete u[cur.id]; set({ done: u }); } };
     const countable = F.filter((f) => f.id !== 'secret');
     const doneCount = countable.filter((f) => s.done[f.id]).length;

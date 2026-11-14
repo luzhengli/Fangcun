@@ -28,9 +28,12 @@ body{margin:0}
 .fc-navc .fc-navbtn{margin-left:0}
 .fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .fc-navc .fc-navhide{display:none!important}
+.fc-shell{height:100vh;min-height:640px;overflow:hidden}
+.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+@media (max-width: 900px){.fc-shell{height:auto;overflow:visible;flex-wrap:wrap!important}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
 </style>
 </helmet>
-<div class="{{rootClass}}" style="min-height: 900px; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
 
   <!-- 窗口工具栏：贯穿整个窗口顶部 -->
   <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
@@ -40,8 +43,8 @@ body{margin:0}
     <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
   </div>
 
-  <div style="flex: 1; display: flex; flex-wrap: wrap;">
-  <nav aria-label="主导航" class="{{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
+  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
+  <nav aria-label="主导航" class="fc-col {{navClass}}" style="flex: 1 1 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px 10px 16px; display: flex; flex-direction: column; gap: 18px;">
     <div style="display: flex; align-items: center; gap: 8px; padding: 2px 6px; height: 28px;">
       <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="color: var(--accent);"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="2.5"></rect><rect x="5.5" y="5.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"></rect></svg>
       <span style="font-weight: 600; font-size: 14px; letter-spacing: .02em;">方寸</span>
@@ -77,10 +80,10 @@ body{margin:0}
     </div>
   </nav>
 
-  <main style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column;">
-    <div style="flex: 1; display: flex; flex-wrap: wrap; min-height: 0;">
+  <main style="flex: 999 1 640px; min-width: 0; min-height: 0; display: flex; flex-direction: column;">
+    <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
       <sc-if value="{{listClosed}}" hint-placeholder-val="{{false}}">
-        <section aria-label="套装列表（已折叠）" style="flex: 0 0 44px; box-sizing: border-box; border-right: 1px solid var(--line); padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <section aria-label="套装列表（已折叠）" class="fc-col" style="flex: 0 0 44px; box-sizing: border-box; border-right: 1px solid var(--line); padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px;">
           <button type="button" class="fc-h" onClick="{{toggleList}}" aria-label="展开套装列表" aria-expanded="false" style="width: 32px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path><path d="m9.5 6.5 1.5 1.5-1.5 1.5"></path></svg></button>
           <button type="button" class="fc-h" aria-label="新建套装" title="新建套装" style="width: 32px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg></button>
           <span aria-hidden="true" style="width: 20px; height: 1px; background: var(--line); margin: 2px 0;"></span>
@@ -90,7 +93,7 @@ body{margin:0}
         </section>
       </sc-if>
       <sc-if value="{{listOpen}}" hint-placeholder-val="{{true}}">
-      <section aria-label="套装列表" style="flex: 0 1 240px; min-width: 200px; border-right: 1px solid var(--line); padding: 10px 6px 6px;">
+      <section aria-label="套装列表" class="fc-col" style="flex: 0 1 240px; min-width: 200px; border-right: 1px solid var(--line); padding: 10px 6px 6px;">
         <button type="button" class="fc-btn" style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 30px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"></path></svg>新建套装</button>
         <div style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 2px 0 10px; margin-bottom: 2px;">
           <span style="flex: 1; font-size: 11px; font-weight: 600; color: var(--tx-3);">全部套装 · 3</span>
@@ -108,7 +111,7 @@ body{margin:0}
       </section>
       </sc-if>
 
-      <aside aria-label="套装详情" style="flex: 999 1 460px; min-width: 0; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+      <aside aria-label="套装详情" class="fc-col" style="flex: 999 1 460px; min-width: 0; box-sizing: border-box; padding: 20px; display: flex; flex-direction: column; gap: 20px;">
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <h2 style="margin: 0; font-size: 17px; font-weight: 600;">{{d.name}}</h2>
           <span style="color: var(--tx-2);">{{d.blurb}}</span>
@@ -229,7 +232,7 @@ class Component extends DCLogic {
     const LY = [['全局', '每个项目都加载'], ['套装', '你挑选的项目才加载'], ['项目', '只写在本项目清单'], ['个人', '只在你的机器上']];
     const layers = LY.map(([name, desc], i) => ({ name, desc, marks: marks(i),
       style: 'display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; ' + (i === 1 ? 'background: var(--bg); border: 1px solid var(--accent); color: var(--tx-1);' : 'border: 1px solid transparent; color: var(--tx-2);') }));
-    return { rootClass: 'fc' + (dark ? ' dark' : ''), bundles, d, layers, applied: s.applied,
+    return { rootClass: 'fc fc-shell' + (dark ? ' dark' : ''), bundles, d, layers, applied: s.applied,
       navClass: s.navC ? 'fc-navc' : '', navLabel: s.navC ? '展开侧栏' : '折叠侧栏', navExpanded: !s.navC, toggleNav: () => set({ navC: !s.navC }),
       navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (s.navC ? 'transparent' : 'var(--bg-hover)') + ';',
       listOpen: s.listOpen, listClosed: !s.listOpen, toggleList: () => set({ listOpen: !s.listOpen }),
