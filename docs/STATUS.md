@@ -4,7 +4,9 @@
 
 ## 现在在哪
 
-M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成；只剩 M0-12 的最后一眼：窗口按钮是否在工具栏里居中。出口标准本机实测：`fangcun doctor` 约 7 秒，零配置，`~/.fangcun` 没有建，没有写任何文件。
+M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成。本机实测：`fangcun doctor` 约 7 秒，零配置，没有写任何文件。
+
+人已定 D-15、D-18 至 D-22（都是推荐项，D-19 补问了两件），设计文档已改，DECISIONS 记了经过。由此多出三件代码活（M0-19 至 M0-21）和一件原型活（D-23）。这些文档改动还没提交。
 
 - **能用的**：
   - 命令行：`pnpm cli -- doctor`、`status`、`why <资产> [--global]`、`log`。写入命令仍返回「当前是只读模式」。
@@ -16,22 +18,26 @@ M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、
 
 ## 下一步
 
-1. 人看 PR #5，合并到 main。
-2. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。其余几项 Codex 已查过。
-3. 人看「要人定」的 D-18 至 D-22。**D-19 最要紧**：Claude Code 的 skill 同名时全局盖过项目，和 4.3「下层覆盖上层」相反，影响 M1 物化怎么做。
-4. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。
+1. 人确认设计文档这次的改动（4.3、F5、6.1、6.3、6.6、6.7、7.4、第 8 节、9.3 末尾），再提交。
+2. 代码跟上人定的结论：
+   - **M0-19**：体检记录写进 `~/.fangcun/journal/records.jsonl`。同时把 `AGENTS.md`、`ARCHITECTURE.md` 里「M0 不写任何文件」改成「M0 只写 `~/.fangcun`」，`Access::ReadOnly` 要放开这一个目录。
+   - **M0-20**：全局页同名 skill 在 Claude Code、Codex 下是「同名冲突 N 处」，不是「被覆盖」。现在 `global.rs` 不看工具规则，一律给 `Overridden`。
+   - **M0-21**：项目预算读 `fangcun.toml` 的 `[project].budget`。
+3. **D-23**：原型三处跟上 D-19、D-21，要在画布里改再同步。原型改完之前，示例数据照旧。
+4. 人看 PR #5，合并到 main。M0-19 至 M0-21 是接着在 `m0-readonly` 上做，还是合并后另开分支，问人。
+5. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。
+6. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。M1-01、M1-02 已定要做。
 
 ## 卡在哪
 
 - **M0-12**：Codex 能操作 Fangcun 了，但它自己的操控浮层总挡住窗口左上角，看不到按钮；按 `AGENTS.md`，Claude Code 不能自己截图看桌面。
-- **要人定的设计**：D-15、D-18 至 D-22，实现已按推荐项或最保守的做法先做，见 DECISIONS。设计文档没有改。
 - **D-09、D-16、D-17** 照旧，不卡开发。
 
 ## 接手须知
 
 - **先读 `docs/ARCHITECTURE.md`**，新增了「扫描缓存」「项目从哪来」两段和 `global` 模块。最要紧的规则没变：业务逻辑只在内核；M0 用 `Access::ReadOnly`；界面只经 `ipc/` 取数据；颜色只用 `styles/tokens.css`。
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
-- **同名优先级按工具真实规则**：Claude Code 的 skill 全局优先，MCP 个人 > 项目 > 全局、整条取用；Codex 的同名 skill 都加载，MCP 项目层赢、按字段合并，未受信任项目的 `.codex/config.toml` 不读（后两条是实测）。界面上「谁覆盖谁」的小字在规则相反时会改写。
+- **同名优先级按工具真实规则**（D-19 已定，4.3）。工具规则与方寸相反时，物化不自动移动上层同名项，标「同名冲突」由人选。Claude Code 的 skill 全局优先，MCP 个人 > 项目 > 全局、整条取用；Codex 的同名 skill 都加载，MCP 项目层赢、按字段合并，未受信任项目的 `.codex/config.toml` 不读（后两条是实测）。界面上「谁覆盖谁」的小字在规则相反时会改写。
 - **只读扫描的工具**只参加体检，不进项目页、全局页的工具切换。
 - **MCP 常驻不估算**，预算条 MCP 段为 0，旁边写「N 个未估算」。
 - **内核第一次被调用时全盘扫描一次并缓存**，读近 30 天会话记录（本机约 400MB，按修改时间先筛）。`Kernel::rescan` 重扫。
