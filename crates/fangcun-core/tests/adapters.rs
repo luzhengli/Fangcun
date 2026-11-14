@@ -48,6 +48,20 @@ fn kernel(home: &Path, project: &Path) -> Kernel {
         .with_project(project)
 }
 
+/// 只读：方寸只写了 `~/.fangcun/journal` 一个目录，里面是体检记录（D-15）。
+fn only_journal_written(home: &Path) {
+    let entries: Vec<String> = fs::read_dir(home.join(".fangcun"))
+        .expect("体检记录应已写入")
+        .map(|e| {
+            e.expect("目录项")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(entries, ["journal"]);
+}
+
 fn find<'a>(
     context: &'a EffectiveContext,
     name: &str,
@@ -214,8 +228,7 @@ fn claude_code_reads_what_the_docs_say() {
             .any(|f| f.id == "duplicate:frontend-design")
     );
 
-    // 只读：扫描和体检都不创建 ~/.fangcun，体检记录只在内存里。
-    assert!(!home.join(".fangcun").exists());
+    only_journal_written(&home);
     assert_eq!(
         kernel.log(&RecordFilter::default()).expect("读记录").len(),
         1
@@ -272,7 +285,7 @@ fn codex_reads_what_the_docs_say() {
         .expect("脱节发现");
     let paths: Vec<&str> = detached.locations.iter().map(|l| l.path.as_str()).collect();
     assert!(paths.contains(&"lark-vc") && paths.contains(&"grill-me"));
-    assert!(!home.join(".fangcun").exists());
+    only_journal_written(&home);
 
     // 标为受信任后：同名按字段合并，项目层只写了 args，command 沿用用户层。
     let mut config = fs::read_to_string(home.join(".codex/config.toml")).expect("读用户配置");

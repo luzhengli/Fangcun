@@ -1,7 +1,8 @@
 //! 开发用：用真实内核跑一遍界面要的全部只读命令，把结果写成一份 JSON。
 //!
 //! `pnpm screens --snapshot <文件>` 读它，在浏览器里用本机的真实数据渲染界面并截图，
-//! 不用开桌面窗口。只读：内核以 `Access::ReadOnly` 打开，只写参数给的那一个文件。
+//! 不用开桌面窗口。只读：内核以 `Access::ReadOnly` 打开，只写参数给的那一个文件，
+//! 外加和桌面应用一样往 `~/.fangcun/journal` 记一条体检。
 //!
 //! 用法：cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json
 

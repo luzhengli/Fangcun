@@ -30,7 +30,7 @@ use crate::{Error, Result};
 /// 内核的访问方式。M0 的桌面应用和命令行都用只读。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Access {
-    /// 不写任何文件，包括 `~/.fangcun`。
+    /// 不写方寸目录以外的任何文件。`~/.fangcun/journal` 照写，记体检（D-15）。
     ReadOnly,
     ReadWrite,
 }
@@ -85,7 +85,8 @@ pub struct Kernel {
     user_home: PathBuf,
     origin: Trigger,
     extra_projects: Vec<PathBuf>,
-    scan: Mutex<Option<Arc<Scan>>>,
+    /// 最近一次扫描，以及它记没记过体检记录。
+    scan: Mutex<Option<(Arc<Scan>, bool)>>,
     journal: Journal,
 }
 
@@ -154,17 +155,29 @@ impl Kernel {
     }
 
     /// 最近一次扫描。还没扫过就先扫一次。
+    ///
+    /// 桌面应用的第一次扫描就是启动时的体检，记一条；命令行的 `status`、`why` 顺带扫的不记，
+    /// 只有 `doctor` 记。
     fn scan(&self) -> Arc<Scan> {
+        self.scan_and_record(self.origin != Trigger::Cli)
+    }
+
+    fn scan_and_record(&self, record: bool) -> Arc<Scan> {
         // 扫描期间一直拿着锁：界面启动时几个查询同时到达，只扫一次，后到的等着用同一份结果。
         let mut guard = self
             .scan
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        if let Some(scan) = guard.as_ref() {
+        if let Some((scan, recorded)) = guard.as_mut() {
+            // 命令行先跑了别的查询、再 `doctor` 时，补记这一次扫描。
+            if record && !*recorded {
+                self.record_checkup(scan);
+                *recorded = true;
+            }
             return Arc::clone(scan);
         }
-        let scan = self.build_scan();
-        *guard = Some(Arc::clone(&scan));
+        let scan = self.build_scan(record);
+        *guard = Some((Arc::clone(&scan), record));
         scan
     }
 
@@ -173,13 +186,13 @@ impl Kernel {
             .scan
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        let scan = self.build_scan();
-        *guard = Some(Arc::clone(&scan));
+        let scan = self.build_scan(true);
+        *guard = Some((Arc::clone(&scan), true));
         scan
     }
 
-    /// 扫一次全盘，并在内存里记一条体检记录。调用方持有扫描锁。
-    fn build_scan(&self) -> Arc<Scan> {
+    /// 扫一次全盘，`record` 时记一条体检记录。调用方持有扫描锁。
+    fn build_scan(&self, record: bool) -> Arc<Scan> {
         let options = ScanOptions {
             project_roots: self.extra_projects.clone(),
         };
@@ -188,13 +201,21 @@ impl Kernel {
             &self.user_home,
             &options,
         ));
-        let report = crate::scanner::diagnose(&scan);
-        self.journal.remember(self.checkup_record(&scan, &report));
+        if record {
+            self.record_checkup(&scan);
+        }
         scan
     }
 
+    fn record_checkup(&self, scan: &Scan) {
+        let report = crate::scanner::diagnose(scan);
+        // 写不进 `~/.fangcun` 时记录留在内存里，体检照常。
+        let _ = self.journal.record(self.checkup_record(scan, &report));
+    }
+
     fn checkup_record(&self, scan: &Scan, report: &CheckupReport) -> Record {
-        let first = self.journal.is_empty();
+        // 以前运行留下过体检记录，就不算首次。
+        let first = !self.journal.has_kind(RecordKind::Checkup);
         let trigger = if first && self.origin == Trigger::Desktop {
             Trigger::FirstLaunch
         } else {
@@ -234,8 +255,8 @@ impl Kernel {
             }
         }
         Record {
-            // 同一秒里可能重扫，编号加上本次运行的序号，保证唯一。
-            id: format!("checkup-{}-{}", scan.scanned_at.0, self.journal.len()),
+            // 同一秒里可能重扫，编号加上已有记录的条数，保证唯一。
+            id: format!("checkup-{}-{}", scan.scanned_at.0, self.journal.count()),
             at: scan.scanned_at.clone(),
             kind: RecordKind::Checkup,
             title,
@@ -281,7 +302,7 @@ impl Kernel {
 
     /// `fangcun doctor`、体检报告页。用最近一次扫描，还没扫过就先扫。
     pub fn doctor(&self) -> Result<CheckupReport> {
-        Ok(crate::scanner::diagnose(&self.scan()))
+        Ok(crate::scanner::diagnose(&self.scan_and_record(true)))
     }
 
     /// 「重新体检」：重新扫描全盘，换掉缓存。
@@ -454,9 +475,20 @@ mod tests {
     use super::*;
 
     fn kernel(access: Access) -> Kernel {
-        Kernel::with_home(FangcunHome::at("/nonexistent/fangcun-test"), access)
+        kernel_at(FangcunHome::at("/nonexistent/fangcun-test"), access)
+    }
+
+    fn kernel_at(home: FangcunHome, access: Access) -> Kernel {
+        Kernel::with_home(home, access)
             .expect("打开内核不应碰磁盘")
             .with_user_home("/nonexistent/fangcun-test-home")
+    }
+
+    /// 每个测试一个空的临时 `~/.fangcun`。
+    fn temp_home(name: &str) -> FangcunHome {
+        let root = std::env::temp_dir().join(format!("fangcun-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        FangcunHome::at(root)
     }
 
     #[test]
@@ -494,7 +526,8 @@ mod tests {
 
     #[test]
     fn concurrent_queries_scan_once() {
-        let kernel = kernel(Access::ReadOnly);
+        let home = temp_home("concurrent");
+        let kernel = kernel_at(home.clone(), Access::ReadOnly);
         std::thread::scope(|scope| {
             for _ in 0..6 {
                 scope.spawn(|| kernel.overview().expect("概览"));
@@ -510,6 +543,52 @@ mod tests {
             .map(|r| r.id)
             .collect();
         assert_eq!(ids.len(), 2, "每条体检记录的编号都不同");
+        let _ = std::fs::remove_dir_all(home.root());
+    }
+
+    #[test]
+    fn checkups_are_kept_in_the_journal_across_runs() {
+        let home = temp_home("journal");
+        let first = kernel_at(home.clone(), Access::ReadOnly);
+        first.overview().expect("概览");
+        let records = first.log(&RecordFilter::default()).expect("读记录");
+        assert_eq!(records[0].trigger, Trigger::FirstLaunch);
+        assert!(records[0].title.starts_with("首次体检"));
+        assert!(
+            home.journal_dir()
+                .join(crate::journal::RECORDS_FILE)
+                .is_file()
+        );
+
+        // 再开一次：读得到上次的记录，这次不算首次。
+        let second = kernel_at(home.clone(), Access::ReadOnly);
+        second.rescan().expect("重扫");
+        let records = second.log(&RecordFilter::default()).expect("读记录");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].trigger, Trigger::Desktop);
+        assert!(records[0].title.starts_with("体检"));
+        // 只写了 journal 一个子目录。
+        let entries: Vec<_> = std::fs::read_dir(home.root()).expect("列目录").collect();
+        assert_eq!(entries.len(), 1);
+        let _ = std::fs::remove_dir_all(home.root());
+    }
+
+    #[test]
+    fn cli_records_only_explicit_checkups() {
+        let home = temp_home("cli");
+        let cli = kernel_at(home.clone(), Access::ReadOnly).with_origin(Trigger::Cli);
+        cli.overview().expect("概览");
+        assert!(
+            cli.log(&RecordFilter::default())
+                .expect("读记录")
+                .is_empty()
+        );
+        assert!(!home.root().exists(), "顺带的扫描不写记录");
+        cli.doctor().expect("体检");
+        let records = cli.log(&RecordFilter::default()).expect("读记录");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].trigger, Trigger::Cli);
+        let _ = std::fs::remove_dir_all(home.root());
     }
 
     #[test]

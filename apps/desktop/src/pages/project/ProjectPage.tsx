@@ -164,7 +164,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           {data && tab === "manifest" && <ManifestTab context={data} />}
           {data && tab === "history" && (
             <div className={page.empty}>
-              <p>还没有快照。M0 不写任何文件，同步与回滚在 M1 开放。</p>
+              <p>还没有快照。M0 只读，同步与回滚在 M1 开放。</p>
             </div>
           )}
         </section>

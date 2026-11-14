@@ -2,12 +2,12 @@
 //!
 //! 只追加。桌面应用、命令行、文件监听产生的记录都落在这里。
 //!
-//! M0 不写任何文件（D-15 还没定），所以这一期的记录只留在内存里：
-//! 本次运行做过的体检。`journal/records.jsonl` 存在时也会读出来，格式是一行一条 [`Record`] 的 JSON，
-//! 写入在 M1 实现。
+//! 格式是 `journal/records.jsonl`，一行一条 [`Record`] 的 JSON。M0 只写这一个目录（D-15）：
+//! 记的是体检。目录要等第一条记录才创建；写不进去时（例如没有权限），记录退回到本次运行的内存里，
+//! 不让体检因此失败。
 
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -157,15 +157,19 @@ impl RecordFilter {
 
 #[derive(Debug)]
 pub struct Journal {
+    dir: PathBuf,
     file: PathBuf,
+    /// 没写进磁盘的记录。
     memory: Mutex<Vec<Record>>,
 }
 
 impl Journal {
     /// 只算路径，不创建目录。
     pub fn open(home: &FangcunHome) -> Self {
+        let dir = home.journal_dir();
         Self {
-            file: home.journal_dir().join(RECORDS_FILE),
+            file: dir.join(RECORDS_FILE),
+            dir,
             memory: Mutex::new(Vec::new()),
         }
     }
@@ -191,26 +195,62 @@ impl Journal {
         Ok(u32::try_from(pending).unwrap_or(u32::MAX))
     }
 
-    /// 只留在本次运行的内存里，不落盘。M0 的体检记录走这里。
+    /// 记一条：先写进 `~/.fangcun/journal`，写不进去就留在本次运行的内存里。
+    /// 返回写盘的错误，调用方可以不理会，记录不会丢。
+    pub fn record(&self, record: Record) -> Result<()> {
+        match self.append(&record) {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                self.remember(record);
+                Err(error)
+            }
+        }
+    }
+
+    /// 只留在本次运行的内存里，不落盘。
     pub fn remember(&self, record: Record) {
         if let Ok(mut memory) = self.memory.lock() {
             memory.push(record);
         }
     }
 
-    /// 本次运行在内存里记了几条。
-    pub fn len(&self) -> usize {
-        self.memory.lock().map(|m| m.len()).unwrap_or(0)
+    /// 一共有几条，包括以前运行留下的。新记录的编号用它保证唯一。
+    pub fn count(&self) -> usize {
+        self.all().len()
     }
 
-    /// 本次运行有没有记过任何东西。
-    pub fn is_empty(&self) -> bool {
-        self.memory.lock().map(|m| m.is_empty()).unwrap_or(true)
+    /// 有没有任何一条某类记录，包括以前运行留下的。
+    pub fn has_kind(&self, kind: RecordKind) -> bool {
+        self.all().iter().any(|r| r.kind == kind)
     }
 
-    /// 写进 `~/.fangcun/journal`。M1。
-    pub fn append(&self, _record: &Record) -> Result<()> {
-        Err(Error::NotImplemented("journal::Journal::append"))
+    /// 磁盘上的加内存里的。磁盘上的读不出来时只算内存里的。
+    fn all(&self) -> Vec<Record> {
+        let mut records = self.persisted().unwrap_or_default();
+        if let Ok(memory) = self.memory.lock() {
+            records.extend(memory.iter().cloned());
+        }
+        records
+    }
+
+    /// 追加一行到 `journal/records.jsonl`，目录不在就建。
+    pub fn append(&self, record: &Record) -> Result<()> {
+        let io = |path: &PathBuf| {
+            let path = path.clone();
+            move |source| Error::Io { path, source }
+        };
+        fs::create_dir_all(&self.dir).map_err(io(&self.dir))?;
+        let mut line = serde_json::to_string(record).map_err(|e| Error::Parse {
+            origin: "活动记录".to_owned(),
+            message: e.to_string(),
+        })?;
+        line.push('\n');
+        let mut file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.file)
+            .map_err(io(&self.file))?;
+        file.write_all(line.as_bytes()).map_err(io(&self.file))
     }
 
     fn persisted(&self) -> Result<Vec<Record>> {
@@ -272,6 +312,43 @@ mod tests {
             .collect();
         assert_eq!(ids, ["b", "a"]);
         assert!(!home.root().exists());
+    }
+
+    #[test]
+    fn recorded_entries_survive_a_new_journal() {
+        let root = std::env::temp_dir().join(format!("fangcun-journal-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let home = FangcunHome::at(&root);
+        Journal::open(&home)
+            .record(record("a", "2026-11-14T01:00:00Z", RecordKind::Checkup))
+            .expect("写进临时目录");
+        let reopened = Journal::open(&home);
+        assert!(reopened.has_kind(RecordKind::Checkup));
+        assert_eq!(reopened.count(), 1);
+        let ids: Vec<String> = reopened
+            .read(&RecordFilter::default())
+            .expect("读记录")
+            .into_iter()
+            .map(|r| r.id)
+            .collect();
+        assert_eq!(ids, ["a"]);
+        // 只写了 journal 一个子目录。
+        let entries: Vec<_> = fs::read_dir(&root).expect("列目录").collect();
+        assert_eq!(entries.len(), 1);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn unwritable_journal_falls_back_to_memory() {
+        let home = FangcunHome::at("/nonexistent/fangcun-journal-test");
+        let journal = Journal::open(&home);
+        assert!(
+            journal
+                .record(record("a", "t", RecordKind::Checkup))
+                .is_err()
+        );
+        assert_eq!(journal.read(&RecordFilter::default()).expect("读").len(), 1);
+        assert_eq!(journal.count(), 1);
     }
 
     #[test]

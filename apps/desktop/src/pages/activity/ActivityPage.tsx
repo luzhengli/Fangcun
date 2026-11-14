@@ -222,8 +222,7 @@ export function ActivityPage() {
           )}
           <p className={styles.foot}>
             更早的记录保留在 ~/.fangcun/journal，命令行可用{" "}
-            <span className={styles.mono}>fangcun log</span> 查看。M0
-            不写任何文件，这里只有本次运行的体检。
+            <span className={styles.mono}>fangcun log</span> 查看。
           </p>
         </section>
         {inspectorOpen && current && (
