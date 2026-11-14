@@ -4,9 +4,9 @@
 
 ## 现在在哪
 
-M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-21 完成，只剩 M0-12 的最后一眼。本机实测：`fangcun doctor` 约 7 秒，零配置，只写 `~/.fangcun/journal`。
+M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-21 完成，M0-12 按人给的截图改了窗口按钮位置，待人再看一眼。本机实测：`fangcun doctor` 约 7 秒，零配置，只写 `~/.fangcun/journal`。
 
-人已定 D-15、D-18 至 D-22（都是推荐项，D-19 补问了两件），设计文档已改并随 PR #5 合进 main。代码跟上的三件（M0-19 至 M0-21）在分支 `m0-followups` 上做完了。原型还差三处（D-23）。
+人已定 D-15、D-18 至 D-22（都是推荐项，D-19 补问了两件），设计文档已改并随 PR #5 合进 main。代码跟上的三件（M0-19 至 M0-21）随 PR #6 合进 main。原型还差三处（D-23）。
 
 - **能用的**：
   - 命令行：`pnpm cli -- doctor`、`status`、`why <资产> [--global]`、`log`。写入命令仍返回「当前是只读模式」。
@@ -14,18 +14,16 @@ M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、
   - 适配器：Claude Code、Codex 完整支持；Cursor、Copilot CLI、Gemini CLI、opencode、Windsurf、Trae 只读扫描。体检扫 8 个工具。
   - 本机实测：8 个项目、39 项资产；18 个 lark-* skill 只有 Xuanji 用过，10 个全局 skill 近 30 天没人用，Claude Code 只读到 31 个全局 skill 里的 16 个，`~/.agents/.skill-lock.json` 07-05 后没更新。
 - **检查**：`pnpm check` 全过（Rust 库 87 个测试，加两组适配器回归样例；前端 12 个）。四个页面用示例数据和原型截图对过，也用本机真实数据截图看过（`pnpm screens --snapshot`）。M0-19 至 M0-21 只改了内核和两处文案，没有重新截图。
-- **git**：PR #5 已合并到 main（`5db9439`）。分支 `m0-followups` 从 main 开出，三个提交对应 M0-19 至 M0-21，还没推送，没开 PR。
+- **git**：PR #5（`5db9439`）、PR #6（`2df233c`）都已合并到 main。窗口按钮的调整在分支 `m0-traffic-lights`，随本次 PR 合并。
 
 ## 下一步
 
-1. 问人要不要推送 `m0-followups` 并开 PR。
+1. **M0-12**：人用 `pnpm dev` 再看一眼左上角的红黄绿按钮。人给的截图（2026-11-14）里按钮中心比后退、侧栏按钮高约 4.5pt，`apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y` 已从 13 改成 17.5（按 tao 的算法，按钮中心约在 y + 1.75pt，工具栏里其他按钮的中心在 19.25pt）。还偏就按同样算法微调。
 2. **D-23**：原型三处跟上 D-19、D-21，要在画布里改再同步。原型改完之前，示例数据照旧（全局页示例里 frontend-design 仍是「被覆盖」）；同步后改 `apps/desktop/src/ipc/fixtures/global.ts`、`project.ts` 跟上。
-3. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。
-4. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。M1-01、M1-02 已定要做。
+3. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。M1-01、M1-02 已定要做。
 
 ## 卡在哪
 
-- **M0-12**：Codex 能操作 Fangcun 了，但它自己的操控浮层总挡住窗口左上角，看不到按钮；按 `AGENTS.md`，Claude Code 不能自己截图看桌面。
 - **D-09、D-16、D-17** 照旧，不卡开发。
 
 ## 接手须知
