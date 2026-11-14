@@ -12,7 +12,8 @@
 | 1 | `docs/STATUS.md` | 每次开工先读：现在在哪、下一步、卡在哪 |
 | 2 | `docs/BACKLOG.md` | 要挑活或查某件事的状态时 |
 | 3 | `docs/product-design.md` 的对应章节 | 要设计或实现某个功能时，按下面的章节索引只读那一节。全文约 890 行，不要通读 |
-| 4 | `docs/DECISIONS.md`、`docs/LOG.md`、`docs/archive/` | 要查某个决定的来由、某天做了什么、原型原件时 |
+| 4 | `docs/ARCHITECTURE.md` | 要写代码时：代码怎么组织、不能破的规则、照着原型实现一个页面的步骤 |
+| 5 | `docs/DECISIONS.md`、`docs/LOG.md` | 要查某个决定的来由、某天做了什么时 |
 
 ## 目录
 
@@ -25,11 +26,29 @@
 | `docs/BACKLOG.md` | 待办，按期分节，带状态标记 |
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
+| `docs/ARCHITECTURE.md` | 工程架构：模块、规则、IPC 约定、命令 |
+| `crates/fangcun-core/` | 内核（Rust）。全部业务逻辑在这里，桌面应用与命令行共用 |
+| `crates/fangcun-cli/` | 命令行 `fangcun` |
+| `apps/desktop/` | 桌面应用。`src-tauri/` 是 Tauri 外壳，`src/` 是 React 界面 |
+| `adapters/` | 各 Agent 工具的声明式适配器，每个工具一份 TOML |
 | `prototype/` | 网页版原型画布的源文件镜像，实现界面时参考。只同步，不手改。同步记录在 `prototype/README.md` |
 | `tools/prototype-preview/` | 原型的本地预览器和同步检查脚本 `check.js`。用法见 `prototype/README.md`「本地看」 |
-| `docs/archive/` | 旧的原型导出件，文件名带导出日期。2026-11-14 起改为同步源文件到 `prototype/`，这里不再新增 |
 
-仓库里目前只有文档，还没有代码。开始写代码后，在这里补上代码目录和开发命令。
+## 开发命令
+
+都在仓库根目录运行。完整的表和环境要求在 `docs/ARCHITECTURE.md`「命令」。
+
+| 命令 | 作用 |
+| --- | --- |
+| `pnpm install` | 装前端依赖 |
+| `pnpm dev` | 桌面应用，连内核 |
+| `pnpm dev:fixtures` | 浏览器里看界面，用照抄原型的示例数据 |
+| `pnpm cli -- <命令>` | 运行命令行 |
+| `pnpm bindings` | 改了内核里导出给界面的类型后运行 |
+| `pnpm screens [画板…]` | 给应用截图，和 `prototype/screens/` 里同名的原型截图对比 |
+| `pnpm check` | 提交前跑：格式、lint、类型检查、全部测试、前端构建 |
+
+写代码时守 `docs/ARCHITECTURE.md`「不能破的规则」。最要紧的三条：业务逻辑只在内核；M0 不写任何文件；界面只经 `ipc/` 取数据，颜色只用「墨格」token。
 
 ## 设计文档章节索引
 
@@ -90,6 +109,7 @@
 - 找脚本段：`grep -n data-dc-script prototype/project/*.dc.html`。
 - 看结构时去掉行内样式和图标：`sed -E 's/ style="[^"]*"//g; s/<svg.*<\/svg>//g' 文件`。
 - 实现时：文案和示例数据照抄；结构和交互按原型改写成 React 组件，不要搬 `DCLogic` 或 `sc-*` 标签；视觉只用「墨格」token。
+- 实现后：`pnpm screens <画板>` 给应用截图，和 `prototype/screens/` 里同名的截图对着看。完整步骤见 `docs/ARCHITECTURE.md`「照着原型实现一个页面」。
 
 ### 同步
 
@@ -104,9 +124,7 @@
 
 本地会话只需 `git pull` 拿到最新的 `prototype/`，包括截图。
 
-### 旧导出件
-
-`docs/archive/` 里是 11-13、11-14 的网页另存件，是打包文件。要读时先解包：`<script type="__bundler/manifest">` 是 JSON，每项的 `data` 是 base64，`compressed` 为真时再 gzip 解压；`<script type="__bundler/template">` 是外壳或单画板页面；页面内容在最后一个 `</helmet>` 之后。现在一般不需要读它们。
+同步改了「墨格」的 token 时，`apps/desktop/src/styles/tokens.css` 要跟着改。它由测试逐项比对原型，没跟上时 `pnpm test` 和 CI 会报出来。
 
 ## 交流
 

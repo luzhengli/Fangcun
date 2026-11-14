@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 检查
+    # 首版只面向 macOS。Windows 与 Linux 到 V2 再加。
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: pnpm install --frozen-lockfile
+
+      # 格式、lint、类型检查、测试、前端构建。本地是同一条命令。
+      - run: pnpm check
+
+      # 测试会重新导出 TypeScript 类型。和仓库里的不一样，说明改了内核类型没跑 pnpm bindings。
+      - name: 类型绑定与内核一致
+        run: git diff --exit-code -- apps/desktop/src/ipc/bindings
+
+  prototype:
+    name: 原型能渲染
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium --only-shell
+
+      # 只检查不截图：截图由同步原型的那次会话生成并提交，不同机器的字体渲染不一样。
+      - run: node tools/prototype-preview/check.js --no-screens

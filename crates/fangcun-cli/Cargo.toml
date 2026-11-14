@@ -1,0 +1,18 @@
+[package]
+name = "fangcun-cli"
+description = "方寸命令行 fangcun。与桌面应用共用内核。"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "fangcun"
+path = "src/main.rs"
+
+[dependencies]
+fangcun-core.workspace = true
+clap = { version = "4", features = ["derive"] }
+
+[lints]
+workspace = true

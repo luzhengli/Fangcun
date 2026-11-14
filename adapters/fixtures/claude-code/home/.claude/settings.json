@@ -1,0 +1,4 @@
+{
+  "enabledPlugins": { "code-review-kit@market": true, "disabled-kit@market": false },
+  "hooks": {}
+}

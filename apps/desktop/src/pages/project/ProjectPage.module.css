@@ -1,0 +1,181 @@
+/* 项目页（6.3）。列宽照抄 prototype/project/Main.dc.html。 */
+
+.palette {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--tx-2);
+}
+
+.palette:disabled {
+  cursor: default;
+}
+
+.kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  color: var(--tx-3);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.budgetLead {
+  font-weight: 600;
+}
+
+.budgetTotal {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetLimit {
+  color: var(--tx-3);
+}
+
+.colName {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colLayer {
+  flex: 0 0 150px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--tx-2);
+  white-space: nowrap;
+}
+
+.colStatus {
+  flex: 0 0 170px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.colCost {
+  flex: 0 0 52px;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--tx-2);
+  margin-left: 8px;
+}
+
+.kindTag {
+  flex: none;
+  font-size: 11px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  color: var(--tx-2);
+}
+
+.othersIntro {
+  margin: 0;
+  padding: 0 16px 6px;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.stack li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.stack li + li {
+  border-top: 1px solid var(--line);
+}
+
+.stack li[data-effective="true"] {
+  background: var(--ok-weak);
+}
+
+.stackLayer {
+  flex: 0 0 32px;
+  color: var(--tx-2);
+}
+
+.stackValue {
+  flex: 1;
+  min-width: 0;
+  color: var(--tx-3);
+  word-break: break-all;
+}
+
+.stack li[data-effective="true"] .stackValue {
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.stack li[data-shadowed="true"] .stackValue {
+  text-decoration: line-through;
+}
+
+.stackNote,
+.sectionNote {
+  margin: 0;
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.shareText {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-2);
+}
+
+.shareBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.shareBar > span {
+  display: block;
+  height: 100%;
+}
+
+.files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

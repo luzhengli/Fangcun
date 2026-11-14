@@ -1,0 +1,22 @@
+# Rust
+/target/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Tauri
+apps/desktop/src-tauri/gen/
+
+# 应用截图，pnpm screens 生成，用来和 prototype/screens/ 对比
+apps/desktop/screens/
+
+# 本机
+.DS_Store
+*.local
+.env
+.env.*
+
+# 方寸自己的个人覆盖，永不提交
+fangcun.local.toml

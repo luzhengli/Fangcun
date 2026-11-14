@@ -1,0 +1,37 @@
+# Trae 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14：官方文档页（https://docs.trae.ai/ide/skills、/ide/rules、/ide/add-mcp-servers）
+# 没能读出正文。下面的位置取自引用这些官方页的二手来源，待核实：
+#   https://github.com/dyoshikawa/rulesync/pull/3233
+#   https://github.com/dyoshikawa/rulesync/issues/2950
+# 没读的：~/.trae/user_rules、Trae CN（~/.trae-cn）。
+schema = 1
+
+[tool]
+id = "trae"
+name = "Trae"
+support = "scan-only"
+
+[[skills]]
+scope = "global"
+path = "~/.trae/skills"
+
+[[skills]]
+scope = "project"
+path = ".trae/skills"
+
+[[rules]]
+scope = "project"
+dir = ".trae/rules"
+
+[[mcp]]
+scope = "project"
+file = ".trae/mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"

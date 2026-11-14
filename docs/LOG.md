@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-11-14 人定 D-15、D-18 至 D-22
+
+- 人逐条选了六件，都是推荐项。D-19 写正文时发现「物化时移走上层同名项」会让共用全局目录的其他项目丢掉它，补问后改为不自动移、标「同名冲突」由人选；示例保留 frontend-design。
+- 设计文档 4.3、F5、6.1、6.3、6.6、6.7、7.4、第 8 节、9.3 已按结论改写。DECISIONS 记了经过。
+- 留下的：代码跟上（M0-19 体检记录落盘、M0-20 全局页「同名冲突」、M0-21 读 `budget`），原型三处（D-23），M1-01、M1-02。
+
+## 2026-11-14 桌面窗口检查（M0-12）
+
+- 人批准 Codex 操作 Fangcun 后用 debug 包查：拖动、体检、项目、全局页通过；活动页同一条体检记录出现三次，原因是启动时几个查询并发各扫一次。内核改为扫描期间持锁、记录编号带序号，加了并发测试，复查只剩一条。
+- 窗口按钮被 Codex 的操控浮层挡住，没看到。按 tao 的实现算默认会偏上约 6px，设了 `trafficLightPosition {x: 12, y: 13}`，要人看一眼。
+- `pnpm screens` 加了 `--dark`，深色下的界面用真实数据截图看过。
+
+---
+
+## 2026-11-14 补完 M0（M0-15 至 M0-18，M0-11 本地模拟）
+
+- 只读扫描的适配器：Cursor、Copilot CLI、Gemini CLI、opencode、Windsurf、Trae，体检现在扫 8 个工具。Trae 官方页读不出，用二手来源，标了待核实。
+- 实测 Codex：同名 MCP 项目层赢、按字段合并；未受信任项目的 `.codex/config.toml` 不读。适配器格式加了 `requires`、`mcp-merge`、`path-vars`、`skill-switches`、`extra-names`、`import-depth`、`install-index`、规则扩展名，回归样例跟着加。
+- 真实数据：`ipc_snapshot` 示例加 `pnpm screens --snapshot`，四个页面用本机数据截图看过。CI 在干净副本里按 ci.yml 跑过，修了一处格式错误。
+- 人选了开分支提 PR：分支 `m0-readonly`，PR #5，CI 第一次运行两项都过（M0-11 完成）。
+- 没做：M0-12 的 Codex 找到了窗口，但自动审批拒绝操作 Fangcun 与系统设置，人说去批准，批准后重跑。
+
+---
+
+## 2026-11-14 实现 M0（M0-02 至 M0-10、M0-13、M0-14）
+
+- 适配器：对照 Claude Code 与 Codex 当期文档填了读取位置、优先级、MCP 字段、会话记录、其他加载项，定了格式（`adapters/README.md`），回归样例在 `adapters/fixtures/` 与 `tests/adapters.rs`。
+- 内核：扫描、按内容哈希归并、五类体检发现、生效上下文与 `why`、全局页、估算、会话记录统计、内存里的体检记录。命令行 `doctor`、`status`、`why`、`log` 可用。本机实测：`fangcun doctor` 约 7 秒，2 个工具、8 个项目、39 项资产，`~/.fangcun` 没有建。
+- 界面：体检报告、项目页、全局页、活动页，侧栏项目列表、重新体检、后退前进置灰；跨页组件进了 `components/`。示例数据照抄原型，四张截图与原型对过。`pnpm check` 全过（Rust 85 个测试、前端 12 个）。
+- 没做：M0-11（CI 要推送后才跑）、M0-12（Codex 的 computer use 起不来，报 `Operation not permitted`）。实现中发现六件设计文档没写到的事，进了「要人定」。
+
+---
+
+## 2026-11-14 工程骨架（M0-01）
+
+- 搭了 Rust 工作区（内核 `fangcun-core`、命令行 `fangcun-cli`）、Tauri 2 外壳、React 界面、适配器目录、CI 配置。只有结构、类型、接口，用例都返回「尚未实现」。说明写在新增的 `docs/ARCHITECTURE.md`。
+- 中途人让把远端的原型预览器同步到本地并检查骨架。用合并同步（`AGENTS.md`、`LOG.md` 两处冲突已解）。骨架跟着加了示例数据通道 `pnpm dev:fixtures`、应用截图脚本 `pnpm screens`、Playwright 依赖，Biome 排除了预览器目录。
+- 结果：`pnpm check` 全过（Rust 测试 14 个、前端测试 11 个）；`check.js` 在本地七张画板通过；桌面外壳启动 7 秒不退出；截图对比跑通，顺手把侧栏标识区的高度改成和原型一致。
+- 没做：没有提交骨架，没有推送；CI 没跑过；桌面窗口里的样子没人看过。三件要人定的事进了 BACKLOG（D-15、D-16、D-17）。
+
+---
+
 ## 2026-11-14 原型同步加检查和截图
 
 - 人担心画布以后改了、预览器渲染不出来，本地 Agent 看不懂原型。不改用导出件，补了两层保障。
@@ -19,6 +61,13 @@
 - 新增 `tools/prototype-preview/`（`index.html` + `dc-preview.js`）：读 `prototype/project/` 的画板，实现 `{{}}`、`sc-for`、`sc-if`、事件、`setState` 和画板间跳转。
 - 用 Playwright 渲染七张画板：无报错，无残留 `{{`；抽查了回滚冲突、筛选、勾选、命令面板输入、跨画板链接、深色模式。
 - 用法写进 `prototype/README.md`「本地看」和 `AGENTS.md`。
+
+---
+
+## 2026-11-14 删除 docs/archive/
+
+- 人说旧原型导出件不再看，删除 `docs/archive/` 下三个 HTML（约 4.6MB），用 `git rm`，可从 git 历史取回。
+- 同步清理 `AGENTS.md` 里的目录行、「旧导出件」一节和阅读顺序，以及设计文档第 6 节开头的引用。
 
 ---
 

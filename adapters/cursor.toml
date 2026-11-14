@@ -1,0 +1,57 @@
+# Cursor 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照 Cursor 当期文档核实：
+#   https://cursor.com/docs/context/rules
+#   https://cursor.com/docs/context/skills
+#   https://cursor.com/docs/context/mcp
+# 没读的：界面里设置的 User rules（不在文件里）、Team rules、「为兼容而读 Claude 与 Codex 目录」的具体位置。
+schema = 1
+
+[tool]
+id = "cursor"
+name = "Cursor"
+support = "scan-only"
+
+[[skills]]
+scope = "global"
+path = "~/.cursor/skills"
+
+[[skills]]
+scope = "global"
+path = "~/.agents/skills"
+
+[[skills]]
+scope = "project"
+path = ".cursor/skills"
+
+[[skills]]
+scope = "project"
+path = ".agents/skills"
+
+# rules 文档：项目根目录与子目录的 AGENTS.md 可以代替 .cursor/rules。这里只读根目录。
+[[instructions]]
+scope = "project"
+names = ["AGENTS.md"]
+
+[[rules]]
+scope = "project"
+dir = ".cursor/rules"
+extension = "mdc"
+
+[[mcp]]
+scope = "global"
+file = "~/.cursor/mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+[[mcp]]
+scope = "project"
+file = ".cursor/mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"

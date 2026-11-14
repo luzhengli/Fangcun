@@ -1,0 +1,87 @@
+/*
+ * 设计系统「墨格」的颜色与字体 token。
+ *
+ * 取值照抄 prototype/project/DesignSystem.dc.html 里的 `.fc` 与 `.fc.dark`，一个字符都不改。
+ * tokens.test.ts 会逐项比对；原型同步后这里对不上，测试会失败。
+ * 界面只用这里的变量，不写色值，不新增 token。要改颜色，先改设计文档和原型。
+ *
+ * 原型用 `.dark` 类切换深色；应用里跟随系统（6.10），所以深色放在媒体查询里。
+ */
+
+:root {
+  --bg: #FFFFFF;
+  --bg-sidebar: #F2F2F0;
+  --bg-subtle: #F8F8F6;
+  --bg-hover: #EDEDEA;
+  --bg-selected: #E8EDFC;
+  --veil: rgba(0,0,0,.04);
+  --line: #E6E6E2;
+  --line-strong: #D0D0CB;
+  --tx-1: #1D1D1F;
+  --tx-2: #55555A;
+  --tx-3: #6B6B70;
+  --accent: #3552D4;
+  --accent-weak: #ECF0FD;
+  --on-accent: #FFFFFF;
+  --bar-1: #3552D4;
+  --bar-2: #8FA3EC;
+  --bar-3: #C9D3F6;
+  --ok: #1B7A43;
+  --ok-dot: #2EA457;
+  --ok-weak: #E7F5EC;
+  --warn: #985200;
+  --warn-dot: #E58A00;
+  --warn-weak: #FDF1E0;
+  --info: #3552D4;
+  --info-dot: #4C6EF5;
+  --info-weak: #ECF0FD;
+  --danger: #BA2D28;
+  --danger-dot: #E5484D;
+  --danger-weak: #FCEBEA;
+  --unknown: #6B43C2;
+  --unknown-dot: #8E62F0;
+  --unknown-weak: #F2EDFD;
+  --muted-dot: #A3A3A8;
+  --code-bg: #F4F4F2;
+  --add-bg: #E3F4E8;
+  --del-bg: #FBE7E6;
+  --shadow-pop: 0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);
+  --font: -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;
+  --mono: "SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1C1C1E;
+    --bg-sidebar: #232325;
+    --bg-subtle: #202022;
+    --bg-hover: #2A2A2D;
+    --bg-selected: #27304F;
+    --veil: rgba(255,255,255,.05);
+    --line: #323235;
+    --line-strong: #46464B;
+    --tx-1: #ECECEE;
+    --tx-2: #B0B0B6;
+    --tx-3: #93939A;
+    --accent: #7D93FF;
+    --accent-weak: #252D4A;
+    --on-accent: #0F1530;
+    --bar-1: #7D93FF;
+    --bar-2: #4E62B8;
+    --bar-3: #323E74;
+    --ok: #5BCB85;
+    --ok-weak: #17301F;
+    --warn: #F2A33A;
+    --warn-weak: #33260F;
+    --info: #8DA2FF;
+    --info-weak: #232B48;
+    --danger: #FF7B76;
+    --danger-weak: #3A1D1C;
+    --unknown: #B394FF;
+    --unknown-weak: #2B2240;
+    --code-bg: #252527;
+    --add-bg: #173020;
+    --del-bg: #3A1D1C;
+    --shadow-pop: 0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08);
+  }
+}

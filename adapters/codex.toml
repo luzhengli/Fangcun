@@ -1,0 +1,119 @@
+# Codex 适配器。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照 Codex 当期文档核实（developers.openai.com 已跳转到 learn.chatgpt.com）：
+#   https://learn.chatgpt.com/docs/agent-configuration/agents-md
+#   https://learn.chatgpt.com/docs/build-skills
+#   https://learn.chatgpt.com/docs/extend/mcp?surface=cli
+# 会话记录的格式对照本机 ~/.codex/sessions 下的实际文件核实。
+# 还没读的：/etc/codex/skills、内置的系统 skill。
+schema = 1
+
+[tool]
+id = "codex"
+name = "Codex"
+support = "full"
+
+# 配置文档：Codex 的本地状态放在 CODEX_HOME 下，默认 ~/.codex。
+[path-vars]
+CODEX_HOME = "~/.codex"
+
+[capabilities]
+# skills 文档：支持软链的 skill 目录，扫描时跟随到目标。
+follows-symlinks = true
+# mcp 文档：受信任的项目可以在 .codex/config.toml 里配 MCP。
+project-mcp = true
+# skills 文档：受信任项目的 .codex/config.toml 里 [[skills.config]] enabled = false 可以停用。
+per-project-disable = true
+
+# ── Skills ──
+# 启动时只读名称、描述和路径，选中后才读完整的 SKILL.md。
+
+[[skills]]
+scope = "global"
+path = "~/.agents/skills"
+lock = { path = "~/.agents/.skill-lock.json", format = "skills-cli" }
+
+[[skills]]
+scope = "project"
+path = ".agents/skills"
+walk = "git-root-down"
+
+# ── 指令文件 ──
+# 全局层取 ~/.codex 下第一个非空的 AGENTS.override.md 或 AGENTS.md。
+# 项目层从 git 根目录往下走到工作目录，每层最多一个文件。合并后上限 32 KiB。
+
+[[instructions]]
+scope = "global"
+names = ["$CODEX_HOME/AGENTS.override.md", "$CODEX_HOME/AGENTS.md"]
+pick = "first"
+
+[[instructions]]
+scope = "project"
+names = ["AGENTS.override.md", "AGENTS.md"]
+walk = "git-root-down"
+pick = "first"
+max-bytes = 32768
+# 配置文档：project_doc_fallback_filenames 是 AGENTS.md 缺失时每层再试的文件名。
+extra-names = { file = "$CODEX_HOME/config.toml", format = "toml", key = ["project_doc_fallback_filenames"] }
+
+# ── MCP ──
+# 用户层 ~/.codex/config.toml，项目层 .codex/config.toml（只对受信任的项目生效）。
+
+[[mcp]]
+scope = "global"
+file = "$CODEX_HOME/config.toml"
+format = "toml"
+key = ["mcp_servers"]
+
+[[mcp]]
+scope = "project"
+file = ".codex/config.toml"
+format = "toml"
+key = ["mcp_servers"]
+# 2026-11-14 用隔离的 CODEX_HOME 实测（codex-cli 0.167.0，codex mcp list --json）：
+# 项目没有标成 trusted 时，这份配置整个不读。
+requires = { file = "$CODEX_HOME/config.toml", format = "toml", key = ["projects", "{project}", "trust_level"], equals = "trusted", unmet = "项目没有标为受信任，Codex 不读项目里的 .codex/config.toml" }
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"
+enabled = "enabled"
+
+[precedence]
+# skills 文档：同名的 skill 不合并，都出现在可选列表里。所以这里留空，表示都加载。
+skills = []
+# 配置文档：离工作目录近的配置文件赢（项目层盖过用户层）。
+# 2026-11-14 实测：同名的 mcp_servers 按字段合并，项目层写了的字段盖过用户层，没写的沿用用户层。
+mcp = ["project", "global"]
+mcp-merge = "fields"
+
+# ── skill 开关 ──
+# skills 文档：[[skills.config]] 里按 path（SKILL.md 的绝对路径）或 name 匹配，enabled = false 停用；
+# 多项匹配时后面的赢。项目里的 .codex/config.toml 只对受信任的项目生效。
+
+[[skill-switches]]
+scope = "global"
+file = "$CODEX_HOME/config.toml"
+format = "toml"
+key = ["skills", "config"]
+path-field = "path"
+name-field = "name"
+enabled-field = "enabled"
+
+[[skill-switches]]
+scope = "project"
+file = ".codex/config.toml"
+format = "toml"
+key = ["skills", "config"]
+path-field = "path"
+name-field = "name"
+enabled-field = "enabled"
+requires = { file = "$CODEX_HOME/config.toml", format = "toml", key = ["projects", "{project}", "trust_level"], equals = "trusted", unmet = "项目没有标为受信任" }
+
+# ── 会话记录 ──
+
+[sessions]
+dir = "$CODEX_HOME/sessions"
+format = "codex-rollout-jsonl"

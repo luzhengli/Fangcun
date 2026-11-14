@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.rs]
+indent_size = 4
+
+[*.md]
+trim_trailing_whitespace = false
+
+[prototype/**]
+# 原型镜像只同步不手改，编辑器不要重排。
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_size = unset

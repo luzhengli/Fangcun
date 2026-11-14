@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗口的权限。界面不直接读写文件、不开子进程、不联网，一切经内核命令。要加权限先看 docs/ARCHITECTURE.md。",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:window:allow-start-dragging"]
+}

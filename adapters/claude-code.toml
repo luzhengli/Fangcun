@@ -1,0 +1,158 @@
+# Claude Code 适配器。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照 Claude Code 当期文档核实：
+#   https://code.claude.com/docs/en/skills
+#   https://code.claude.com/docs/en/memory
+#   https://code.claude.com/docs/en/mcp
+# 会话记录的格式对照本机 ~/.claude/projects 下的实际文件核实。
+# 还没读的：--add-dir 加进来的目录、插件自带的 MCP。插件自带的 skill 只计数，写在「其他加载项」里。
+schema = 1
+
+[tool]
+id = "claude-code"
+name = "Claude Code"
+support = "full"
+
+[capabilities]
+# skills 文档：个人与项目位置的 skill 目录可以是软链，读目标里的 SKILL.md，多处指向同一目标只加载一次。
+follows-symlinks = true
+# mcp 文档：项目层是项目根目录的 .mcp.json。
+project-mcp = true
+# 按项目停用 skill 的写法还没核实，不写。
+
+# ── Skills ──
+# 只有名称与描述常驻，全文在触发时才加载。
+
+[[skills]]
+scope = "global"
+path = "~/.claude/skills"
+
+# 企业托管：managed settings 目录下的 .claude/skills。这里是 macOS 的位置。
+# 同名时企业优先于个人；两者在方寸里都算全局层。
+[[skills]]
+scope = "global"
+path = "/Library/Application Support/ClaudeCode/.claude/skills"
+
+[[skills]]
+scope = "project"
+path = ".claude/skills"
+
+# ── 指令文件 ──
+# 工作目录和它上面每一层的 CLAUDE.md、.claude/CLAUDE.md、CLAUDE.local.md 全部拼接，不互相覆盖。
+# 这几个文件一个都没有时，改读每一层的 AGENTS.md 与 .claude/AGENTS.md。
+# ~/.claude/CLAUDE.md 不影响这个判断，总是加载。
+
+# 企业托管的 CLAUDE.md（macOS）先于用户级加载。文件里的 @路径 会把那个文件一起带进来，最多四层。
+[[instructions]]
+scope = "global"
+names = ["/Library/Application Support/ClaudeCode/CLAUDE.md", "~/.claude/CLAUDE.md"]
+import-depth = 4
+
+[[instructions]]
+scope = "project"
+names = ["CLAUDE.md", ".claude/CLAUDE.md", "CLAUDE.local.md"]
+walk = "ancestors"
+fallback = ["AGENTS.md", ".claude/AGENTS.md"]
+personal = ["CLAUDE.local.md"]
+import-depth = 4
+
+[[rules]]
+scope = "global"
+dir = "~/.claude/rules"
+
+[[rules]]
+scope = "project"
+dir = ".claude/rules"
+
+# ── MCP ──
+# 三层：local 存在 ~/.claude.json 的 projects.<项目路径>.mcpServers，只属于你，对应方寸的个人层；
+# project 是 .mcp.json；user 是 ~/.claude.json 的 mcpServers。
+
+[[mcp]]
+scope = "global"
+file = "~/.claude.json"
+format = "json"
+key = ["mcpServers"]
+
+[[mcp]]
+scope = "project"
+file = ".mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+[[mcp]]
+scope = "personal"
+file = "~/.claude.json"
+format = "json"
+key = ["projects", "{project}", "mcpServers"]
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"
+
+[precedence]
+# skills 文档：「Enterprise over personal, and personal over project」。全局盖过项目。
+skills = ["global", "project"]
+# mcp 文档：local > project > user，整条取用，字段不跨层合并。
+mcp = ["personal", "project", "global"]
+
+# ── 其他加载项（只看不管）──
+
+[[observed]]
+kind = "plugin"
+scope = "global"
+file = "~/.claude/settings.json"
+format = "json"
+key = ["enabledPlugins"]
+# 插件的安装目录记在 installed_plugins.json（对照本机文件核实，文档没有写这个文件）。
+# skills 文档：插件的 skill 在 <插件>/skills/<名称>/SKILL.md。
+install-index = { file = "~/.claude/plugins/installed_plugins.json", format = "json", key = ["plugins"], path-field = "installPath", skills-dir = "skills" }
+
+[[observed]]
+kind = "hook"
+scope = "global"
+file = "~/.claude/settings.json"
+format = "json"
+key = ["hooks"]
+
+[[observed]]
+kind = "hook"
+scope = "project"
+file = ".claude/settings.json"
+format = "json"
+key = ["hooks"]
+
+[[observed]]
+kind = "hook"
+scope = "personal"
+file = ".claude/settings.local.json"
+format = "json"
+key = ["hooks"]
+
+[[observed]]
+kind = "slash-command"
+scope = "global"
+dir = "~/.claude/commands"
+
+[[observed]]
+kind = "slash-command"
+scope = "project"
+dir = ".claude/commands"
+
+[[observed]]
+kind = "subagent"
+scope = "global"
+dir = "~/.claude/agents"
+
+[[observed]]
+kind = "subagent"
+scope = "project"
+dir = ".claude/agents"
+
+# ── 会话记录 ──
+
+[sessions]
+dir = "~/.claude/projects"
+format = "claude-code-jsonl"

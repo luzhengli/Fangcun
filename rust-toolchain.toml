@@ -1,0 +1,4 @@
+# 只对用 rustup 的环境（CI、其他贡献者）生效。Homebrew 装的 Rust 会忽略这个文件。
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

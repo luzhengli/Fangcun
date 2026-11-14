@@ -1,0 +1,115 @@
+/* 体检报告（6.2）。尺寸照抄 prototype/project/Checkup.dc.html。 */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+}
+
+.lead {
+  font-weight: 600;
+}
+
+.progress {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.scanned {
+  color: var(--tx-3);
+}
+
+.stat {
+  color: var(--tx-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 概要条与项目页的预算条同一样式；每处理一项，点亮一段。 */
+.segments {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.segments > span {
+  flex: 1;
+}
+
+.segments > span[data-done="true"] {
+  background: var(--ok-dot);
+}
+
+.colTag {
+  flex: 0 0 76px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.colText {
+  flex: 1 1 240px;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.colState {
+  flex: 0 0 96px;
+  white-space: nowrap;
+  color: var(--tx-3);
+}
+
+.foot {
+  margin: 16px 16px 0;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.location {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.location + .location {
+  border-top: 1px solid var(--line);
+}
+
+.locPath {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 18px;
+  word-break: break-all;
+  user-select: text;
+}
+
+.locDetail {
+  flex: 0 0 72px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.locFoot {
+  font-size: 11px;
+  color: var(--tx-3);
+}
