@@ -24,6 +24,8 @@ apps/desktop/src-tauri      Tauri 外壳：把内核用例暴露成命令      c
 | `apps/desktop/src-tauri/` | 桌面外壳。打开内核、暴露命令、转发事件 |
 | `apps/desktop/src/` | React 界面 |
 | `apps/desktop/scripts/screens.mjs` | 给应用各页面截图，和原型截图对比 |
+| `apps/desktop/scripts/window-shot.mjs` | 给真实的桌面窗口截图，量窗口按钮 |
+| `tools/workflow/` | `pnpm workflow`，工作流的状态，见 `docs/WORKFLOW.md` |
 | `adapters/` | 适配器，每个工具一份 TOML。格式见 `adapters/README.md` |
 | `tools/prototype-preview/` | 原型预览器与同步检查，不属于产品代码 |
 
@@ -139,8 +141,8 @@ src/
 3. 在内核里把这一页要的数据类型补全，`pnpm bindings`。
 4. 把原型脚本段里的示例数据照抄进 `ipc/fixtures/`。类型对不上时改内核的类型，不改数据。
 5. 写页面。`pnpm dev:fixtures` 在浏览器里看。
-6. `pnpm screens <画板>`，把 `apps/desktop/screens/<画板>.png` 和 `prototype/screens/<画板>.png` 对着看，直到一致。两张图的视口、配色、数据相同。
-7. 在内核里实现真实数据。`pnpm dev` 在桌面外壳里看。
+6. `pnpm screens --compare <画板>`，看 `apps/desktop/screens/compare-<画板>.png` 的「原型 · 应用 · 差异」三栏拼图，直到一致。两边在本机用同一个浏览器渲染，视口、配色、数据相同。示例数据跟上这张画板后，`pnpm workflow accept <画板>`。
+7. 在内核里实现真实数据。`pnpm screens --snapshot` 用本机数据截图，`pnpm dev` 在桌面外壳里看。改了窗口外壳（`tauri.conf.json`、工具栏）时跑 `pnpm window-shot`。
 
 对比时已知的环境差异，不算不一致：原型画了红黄绿三个窗口按钮，应用里是系统画的，截图里是空位；原型给滚动条预留了位置，侧栏内容比应用窄约 10px。
 
@@ -159,6 +161,9 @@ src/
 | `pnpm bindings` | 把内核类型导出到前端 |
 | `pnpm screens [画板…]` | 给应用截图，和原型截图对比 |
 | `pnpm screens --snapshot target/ipc-snapshot.json [画板…]` | 用本机真实数据截图，写到 `screens/real-<画板>.png`。快照先用 `cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json` 生成，只读 |
+| `pnpm screens --compare [画板…]` | 本机重渲原型，写出「原型 · 应用 · 差异」拼图 `screens/compare-<画板>.png`，打印差异占比 |
+| `pnpm window-shot [--launch]` | 给真实的桌面窗口截图（`screens/window.png`），放大左上角，量关闭按钮离工具栏按钮中心多少 pt。要终端有「屏幕录制」权限 |
+| `pnpm workflow [--fetch]` | 工作流卡在哪：待人处理、没合并的分支、原型待改、落后的示例数据、没复盘的摩擦。`accept <画板…>` 记下示例数据已跟上 |
 | `pnpm prototype:preview` | 起本地服务器看原型，打开 http://localhost:8000/tools/prototype-preview/ |
 | `pnpm prototype:check` | 原型同步后的检查，重新生成 `prototype/screens/` |
 | `pnpm check` | 提交前跑：格式、lint、类型检查、全部测试、前端构建 |
@@ -167,7 +172,24 @@ src/
 
 环境：Rust stable（1.85 以上，用到 2024 edition）、Node 24、pnpm 11。截图和原型检查要 Playwright 的浏览器：`pnpm exec playwright install chromium --only-shell`。
 
-CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内核一致，检查原型能渲染。
+CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内核一致，检查原型能渲染；示例数据落后于原型时留警告，不失败。
+
+## 实现要点
+
+实现时容易踩错、又不在代码里一眼看得出的事。原来在 STATUS 的「接手须知」里，2026-11-14 挪到这里（W-04）。
+
+- **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
+- **同名优先级按工具真实规则**（D-19，4.3）。工具规则与方寸相反时，物化不自动移动上层同名项，标「同名冲突」由人选。Claude Code 的 skill 全局优先，MCP 个人 > 项目 > 全局、整条取用；Codex 的同名 skill 都加载，MCP 项目层赢、按字段合并，未受信任项目的 `.codex/config.toml` 不读（后两条是实测）。界面上「谁覆盖谁」的小字在规则相反时会改写。
+- **全局页的同名**：项目层真正生效（MCP）是「被覆盖」；全局那份照样生效（Claude Code 的 skill）或两份都加载（Codex 的 skill）是「同名冲突」，见 `global.rs` 的 `same_name_in`。
+- **只读扫描的工具**只参加体检，不进项目页、全局页的工具切换。
+- **MCP 常驻不估算**，预算条 MCP 段为 0，旁边写「N 个未估算」。
+- **体检记录**：从来没有体检记录时才算「首次体检」。测试一律用临时目录，不碰真实的 `~/.fangcun`；`ipc_snapshot` 会在真实的 `~/.fangcun` 记一条，不想要就设 `FANGCUN_HOME`。
+- **项目预算**读 `fangcun.toml` 的 `[project].budget`，M0 只读这一个键，别的键不报错；值写错了会报出来。
+- **示例数据**在 `apps/desktop/src/ipc/fixtures/`，按画板分文件，照抄原型。原型和真实内核的差别（例如全局指令的「6 / 6」、MCP 有常驻数）保留在示例数据里，以便和原型截图对比。各画板的示例数据有几处对不上（全局层有什么、tdd 与 project-harness 的差异行数等），文档各小节照各自画板写，没有强行统一。和原型对齐到哪一版记在 `prototype-sync.json`，用 `pnpm workflow accept` 改。
+- **看真实数据**：`cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json`，再 `pnpm screens --snapshot target/ipc-snapshot.json`，图在 `apps/desktop/screens/real-*.png`。
+- **使用数据**：Claude Code 认 `Skill` 工具调用、用户输入的 `/命令`、`mcp__服务__工具`；Codex 认命令里读了 `…/skills/<名称>/SKILL.md`（插件缓存里的不算）和 `mcp__` 调用。Codex 的 MCP 调用本机没有样本。
+- **快照按范围各自编号**，跨项目操作每个项目各留一个快照（M1）。
+- **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型
 

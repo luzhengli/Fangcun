@@ -61,3 +61,8 @@ jobs:
 
       # 只检查不截图：截图由同步原型的那次会话生成并提交，不同机器的字体渲染不一样。
       - run: node tools/prototype-preview/check.js --no-screens
+
+      # 原型变了、示例数据还没跟上时，在 PR 上留警告，不失败：同步原型的 PR 本来就先于示例数据。
+      # 落后的画板会一直被提醒，直到跟上后运行 pnpm workflow accept <画板>。
+      - name: 示例数据跟上原型
+        run: node tools/workflow/status.mjs --ci

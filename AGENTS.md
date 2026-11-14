@@ -9,11 +9,12 @@
 | 层 | 文件 | 什么时候读 |
 | --- | --- | --- |
 | 0 | `AGENTS.md`（本文件） | 每次，自动加载 |
-| 1 | `docs/STATUS.md` | 每次开工先读：现在在哪、下一步、卡在哪 |
+| 1 | `docs/STATUS.md` | 每次开工先读：现在在哪、下一步、卡在哪。再跑 `pnpm workflow --fetch` 看待人处理、没合并的分支、落后的示例数据 |
 | 2 | `docs/BACKLOG.md` | 要挑活或查某件事的状态时 |
 | 3 | `docs/product-design.md` 的对应章节 | 要设计或实现某个功能时，按下面的章节索引只读那一节。全文约 890 行，不要通读 |
 | 4 | `docs/ARCHITECTURE.md` | 要写代码时：代码怎么组织、不能破的规则、照着原型实现一个页面的步骤 |
-| 5 | `docs/DECISIONS.md`、`docs/LOG.md` | 要查某个决定的来由、某天做了什么时 |
+| 5 | `docs/WORKFLOW.md` | 要交接、同步原型、复盘工作流时：一轮迭代怎么走、口令、质量关 |
+| 6 | `docs/DECISIONS.md`、`docs/LOG.md` | 要查某个决定的来由、某天做了什么时 |
 
 ## 目录
 
@@ -26,7 +27,9 @@
 | `docs/BACKLOG.md` | 待办，按期分节，带状态标记 |
 | `docs/DECISIONS.md` | 决定记录，只追加 |
 | `docs/LOG.md` | 工作日志，只追加 |
-| `docs/ARCHITECTURE.md` | 工程架构：模块、规则、IPC 约定、命令 |
+| `docs/ARCHITECTURE.md` | 工程架构：模块、规则、IPC 约定、命令、实现要点 |
+| `docs/WORKFLOW.md` | 工作流：角色、一轮迭代、口令、交接规则、同步原型、质量关、复盘 |
+| `tools/workflow/` | `pnpm workflow`：工作流现在卡在哪 |
 | `crates/fangcun-core/` | 内核（Rust）。全部业务逻辑在这里，桌面应用与命令行共用 |
 | `crates/fangcun-cli/` | 命令行 `fangcun` |
 | `apps/desktop/` | 桌面应用。`src-tauri/` 是 Tauri 外壳，`src/` 是 React 界面 |
@@ -45,7 +48,9 @@
 | `pnpm dev:fixtures` | 浏览器里看界面，用照抄原型的示例数据 |
 | `pnpm cli -- <命令>` | 运行命令行 |
 | `pnpm bindings` | 改了内核里导出给界面的类型后运行 |
-| `pnpm screens [画板…]` | 给应用截图，和 `prototype/screens/` 里同名的原型截图对比 |
+| `pnpm screens [画板…]` | 给应用截图，和 `prototype/screens/` 里同名的原型截图对比。加 `--compare` 出差异拼图 |
+| `pnpm window-shot` | 给真实的桌面窗口截图，量窗口按钮对齐 |
+| `pnpm workflow` | 看工作流卡在哪：待人处理、没合并的分支、原型待改、落后的示例数据 |
 | `pnpm check` | 提交前跑：格式、lint、类型检查、全部测试、前端构建 |
 
 写代码时守 `docs/ARCHITECTURE.md`「不能破的规则」。最要紧的三条：业务逻辑只在内核；M0 只写方寸自己的 `~/.fangcun`，用户的配置一律不写；界面只经 `ipc/` 取数据，颜色只用「墨格」token。
@@ -80,9 +85,11 @@
 
 ### 每轮迭代
 
-1. **设计**：改 `docs/product-design.md`，人确认。没确认的不往下走。
-2. **原型**：人在网页版画布里改，或者让 Agent 改画布。改完同步到 `prototype/`，逐条对照文档，列出不符合的地方，直到原型符合文档。
+1. **设计**：改 `docs/product-design.md`，人确认。没确认的不往下走。要改原型的地方逐条写进 BACKLOG「原型待改」。
+2. **原型**：人在网页版画布里改，或者让云端 Agent 按「原型待改」改画布。改完同步到 `prototype/`，逐条对照文档，列出不符合的地方，直到原型符合文档。
 3. **实现**：只实现文档已确认、原型也已符合的部分。看样子、文案、示例数据时读 `prototype/`，判断该不该做时读文档。
+
+每一步谁做、人说什么口令、交给下一步什么、靠什么把关，见 `docs/WORKFLOW.md`。交接物只有 PR 和 BACKLOG 条目；要人定、要人看的事一律进 BACKLOG「待人处理」。
 
 ## 原型怎么读
 
@@ -109,22 +116,13 @@
 - 找脚本段：`grep -n data-dc-script prototype/project/*.dc.html`。
 - 看结构时去掉行内样式和图标：`sed -E 's/ style="[^"]*"//g; s/<svg.*<\/svg>//g' 文件`。
 - 实现时：文案和示例数据照抄；结构和交互按原型改写成 React 组件，不要搬 `DCLogic` 或 `sc-*` 标签；视觉只用「墨格」token。
-- 实现后：`pnpm screens <画板>` 给应用截图，和 `prototype/screens/` 里同名的截图对着看。完整步骤见 `docs/ARCHITECTURE.md`「照着原型实现一个页面」。
+- 实现后：`pnpm screens --compare <画板>` 出「原型 · 应用 · 差异」拼图，对着看。示例数据跟上原型后 `pnpm workflow accept <画板>`。完整步骤见 `docs/ARCHITECTURE.md`「照着原型实现一个页面」。
 
 ### 同步
 
-人说「同步原型」时，在 claude.ai 云端会话里做（要用 Artifact 工具，本地命令行没有）：
-
-1. 用 Artifact 工具 `list`（`scope: "files"`）列出画布文件。只要 `project/` 下的文件；`index.html`、`SKILL.md`、`artifact-type/` 是编辑器本身，不要。
-2. 用 `read`，`paths` 填全部 `project/…` 路径，`out_dir` 填仓库的 `prototype`，一次读完。画布上已删除的画板，把本地对应文件也删掉。不要用网页抓取去读。
-3. 改写 `prototype/README.md` 的同步记录（版本号取 `read` 结果里的 version）。新增或删掉画板时，改它的画板表。
-4. 在仓库根目录运行 `node tools/prototype-preview/check.js`。它用预览器渲染每张画板，重新生成 `prototype/screens/`。没有全部通过（有报错、残留 `{{`、不认识的标签），就先补 `tools/prototype-preview/dc-preview.js`，直到通过，再往下走。不要提交没通过的同步。
-5. `git diff --stat prototype/` 看哪些画板变了，逐条对照设计文档。不符合文档的，列给人，改原型；文档里没有的，问人要不要写进文档。不要为了迁就原型去改文档。
-6. 按「收工前必须做的事」更新四份文档，提交。
+人说「同步原型」时，在 claude.ai 云端会话里做（要用 Artifact 工具，本地命令行没有），步骤见 `docs/WORKFLOW.md`「同步原型」。最后一步是开 PR，不要只推分支。
 
 本地会话只需 `git pull` 拿到最新的 `prototype/`，包括截图。
-
-同步改了「墨格」的 token 时，`apps/desktop/src/styles/tokens.css` 要跟着改。它由测试逐项比对原型，没跟上时 `pnpm test` 和 CI 会报出来。
 
 ## 交流
 
@@ -156,10 +154,11 @@
 
 每次工作结束前按这个顺序更新，缺一项都算没做完。
 
-1. `docs/STATUS.md`：整份改写成现在的状态。它是给下一位接手者的交接说明。
+1. `docs/STATUS.md`：整份改写成现在的状态，不超过 40 行，只写现在在哪、下一步、卡在哪。它是给下一位接手者的交接说明。长期有效的实现知识写进 `docs/ARCHITECTURE.md`「实现要点」，不放这里。
 2. `docs/BACKLOG.md`：改对应条目的状态标记。新发现的活加进去，不要只留在对话里。
-3. `docs/LOG.md`：在最上面加一条，三到五行。
+3. `docs/LOG.md`：在最上面加一条，三到五行。一个会话一条，不是一件事一条。
 4. `docs/DECISIONS.md`：人新定了什么，记原话和日期。自己做的取舍也记，标明是谁定的。
+5. `docs/WORKFLOW.md`「摩擦记录」：这次在流程上卡过的地方（等人传话、重复劳动、返工、缺工具），一条一行。没有就不写。
 
 ## 多 Agent 协作约定
 

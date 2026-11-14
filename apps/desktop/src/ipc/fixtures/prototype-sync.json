@@ -1,0 +1,25 @@
+{
+  "$comment": "示例数据上次对齐的原型画板：画板文件的 sha256 前 12 位。示例数据跟上后运行 pnpm workflow accept <画板>，不要手改。见 docs/WORKFLOW.md。",
+  "boards": {
+    "Main": {
+      "fixture": "main.ts",
+      "hash": "54d66129074c",
+      "version": "1794610127-a083"
+    },
+    "Checkup": {
+      "fixture": "checkup.ts",
+      "hash": "0f83a3d70d05",
+      "version": "1794610127-a083"
+    },
+    "Global": {
+      "fixture": "global.ts",
+      "hash": "aebab1d53508",
+      "version": "1794610127-a083"
+    },
+    "Activity": {
+      "fixture": "activity.ts",
+      "hash": "b72318e2e2d7",
+      "version": "1794610127-a083"
+    }
+  }
+}

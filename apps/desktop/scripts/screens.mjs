@@ -12,13 +12,19 @@
 //                          用本机真实数据截图，写到 screens/real-<画板>.png。快照由
 //                          cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json
 //                      pnpm screens --dark …   按系统深色外观截图，文件名加 -dark 生成
+//                      pnpm screens --compare [画板…]
+//                          截完再在本机重渲原型（screens/prototype/），逐张算差异，写出三栏拼图
+//                          screens/compare-<画板>.png（原型 · 应用 · 差异标红）。两边同一台机器、
+//                          同一个浏览器渲染，字体一样，差异才有意义。不能和 --snapshot、--dark 一起用。
 // 需要 Playwright 的浏览器：pnpm exec playwright install chromium --only-shell
 
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { createServer } from "vite";
+import { compareImages } from "./lib/image.mjs";
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = join(APP, "..", "..");
@@ -41,6 +47,13 @@ if (snapshotAt >= 0) argv.splice(snapshotAt, 2);
 const darkAt = argv.indexOf("--dark");
 const dark = darkAt >= 0;
 if (dark) argv.splice(darkAt, 1);
+const compareAt = argv.indexOf("--compare");
+const compare = compareAt >= 0;
+if (compare) argv.splice(compareAt, 1);
+if (compare && (snapshotFile || dark)) {
+  console.error("--compare 只比示例数据、浅色的截图，不能和 --snapshot、--dark 一起用。");
+  process.exit(2);
+}
 const wanted = argv;
 const unknown = wanted.filter((name) => !(name in BOARDS));
 if (unknown.length > 0) {
@@ -71,6 +84,7 @@ if (snapshotFile) {
 }
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
+const shots = [];
 
 mkdirSync(OUT, { recursive: true });
 try {
@@ -84,8 +98,10 @@ try {
 
     const file = join(OUT, `${snapshotFile ? "real-" : ""}${name}${dark ? "-dark" : ""}.png`);
     await page.screenshot({ path: file, fullPage: true });
-    console.log(`${relative(REPO, file)}  ←→  prototype/screens/${name}.png`);
+    shots.push({ name, file });
+    if (!compare) console.log(`${relative(REPO, file)}  ←→  prototype/screens/${name}.png`);
   }
+  if (compare) await compareAll(browser, shots);
 } finally {
   await browser.close();
   await server.close();
@@ -94,4 +110,36 @@ try {
 if (errors.length > 0) {
   console.error(`\n页面脚本出错：\n  ${[...new Set(errors)].join("\n  ")}`);
   process.exit(1);
+}
+
+// 本机重渲原型，再逐张和应用截图比。
+async function compareAll(browser, shots) {
+  const protoDir = join(OUT, "prototype");
+  const rendered = spawnSync(
+    process.execPath,
+    [join(REPO, "tools/prototype-preview/check.js"), "--out", relative(REPO, protoDir)],
+    { cwd: REPO, encoding: "utf8" },
+  );
+  if (rendered.status !== 0) {
+    throw new Error(`本机重渲原型没通过：\n${rendered.stdout}${rendered.stderr}`);
+  }
+  const canvasPage = await browser.newPage();
+  console.log("差异是不同像素的占比。已知的环境差异（窗口按钮、滚动条预留）总会占一点。\n");
+  for (const { name, file } of shots) {
+    const out = join(OUT, `compare-${name}.png`);
+    const { ratio, sizeA, sizeB } = await compareImages(canvasPage, {
+      a: join(protoDir, `${name}.png`),
+      b: file,
+      labelA: "原型",
+      labelB: "应用",
+      out,
+    });
+    const size =
+      sizeA.join("×") === sizeB.join("×")
+        ? ""
+        : `  尺寸不同：原型 ${sizeA.join("×")}，应用 ${sizeB.join("×")}`;
+    console.log(
+      `${name.padEnd(9)} ${(ratio * 100).toFixed(1).padStart(5)}%  ${relative(REPO, out)}${size}`,
+    );
+  }
 }

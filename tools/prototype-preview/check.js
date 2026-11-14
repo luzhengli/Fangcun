@@ -5,6 +5,8 @@
 //
 // 用法（在仓库根目录）：node tools/prototype-preview/check.js
 // 只检查不截图：加 --no-screens
+// 截图写到别的目录：加 --out <目录>（相对仓库根目录）。pnpm screens --compare 用它在本机重渲原型，
+// 免得拿云端渲染的截图和本机的应用比，字体不同算出一片差异。
 // 需要 Playwright。claude.ai 云端会话里已装好；本地没有时运行 npm i -g playwright && npx playwright install chromium。
 'use strict';
 const fs = require('fs');
@@ -18,7 +20,8 @@ try { ({ chromium } = require('playwright')); } catch (e) {
 
 const ROOT = path.resolve(__dirname, '..', '..') + path.sep;
 const SRC = path.join(ROOT, 'prototype', 'project');
-const SHOTS = path.join(ROOT, 'prototype', 'screens');
+const outAt = process.argv.indexOf('--out');
+const SHOTS = outAt >= 0 ? path.resolve(ROOT, process.argv[outAt + 1]) : path.join(ROOT, 'prototype', 'screens');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const noScreens = process.argv.includes('--no-screens');
 
