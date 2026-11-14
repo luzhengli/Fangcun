@@ -18,6 +18,6 @@ budget: Budget, projectTotal: number, kinds: KindCounts,
  */
 rarelyUsed: number, 
 /**
- * 「从未使用 · N」：状态为从未使用或被覆盖的项数。
+ * 「从未使用 · N」：状态为从未使用、被覆盖或同名冲突的项数。
  */
 neverUsed: number, rows: Array<GlobalRow>, otherTools: Array<OtherToolCount>, };

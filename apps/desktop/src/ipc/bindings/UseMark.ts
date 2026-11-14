@@ -3,4 +3,4 @@
 /**
  * 「用到它的项目」里一个项目的标记。
  */
-export type UseMark = "used" | "unused" | "overridden";
+export type UseMark = "used" | "unused" | "overridden" | "conflict";

@@ -24,7 +24,11 @@ usedBy: number | null, status: GlobalStatus,
 /**
  * 被项目层覆盖的项目数。
  */
-overridden: number, hasScripts: boolean, command: string | null, usage: Array<ProjectUse>, distribution: Array<Distribution>, 
+overridden: number, 
+/**
+ * 项目层有同名项、但没能盖过全局这一份的项目数。
+ */
+conflicts: number, hasScripts: boolean, command: string | null, usage: Array<ProjectUse>, distribution: Array<Distribution>, 
 /**
  * 检查器名称下面的一句说明。
  */

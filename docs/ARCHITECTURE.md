@@ -33,7 +33,7 @@ apps/desktop/src-tauri      Tauri 外壳：把内核用例暴露成命令      c
 
 1. **业务逻辑只在内核。** 外壳和命令行只做参数转换和输出。界面能做的事命令行都能做，行为一致（7.1）。
 2. **外壳只调 `Kernel`。** 不直接用内核下面的模块。一个用例一个方法。
-3. **M0 只读。** 外壳用 `Access::ReadOnly` 打开内核，写入用例直接返回 `Error::ReadOnly`，有测试守着。打开内核不创建任何目录。
+3. **M0 只读。** 外壳用 `Access::ReadOnly` 打开内核，写入用例直接返回 `Error::ReadOnly`，有测试守着。唯一的例外是体检记录写进 `~/.fangcun/journal`（D-15），方寸目录以外一律不写。打开内核不创建任何目录，第一条记录落盘时才建 `journal`。
 4. **写入先出计划。** 写入用例一律返回 `ChangePlan`，只有 `Kernel::apply` 落盘。方寸目录以外的文件只有 `materializer` 能改（4.6 第 3、4、5 条）。
 5. **内核不写死任何工具的路径或格式。** 一律从适配器查（7.3）。
 6. **界面只经 `ipc/` 取数据。** 不给界面加文件、子进程、网络权限。CSP 是 `default-src 'self'`，界面发不出外部请求，零遥测由此保证。原型里的 Google Fonts 不搬进来。
@@ -64,7 +64,7 @@ model  paths  error                        纯类型，不做 IO
 | `resolver` | 生效上下文、`why`；写锁 | 前两项已有，写锁 M1 |
 | `global` | 全局页：每项常驻、用到它的项目、状态与建议 | 已有 |
 | `estimator` | token 估算 | 已有 |
-| `journal` | 活动记录 | 读已有；M0 的记录只在内存里，写入 M1 |
+| `journal` | 活动记录 | 已有。M0 只写体检记录；写不进去时留在内存里 |
 | `library` | 内容寻址的正本、索引、来源 | M1 |
 | `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | M1 |
 | `watcher` | 监听漂移，向外壳推事件 | M1 |
@@ -72,7 +72,7 @@ model  paths  error                        纯类型，不做 IO
 
 内核是同步的，不依赖异步运行时。桌面外壳用 `AppState::run` 把每次调用放到阻塞线程。
 
-**扫描缓存**：第一次调只读用例时全盘扫描一次（读近 30 天的会话记录、各工具的全局层、发现的项目），结果存在 `Kernel` 里，后面的用例都读它。`Kernel::rescan` 重新扫描，对应侧栏的「重新体检」。每次扫描在内存里记一条体检记录，不落盘。
+**扫描缓存**：第一次调只读用例时全盘扫描一次（读近 30 天的会话记录、各工具的全局层、发现的项目），结果存在 `Kernel` 里，后面的用例都读它。`Kernel::rescan` 重新扫描，对应侧栏的「重新体检」。桌面应用的每次扫描、命令行的 `doctor` 记一条体检记录，写进 `~/.fangcun/journal/records.jsonl`；命令行 `status`、`why` 顺带的扫描不记。
 
 **工具分两种**：适配器 `support = "full"` 的（Claude Code、Codex）进项目页、全局页、使用数据，对应 `Scan::tools`；`scan-only` 的只参加体检，`Scan::global`、`Scan::project_items` 按全部工具（`Scan::scanned_tools`）收集。
 

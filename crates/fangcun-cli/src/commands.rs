@@ -263,7 +263,7 @@ fn print_log(records: &[Record]) {
     }
     println!();
     println!(
-        "M0 不写任何文件，这里只有本次运行的体检。更早的记录保留在 ~/.fangcun/journal（M1 起写入）。"
+        "记录保存在 ~/.fangcun/journal。M0 只记体检：桌面应用启动、重新体检、fangcun doctor。"
     );
 }
 

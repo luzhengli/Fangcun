@@ -48,7 +48,7 @@
 | `pnpm screens [画板…]` | 给应用截图，和 `prototype/screens/` 里同名的原型截图对比 |
 | `pnpm check` | 提交前跑：格式、lint、类型检查、全部测试、前端构建 |
 
-写代码时守 `docs/ARCHITECTURE.md`「不能破的规则」。最要紧的三条：业务逻辑只在内核；M0 不写任何文件；界面只经 `ipc/` 取数据，颜色只用「墨格」token。
+写代码时守 `docs/ARCHITECTURE.md`「不能破的规则」。最要紧的三条：业务逻辑只在内核；M0 只写方寸自己的 `~/.fangcun`，用户的配置一律不写；界面只经 `ipc/` 取数据，颜色只用「墨格」token。
 
 ## 设计文档章节索引
 

@@ -34,6 +34,9 @@ pub struct ProjectSection {
     /// 引用的套装，按名称。
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bundles: Vec<String>,
+    /// 常驻预算，估算的 token 数。不写时 20000（7.4、D-22）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub budget: Option<u32>,
 }
 
 /// 一项 Skill 的声明。`pin` 与 `track` 二选一，校验放在解析器里。

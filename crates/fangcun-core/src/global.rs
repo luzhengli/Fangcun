@@ -23,8 +23,11 @@ pub enum GlobalStatus {
     SuggestBundle,
     /// 从未使用：近 30 天没有项目触发。橙。
     NeverUsed,
-    /// 被覆盖 N 处：有项目在项目层放了同名项，把它遮蔽了。灰。
+    /// 被覆盖 N 处：有项目在项目层放了同名项，按工具规则项目层生效，把它遮蔽了（例如 MCP）。灰。
     Overridden,
+    /// 同名冲突 N 处：有项目在项目层放了同名项，但按工具规则全局这一份生效（Claude Code 的 skill），
+    /// 或两份都加载（Codex 的 skill）。灰（4.3、D-19）。
+    SameNameConflict,
     /// 来源未知：内容哈希与任何来源都不匹配。紫。
     UnknownSource,
     /// 常用。绿。
@@ -47,6 +50,8 @@ pub enum UseMark {
     Used,
     Unused,
     Overridden,
+    /// 项目层有同名项，但没能盖过全局这一份。
+    Conflict,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -94,6 +99,8 @@ pub struct GlobalRow {
     pub status: GlobalStatus,
     /// 被项目层覆盖的项目数。
     pub overridden: u32,
+    /// 项目层有同名项、但没能盖过全局这一份的项目数。
+    pub conflicts: u32,
     pub has_scripts: bool,
     pub command: Option<String>,
     pub usage: Vec<ProjectUse>,
@@ -137,7 +144,7 @@ pub struct GlobalOverview {
     pub kinds: KindCounts,
     /// 「很少用到 · N」：状态为建议转套装的项数。
     pub rarely_used: u32,
-    /// 「从未使用 · N」：状态为从未使用或被覆盖的项数。
+    /// 「从未使用 · N」：状态为从未使用、被覆盖或同名冲突的项数。
     pub never_used: u32,
     pub rows: Vec<GlobalRow>,
     pub other_tools: Vec<OtherToolCount>,
@@ -159,6 +166,22 @@ pub fn status_for(used: usize, total: usize) -> GlobalStatus {
         GlobalStatus::SuggestBundle
     } else {
         GlobalStatus::Common
+    }
+}
+
+/// 项目层有同名项的项目，按工具规则分两类。
+#[derive(Default)]
+struct SameName {
+    /// 项目层生效，全局这一份被遮蔽。
+    overridden: BTreeSet<PathBuf>,
+    /// 全局这一份照样生效，或两份都加载。
+    conflicts: BTreeSet<PathBuf>,
+}
+
+impl SameName {
+    fn extend(&mut self, other: SameName) {
+        self.overridden.extend(other.overridden);
+        self.conflicts.extend(other.conflicts);
     }
 }
 
@@ -187,14 +210,15 @@ impl Ctx<'_> {
         out
     }
 
-    /// 在哪些项目里，项目层的同名项把全局这一份遮蔽了。
-    fn overridden_in(&self, kind: AssetKind, name: &str) -> BTreeSet<PathBuf> {
+    /// 哪些项目在项目层放了同名项，按工具规则分成两类：
+    /// 项目层生效、把全局这一份遮蔽了的；全局这一份照样生效或两份都加载的。
+    fn same_name_in(&self, kind: AssetKind, name: &str) -> SameName {
         let priority = match kind {
             AssetKind::Skill => &self.adapter.precedence.skills,
             AssetKind::Mcp => &self.adapter.precedence.mcp,
-            AssetKind::Instruction => return BTreeSet::new(),
+            AssetKind::Instruction => return SameName::default(),
         };
-        let mut out = BTreeSet::new();
+        let mut out = SameName::default();
         for (root, per_tool) in &self.scan.project_items {
             let Some(collected) = per_tool.get(self.tool()) else {
                 continue;
@@ -221,24 +245,38 @@ impl Ctx<'_> {
                 .copied()
                 .find(|s| *s == Scope::Global || scopes.contains(s));
             if win.is_some_and(|w| w != Scope::Global) {
-                out.insert(root.clone());
+                out.overridden.insert(root.clone());
+            } else {
+                out.conflicts.insert(root.clone());
             }
         }
         out
     }
 
-    fn usage(
-        &self,
-        users: &BTreeMap<PathBuf, u32>,
-        overridden: &BTreeSet<PathBuf>,
-    ) -> Vec<ProjectUse> {
+    /// 同名冲突时这个工具怎么处理，放进建议里的半句话。
+    fn conflict_rule(&self, kind: AssetKind) -> String {
+        let priority = match kind {
+            AssetKind::Mcp => &self.adapter.precedence.mcp,
+            _ => &self.adapter.precedence.skills,
+        };
+        let name = &self.adapter.tool.name;
+        if priority.is_empty() {
+            format!("{name} 同名时两份都加载，各占一份常驻")
+        } else {
+            format!("{name} 同名时全局这一份生效，项目层那一份不加载")
+        }
+    }
+
+    fn usage(&self, users: &BTreeMap<PathBuf, u32>, same: &SameName) -> Vec<ProjectUse> {
         self.scan
             .projects
             .iter()
             .map(|p| {
                 let triggers = users.get(&p.root).copied().unwrap_or(0);
-                let mark = if overridden.contains(&p.root) {
+                let mark = if same.overridden.contains(&p.root) {
                     UseMark::Overridden
+                } else if same.conflicts.contains(&p.root) {
+                    UseMark::Conflict
                 } else if triggers > 0 {
                     UseMark::Used
                 } else {
@@ -260,7 +298,8 @@ fn advice(
     used_names: &[String],
     total: usize,
     resident: Option<TokenEstimate>,
-    overridden: usize,
+    same: &SameName,
+    conflict_rule: &str,
 ) -> (String, Vec<String>) {
     let saving = resident.map_or_else(
         || "启动这个服务的开销".to_owned(),
@@ -280,8 +319,18 @@ fn advice(
             vec!["从全局移除…".to_owned()],
         ),
         GlobalStatus::Overridden => (
-            format!("{overridden} 个项目在项目层放了同名项，把它遮蔽了。留在全局只是占位。"),
+            format!(
+                "{} 个项目在项目层放了同名项，把它遮蔽了。留在全局只是占位。",
+                same.overridden.len()
+            ),
             vec!["从全局移除…".to_owned()],
+        ),
+        GlobalStatus::SameNameConflict => (
+            format!(
+                "{} 个项目在项目层放了同名项，但{conflict_rule}。转成套装或从全局移除后，项目层那一份才单独生效。",
+                same.conflicts.len()
+            ),
+            vec!["转成套装…".to_owned(), "从全局移除…".to_owned()],
         ),
         GlobalStatus::UnknownSource => (
             "内容哈希与任何来源都不匹配。先去资产库收编，再决定留还是走。".to_owned(),
@@ -374,22 +423,30 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
     for group in group_global_skills(&skills) {
         let names: Vec<&str> = group.members.iter().map(|m| m.name.as_str()).collect();
         let users = ctx.users(AssetKind::Skill, &names);
-        let overridden: BTreeSet<PathBuf> = names
-            .iter()
-            .flat_map(|n| ctx.overridden_in(AssetKind::Skill, n))
-            .collect();
+        let mut same = SameName::default();
+        for n in &names {
+            same.extend(ctx.same_name_in(AssetKind::Skill, n));
+        }
         let resident = TokenEstimate(group.members.iter().map(|m| m.resident.0).sum());
         let unknown = group.members.iter().all(|m| m.source.is_none());
-        let status = if !overridden.is_empty() {
+        let status = if !same.overridden.is_empty() {
             GlobalStatus::Overridden
+        } else if !same.conflicts.is_empty() {
+            GlobalStatus::SameNameConflict
         } else if unknown {
             GlobalStatus::UnknownSource
         } else {
             status_for(users.len(), total)
         };
         let used_names = project_names(&users);
-        let (advice, actions) =
-            advice(status, &used_names, total, Some(resident), overridden.len());
+        let (advice, actions) = advice(
+            status,
+            &used_names,
+            total,
+            Some(resident),
+            &same,
+            &ctx.conflict_rule(AssetKind::Skill),
+        );
         let first = group.members[0];
         let single = group.members.len() == 1;
         let location = if single {
@@ -435,10 +492,11 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             resident: Some(resident),
             used_by: Some(u32_of(users.len())),
             status,
-            overridden: u32_of(overridden.len()),
+            overridden: u32_of(same.overridden.len()),
+            conflicts: u32_of(same.conflicts.len()),
             has_scripts: group.members.iter().any(|m| m.has_scripts),
             command: None,
-            usage: ctx.usage(&users, &overridden),
+            usage: ctx.usage(&users, &same),
             distribution: skill_distribution(&ctx, &names),
             advice,
             actions,
@@ -446,7 +504,14 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
     }
 
     for skill in global.skills.iter().filter(|s| s.disabled_by.is_some()) {
-        let (advice, actions) = advice(GlobalStatus::Disabled, &[], total, None, 0);
+        let (advice, actions) = advice(
+            GlobalStatus::Disabled,
+            &[],
+            total,
+            None,
+            &SameName::default(),
+            "",
+        );
         rows.push(GlobalRow {
             id: format!("skill-disabled:{}", skill.dir.display()),
             name: skill.name.clone(),
@@ -460,6 +525,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             used_by: None,
             status: GlobalStatus::Disabled,
             overridden: 0,
+            conflicts: 0,
             has_scripts: skill.has_scripts,
             command: None,
             usage: Vec::new(),
@@ -476,14 +542,23 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
     // MCP
     for entry in &global.mcp {
         let users = ctx.users(AssetKind::Mcp, &[entry.name.as_str()]);
-        let overridden = ctx.overridden_in(AssetKind::Mcp, &entry.name);
-        let status = if !overridden.is_empty() {
+        let same = ctx.same_name_in(AssetKind::Mcp, &entry.name);
+        let status = if !same.overridden.is_empty() {
             GlobalStatus::Overridden
+        } else if !same.conflicts.is_empty() {
+            GlobalStatus::SameNameConflict
         } else {
             status_for(users.len(), total)
         };
         let used_names = project_names(&users);
-        let (advice, actions) = advice(status, &used_names, total, None, overridden.len());
+        let (advice, actions) = advice(
+            status,
+            &used_names,
+            total,
+            None,
+            &same,
+            &ctx.conflict_rule(AssetKind::Mcp),
+        );
         let distribution = adapters
             .iter()
             .filter(|a| scan.scanned_tools.contains(&a.tool.id))
@@ -522,10 +597,11 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             resident: None,
             used_by: Some(u32_of(users.len())),
             status,
-            overridden: u32_of(overridden.len()),
+            overridden: u32_of(same.overridden.len()),
+            conflicts: u32_of(same.conflicts.len()),
             has_scripts: entry.command.is_some(),
             command: mcp_command(entry),
-            usage: ctx.usage(&users, &overridden),
+            usage: ctx.usage(&users, &same),
             distribution,
             advice,
             actions,
@@ -539,7 +615,8 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             &[],
             total,
             Some(file.resident),
-            0,
+            &SameName::default(),
+            "",
         );
         let counted = !file.on_demand && !file.truncated;
         let distribution = adapters
@@ -583,6 +660,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             used_by: None,
             status: GlobalStatus::AlwaysLoaded,
             overridden: 0,
+            conflicts: 0,
             has_scripts: false,
             command: None,
             usage: Vec::new(),
@@ -627,7 +705,9 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
         }
         match row.status {
             GlobalStatus::SuggestBundle => rarely_used += row.count,
-            GlobalStatus::NeverUsed | GlobalStatus::Overridden => never_used += row.count,
+            GlobalStatus::NeverUsed | GlobalStatus::Overridden | GlobalStatus::SameNameConflict => {
+                never_used += row.count
+            }
             _ => {}
         }
     }

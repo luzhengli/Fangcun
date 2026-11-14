@@ -7,6 +7,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use fangcun_core::global::{GlobalStatus, UseMark};
 use fangcun_core::journal::RecordFilter;
 use fangcun_core::model::{AssetKind, AssetState, ObservedKind, Scope, Timestamp, ToolId};
 use fangcun_core::paths::FangcunHome;
@@ -46,6 +47,20 @@ fn kernel(home: &Path, project: &Path) -> Kernel {
         .expect("打开内核")
         .with_user_home(home)
         .with_project(project)
+}
+
+/// 只读：方寸只写了 `~/.fangcun/journal` 一个目录，里面是体检记录（D-15）。
+fn only_journal_written(home: &Path) {
+    let entries: Vec<String> = fs::read_dir(home.join(".fangcun"))
+        .expect("体检记录应已写入")
+        .map(|e| {
+            e.expect("目录项")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(entries, ["journal"]);
 }
 
 fn find<'a>(
@@ -170,6 +185,19 @@ fn claude_code_reads_what_the_docs_say() {
     let project_fd = find(&context, "frontend-design", Scope::Project);
     assert_eq!(project_fd.state, Some(AssetState::Overridden));
     assert!(global_fd.counted && !project_fd.counted);
+    // 全局页：项目层的同名项没能盖过全局，是「同名冲突」，不是「被覆盖」（D-19）。
+    let global = kernel
+        .global_overview(&ToolId::from(ToolId::CLAUDE_CODE))
+        .expect("全局页");
+    let row = global
+        .rows
+        .iter()
+        .find(|r| r.name == "frontend-design")
+        .expect("全局 frontend-design");
+    assert_eq!(row.status, GlobalStatus::SameNameConflict);
+    assert_eq!((row.conflicts, row.overridden), (1, 0));
+    assert!(row.usage.iter().any(|u| u.mark == UseMark::Conflict));
+    assert!(row.advice.contains("全局这一份生效"), "{}", row.advice);
     let lark = find(&context, "lark-doc", Scope::Global);
     assert_eq!(lark.triggers, Some(1), "会话记录里触发过一次");
 
@@ -180,6 +208,15 @@ fn claude_code_reads_what_the_docs_say() {
     assert_eq!(shared.state, Some(AssetState::Overridden));
     assert_eq!(find(&context, "context7", Scope::Global).triggers, Some(1));
     assert!(context.budget.mcp_unestimated >= 2, "MCP 不估算常驻");
+
+    // 项目预算：没写清单时 20k；清单里写了就用清单的（D-22）。
+    assert_eq!(context.budget.limit.0, 20_000);
+    fs::write(project.join("fangcun.toml"), "[project]\nbudget = 12000\n").expect("写清单");
+    let budgeted = kernel
+        .effective_context(&project, &ToolId::from(ToolId::CLAUDE_CODE))
+        .expect("生效上下文");
+    assert_eq!(budgeted.budget.limit.0, 12_000);
+    fs::remove_file(project.join("fangcun.toml")).expect("删清单");
 
     // 其他加载项：启用的插件、项目的 Hook、斜杠命令；停用的插件不算。
     let observed: Vec<(ObservedKind, &str)> = context
@@ -214,8 +251,7 @@ fn claude_code_reads_what_the_docs_say() {
             .any(|f| f.id == "duplicate:frontend-design")
     );
 
-    // 只读：扫描和体检都不创建 ~/.fangcun，体检记录只在内存里。
-    assert!(!home.join(".fangcun").exists());
+    only_journal_written(&home);
     assert_eq!(
         kernel.log(&RecordFilter::default()).expect("读记录").len(),
         1
@@ -249,6 +285,16 @@ fn codex_reads_what_the_docs_say() {
     let global_tdd = find(&context, "tdd", Scope::Global);
     let project_tdd = find(&context, "tdd", Scope::Project);
     assert!(global_tdd.counted && project_tdd.counted);
+    let global = kernel
+        .global_overview(&ToolId::from(ToolId::CODEX))
+        .expect("全局页");
+    let row = global
+        .rows
+        .iter()
+        .find(|r| r.members.iter().any(|m| m == "tdd"))
+        .expect("全局 tdd");
+    assert_eq!(row.status, GlobalStatus::SameNameConflict);
+    assert!(row.advice.contains("两份都加载"), "{}", row.advice);
     assert_eq!(global_tdd.source.as_deref(), Some("obra/superpowers"));
     // [[skills.config]] 按名称停用了 grill-me。
     let grill = find(&context, "grill-me", Scope::Global);
@@ -272,7 +318,7 @@ fn codex_reads_what_the_docs_say() {
         .expect("脱节发现");
     let paths: Vec<&str> = detached.locations.iter().map(|l| l.path.as_str()).collect();
     assert!(paths.contains(&"lark-vc") && paths.contains(&"grill-me"));
-    assert!(!home.join(".fangcun").exists());
+    only_journal_written(&home);
 
     // 标为受信任后：同名按字段合并，项目层只写了 args，command 沿用用户层。
     let mut config = fs::read_to_string(home.join(".codex/config.toml")).expect("读用户配置");

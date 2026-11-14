@@ -3,4 +3,4 @@
 /**
  * 全局页的状态（6.6「状态」表），按近 30 天用到的项目数给出。
  */
-export type GlobalStatus = "suggest-bundle" | "never-used" | "overridden" | "unknown-source" | "common" | "most-projects" | "every-project" | "always-loaded" | "disabled";
+export type GlobalStatus = "suggest-bundle" | "never-used" | "overridden" | "same-name-conflict" | "unknown-source" | "common" | "most-projects" | "every-project" | "always-loaded" | "disabled";
