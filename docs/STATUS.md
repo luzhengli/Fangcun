@@ -4,29 +4,24 @@
 
 ## 现在在哪
 
-M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成。本机实测：`fangcun doctor` 约 7 秒，零配置，没有写任何文件。
+M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-21 完成，只剩 M0-12 的最后一眼。本机实测：`fangcun doctor` 约 7 秒，零配置，只写 `~/.fangcun/journal`。
 
-人已定 D-15、D-18 至 D-22（都是推荐项，D-19 补问了两件），设计文档已改，DECISIONS 记了经过。由此多出三件代码活（M0-19 至 M0-21）和一件原型活（D-23）。这些文档改动还没提交。
+人已定 D-15、D-18 至 D-22（都是推荐项，D-19 补问了两件），设计文档已改并随 PR #5 合进 main。代码跟上的三件（M0-19 至 M0-21）在分支 `m0-followups` 上做完了。原型还差三处（D-23）。
 
 - **能用的**：
   - 命令行：`pnpm cli -- doctor`、`status`、`why <资产> [--global]`、`log`。写入命令仍返回「当前是只读模式」。
   - 桌面应用：启动先进体检报告；项目页、全局页、活动页可用；侧栏列近 30 天的项目，「重新体检」重扫。资产库、套装两页还是占位（M1）。
   - 适配器：Claude Code、Codex 完整支持；Cursor、Copilot CLI、Gemini CLI、opencode、Windsurf、Trae 只读扫描。体检扫 8 个工具。
   - 本机实测：8 个项目、39 项资产；18 个 lark-* skill 只有 Xuanji 用过，10 个全局 skill 近 30 天没人用，Claude Code 只读到 31 个全局 skill 里的 16 个，`~/.agents/.skill-lock.json` 07-05 后没更新。
-- **检查**：`pnpm check` 全过（Rust 86 个测试，含两组适配器回归样例；前端 12 个）。按 ci.yml 在只含要提交文件的干净副本里跑过四步，全过。四个页面用示例数据和原型截图对过，也用本机真实数据截图看过（`pnpm screens --snapshot`）。
-- **git**：全部改动在分支 `m0-readonly`，已推送，PR #5 等人合并。CI 第一次运行两项都过。
+- **检查**：`pnpm check` 全过（Rust 库 87 个测试，加两组适配器回归样例；前端 12 个）。四个页面用示例数据和原型截图对过，也用本机真实数据截图看过（`pnpm screens --snapshot`）。M0-19 至 M0-21 只改了内核和两处文案，没有重新截图。
+- **git**：PR #5 已合并到 main（`5db9439`）。分支 `m0-followups` 从 main 开出，三个提交对应 M0-19 至 M0-21，还没推送，没开 PR。
 
 ## 下一步
 
-1. 人确认设计文档这次的改动（4.3、F5、6.1、6.3、6.6、6.7、7.4、第 8 节、9.3 末尾），再提交。
-2. 代码跟上人定的结论：
-   - **M0-19**：体检记录写进 `~/.fangcun/journal/records.jsonl`。同时把 `AGENTS.md`、`ARCHITECTURE.md` 里「M0 不写任何文件」改成「M0 只写 `~/.fangcun`」，`Access::ReadOnly` 要放开这一个目录。
-   - **M0-20**：全局页同名 skill 在 Claude Code、Codex 下是「同名冲突 N 处」，不是「被覆盖」。现在 `global.rs` 不看工具规则，一律给 `Overridden`。
-   - **M0-21**：项目预算读 `fangcun.toml` 的 `[project].budget`。
-3. **D-23**：原型三处跟上 D-19、D-21，要在画布里改再同步。原型改完之前，示例数据照旧。
-4. 人看 PR #5，合并到 main。M0-19 至 M0-21 是接着在 `m0-readonly` 上做，还是合并后另开分支，问人。
-5. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。
-6. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。M1-01、M1-02 已定要做。
+1. 问人要不要推送 `m0-followups` 并开 PR。
+2. **D-23**：原型三处跟上 D-19、D-21，要在画布里改再同步。原型改完之前，示例数据照旧（全局页示例里 frontend-design 仍是「被覆盖」）；同步后改 `apps/desktop/src/ipc/fixtures/global.ts`、`project.ts` 跟上。
+3. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。
+4. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。M1-01、M1-02 已定要做。
 
 ## 卡在哪
 
@@ -41,7 +36,9 @@ M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、
 - **只读扫描的工具**只参加体检，不进项目页、全局页的工具切换。
 - **MCP 常驻不估算**，预算条 MCP 段为 0，旁边写「N 个未估算」。
 - **内核第一次被调用时全盘扫描一次并缓存**，读近 30 天会话记录（本机约 400MB，按修改时间先筛）。`Kernel::rescan` 重扫。
-- **体检记录只在内存里**：`fangcun log` 每次是新进程，所以永远是空的；桌面应用里能看到本次运行的体检。
+- **体检记录写进 `~/.fangcun/journal/records.jsonl`**（D-15）。桌面应用的每次扫描、`fangcun doctor` 记一条；命令行 `status`、`why` 顺带的扫描不记。写不进去时留在内存里。从来没有体检记录时才算「首次体检」。测试一律用临时目录，不碰真实的 `~/.fangcun`；`ipc_snapshot` 会在真实的 `~/.fangcun` 记一条，不想要就设 `FANGCUN_HOME`。
+- **全局页的同名**：项目层真正生效（MCP）是「被覆盖」；全局那份照样生效（Claude Code 的 skill）或两份都加载（Codex 的 skill）是「同名冲突」，见 `global.rs` 的 `same_name_in`。
+- **项目预算**读 `fangcun.toml` 的 `[project].budget`，M0 只读这一个键，别的键不报错；值写错了会报出来。
 - **示例数据**在 `apps/desktop/src/ipc/fixtures/`，按画板分文件，照抄原型。原型和真实内核的差别（例如全局指令的「6 / 6」、MCP 有常驻数）保留在示例数据里，以便和原型截图对比。
 - **看真实数据**：`cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json`，再 `pnpm screens --snapshot target/ipc-snapshot.json`，图在 `apps/desktop/screens/real-*.png`。
 - **截图对比时的环境差异**，不算不一致：原型画了红黄绿窗口按钮，应用里是系统画的；原型给滚动条预留了位置；示例数据的「今天 / 昨天」按运行当天算，原型固定在 11-13。
