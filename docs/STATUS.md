@@ -4,7 +4,7 @@
 
 ## 现在在哪
 
-M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成；只剩 M0-12 等人批准 Codex 操作桌面。出口标准本机实测：`fangcun doctor` 约 7 秒，零配置，`~/.fangcun` 没有建，没有写任何文件。
+M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、M0-13 至 M0-18 完成；只剩 M0-12 的最后一眼：窗口按钮是否在工具栏里居中。出口标准本机实测：`fangcun doctor` 约 7 秒，零配置，`~/.fangcun` 没有建，没有写任何文件。
 
 - **能用的**：
   - 命令行：`pnpm cli -- doctor`、`status`、`why <资产> [--global]`、`log`。写入命令仍返回「当前是只读模式」。
@@ -17,13 +17,13 @@ M0（透视版，只读）的功能全部实现。BACKLOG 的 M0-02 至 M0-11、
 ## 下一步
 
 1. 人看 PR #5，合并到 main。
-2. **M0-12**：在 Codex 里批准它用 computer use 操作 Fangcun（和系统设置），再跑一遍检查；或人用 `pnpm dev` 自己看窗口按钮对齐、工具栏拖动、深色模式。debug 包在 `target/debug/bundle/macos/Fangcun.app`。
+2. **M0-12**：人用 `pnpm dev` 看一眼左上角的红黄绿按钮是否在 40px 工具栏里垂直居中。不居中就改 `apps/desktop/src-tauri/tauri.conf.json` 的 `trafficLightPosition.y`（现在是 13）。其余几项 Codex 已查过。
 3. 人看「要人定」的 D-18 至 D-22。**D-19 最要紧**：Claude Code 的 skill 同名时全局盖过项目，和 4.3「下层覆盖上层」相反，影响 M1 物化怎么做。
 4. 然后进 M1。先补 M1-pre-01 至 M1-pre-04。
 
 ## 卡在哪
 
-- **M0-12**：Codex CLI 0.167.0 的 computer use 能起来、也找到了 Fangcun 窗口，但非交互运行时自动审批拒绝了对 Fangcun 和系统设置的访问。按 `AGENTS.md`，Claude Code 不能自己操作桌面。
+- **M0-12**：Codex 能操作 Fangcun 了，但它自己的操控浮层总挡住窗口左上角，看不到按钮；按 `AGENTS.md`，Claude Code 不能自己截图看桌面。
 - **要人定的设计**：D-15、D-18 至 D-22，实现已按推荐项或最保守的做法先做，见 DECISIONS。设计文档没有改。
 - **D-09、D-16、D-17** 照旧，不卡开发。
 

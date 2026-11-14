@@ -10,7 +10,8 @@
 //                      pnpm screens Main Global  只截这几张
 //                      pnpm screens --snapshot target/ipc-snapshot.json
 //                          用本机真实数据截图，写到 screens/real-<画板>.png。快照由
-//                          cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json 生成
+//                          cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json
+//                      pnpm screens --dark …   按系统深色外观截图，文件名加 -dark 生成
 // 需要 Playwright 的浏览器：pnpm exec playwright install chromium --only-shell
 
 import { mkdirSync, readFileSync } from "node:fs";
@@ -37,6 +38,9 @@ const argv = process.argv.slice(2);
 const snapshotAt = argv.indexOf("--snapshot");
 const snapshotFile = snapshotAt >= 0 ? argv[snapshotAt + 1] : null;
 if (snapshotAt >= 0) argv.splice(snapshotAt, 2);
+const darkAt = argv.indexOf("--dark");
+const dark = darkAt >= 0;
+if (dark) argv.splice(darkAt, 1);
 const wanted = argv;
 const unknown = wanted.filter((name) => !(name in BOARDS));
 if (unknown.length > 0) {
@@ -60,7 +64,7 @@ if (!address || typeof address === "string") throw new Error("开发服务器没
 const origin = `http://127.0.0.1:${address.port}`;
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ colorScheme: "light" });
+const page = await browser.newPage({ colorScheme: dark ? "dark" : "light" });
 if (snapshotFile) {
   const snapshot = readFileSync(join(REPO, snapshotFile), "utf8");
   await page.addInitScript(`window.__FANGCUN_SNAPSHOT__ = ${snapshot};`);
@@ -78,7 +82,7 @@ try {
     await page.waitForLoadState("networkidle");
     await page.evaluate(() => document.fonts.ready);
 
-    const file = join(OUT, `${snapshotFile ? "real-" : ""}${name}.png`);
+    const file = join(OUT, `${snapshotFile ? "real-" : ""}${name}${dark ? "-dark" : ""}.png`);
     await page.screenshot({ path: file, fullPage: true });
     console.log(`${relative(REPO, file)}  ←→  prototype/screens/${name}.png`);
   }

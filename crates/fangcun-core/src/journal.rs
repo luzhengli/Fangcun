@@ -198,6 +198,11 @@ impl Journal {
         }
     }
 
+    /// 本次运行在内存里记了几条。
+    pub fn len(&self) -> usize {
+        self.memory.lock().map(|m| m.len()).unwrap_or(0)
+    }
+
     /// 本次运行有没有记过任何东西。
     pub fn is_empty(&self) -> bool {
         self.memory.lock().map(|m| m.is_empty()).unwrap_or(true)

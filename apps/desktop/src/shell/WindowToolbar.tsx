@@ -8,6 +8,8 @@ import styles from "./AppShell.module.css";
  * 整窗工具栏（6.1）：高 40px，贯穿窗口顶部。从左到右是窗口按钮、后退与前进、侧栏开关。
  *
  * 窗口按钮是系统画的（tauri.conf.json 里 titleBarStyle 为 Overlay），这里只留出位置。
+ * 系统默认按 28pt 高的标题栏摆按钮，会比 40px 的工具栏中线高约 6px，所以 tauri.conf.json 里用
+ * trafficLightPosition 把按钮移到 x=12、y=13：按钮框高约 14pt，顶边在 13，中线落在 20。
  * 整条工具栏可以拖动窗口。
  */
 export function WindowToolbar() {

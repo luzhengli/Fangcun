@@ -155,15 +155,31 @@ impl Kernel {
 
     /// 最近一次扫描。还没扫过就先扫一次。
     fn scan(&self) -> Arc<Scan> {
-        if let Ok(guard) = self.scan.lock()
-            && let Some(scan) = guard.as_ref()
-        {
+        // 扫描期间一直拿着锁：界面启动时几个查询同时到达，只扫一次，后到的等着用同一份结果。
+        let mut guard = self
+            .scan
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(scan) = guard.as_ref() {
             return Arc::clone(scan);
         }
-        self.rescan_inner()
+        let scan = self.build_scan();
+        *guard = Some(Arc::clone(&scan));
+        scan
     }
 
     fn rescan_inner(&self) -> Arc<Scan> {
+        let mut guard = self
+            .scan
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let scan = self.build_scan();
+        *guard = Some(Arc::clone(&scan));
+        scan
+    }
+
+    /// 扫一次全盘，并在内存里记一条体检记录。调用方持有扫描锁。
+    fn build_scan(&self) -> Arc<Scan> {
         let options = ScanOptions {
             project_roots: self.extra_projects.clone(),
         };
@@ -174,9 +190,6 @@ impl Kernel {
         ));
         let report = crate::scanner::diagnose(&scan);
         self.journal.remember(self.checkup_record(&scan, &report));
-        if let Ok(mut guard) = self.scan.lock() {
-            *guard = Some(Arc::clone(&scan));
-        }
         scan
     }
 
@@ -221,7 +234,8 @@ impl Kernel {
             }
         }
         Record {
-            id: format!("checkup-{}", scan.scanned_at.0),
+            // 同一秒里可能重扫，编号加上本次运行的序号，保证唯一。
+            id: format!("checkup-{}-{}", scan.scanned_at.0, self.journal.len()),
             at: scan.scanned_at.clone(),
             kind: RecordKind::Checkup,
             title,
@@ -476,6 +490,26 @@ mod tests {
                 "得到的是 {refusal:?}"
             );
         }
+    }
+
+    #[test]
+    fn concurrent_queries_scan_once() {
+        let kernel = kernel(Access::ReadOnly);
+        std::thread::scope(|scope| {
+            for _ in 0..6 {
+                scope.spawn(|| kernel.overview().expect("概览"));
+            }
+        });
+        let records = kernel.log(&RecordFilter::default()).expect("读记录");
+        assert_eq!(records.len(), 1, "并发查询只应扫一次：{records:?}");
+        kernel.rescan().expect("重扫");
+        let ids: std::collections::BTreeSet<String> = kernel
+            .log(&RecordFilter::default())
+            .expect("读记录")
+            .into_iter()
+            .map(|r| r.id)
+            .collect();
+        assert_eq!(ids.len(), 2, "每条体检记录的编号都不同");
     }
 
     #[test]
