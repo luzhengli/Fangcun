@@ -209,6 +209,15 @@ fn claude_code_reads_what_the_docs_say() {
     assert_eq!(find(&context, "context7", Scope::Global).triggers, Some(1));
     assert!(context.budget.mcp_unestimated >= 2, "MCP 不估算常驻");
 
+    // 项目预算：没写清单时 20k；清单里写了就用清单的（D-22）。
+    assert_eq!(context.budget.limit.0, 20_000);
+    fs::write(project.join("fangcun.toml"), "[project]\nbudget = 12000\n").expect("写清单");
+    let budgeted = kernel
+        .effective_context(&project, &ToolId::from(ToolId::CLAUDE_CODE))
+        .expect("生效上下文");
+    assert_eq!(budgeted.budget.limit.0, 12_000);
+    fs::remove_file(project.join("fangcun.toml")).expect("删清单");
+
     // 其他加载项：启用的插件、项目的 Hook、斜杠命令；停用的插件不算。
     let observed: Vec<(ObservedKind, &str)> = context
         .observed

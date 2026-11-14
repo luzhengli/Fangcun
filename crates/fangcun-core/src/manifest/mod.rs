@@ -30,6 +30,33 @@ pub fn parse_manifest(origin: &str, text: &str) -> Result<Manifest> {
     })
 }
 
+/// 项目清单里写的常驻预算。没有清单或没写时返回 `None`，调用方用默认值。
+///
+/// M0 只读这一个键：清单的其余部分在 M1 才用，这里不因为别的键报错。
+pub fn project_budget(project_root: &Path) -> Result<Option<u32>> {
+    #[derive(serde::Deserialize)]
+    struct Partial {
+        #[serde(default)]
+        project: PartialProject,
+    }
+    #[derive(serde::Deserialize, Default)]
+    struct PartialProject {
+        budget: Option<u32>,
+    }
+
+    let path = project_root.join(crate::paths::MANIFEST_FILE);
+    let text = match std::fs::read_to_string(&path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(Error::Io { path, source }),
+    };
+    let partial: Partial = toml::from_str(&text).map_err(|e| Error::Parse {
+        origin: path.display().to_string(),
+        message: e.to_string(),
+    })?;
+    Ok(partial.project.budget)
+}
+
 /// 读项目的清单与个人覆盖。项目没有清单时返回 `None`。
 pub fn load_project(_project_root: &Path) -> Result<Option<(Manifest, Option<Manifest>)>> {
     Err(Error::NotImplemented("manifest::load_project"))
@@ -51,6 +78,7 @@ mod tests {
 [project]
 targets = ["claude-code", "codex"]
 mode    = "link"                 # link 或 vendor
+budget  = 20000                  # 常驻预算（估算值），不写时 20000
 
 bundles = ["工程基线"]
 
@@ -76,6 +104,7 @@ mirror    = ["CLAUDE.md"]        # 生成为对正本的引用
         assert_eq!(manifest.project.targets.len(), 2);
         assert_eq!(manifest.project.mode, Some(SyncMode::Link));
         assert_eq!(manifest.project.bundles, ["工程基线"]);
+        assert_eq!(manifest.project.budget, Some(20_000));
 
         assert_eq!(manifest.skills.len(), 3);
         assert_eq!(manifest.skills["tdd"].track.as_deref(), Some("main"));
@@ -88,6 +117,20 @@ mirror    = ["CLAUDE.md"]        # 生成为对正本的引用
         let instructions = manifest.instructions.expect("示例里有指令文件一节");
         assert_eq!(instructions.canonical, "AGENTS.md");
         assert_eq!(instructions.mirror, ["CLAUDE.md"]);
+    }
+
+    #[test]
+    fn project_budget_reads_only_the_budget() {
+        let root = std::env::temp_dir().join(format!("fangcun-budget-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("建临时目录");
+        assert_eq!(project_budget(&root).expect("没有清单"), None);
+        let manifest = root.join(crate::paths::MANIFEST_FILE);
+        std::fs::write(&manifest, "[project]\nbudget = 12000\nlater = true\n").expect("写清单");
+        assert_eq!(project_budget(&root).expect("读预算"), Some(12_000));
+        std::fs::write(&manifest, "[project]\nbudget = \"12k\"\n").expect("写清单");
+        assert!(project_budget(&root).is_err(), "写错了要报出来");
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

@@ -363,12 +363,13 @@ impl Kernel {
         let scan = self.scan();
         let adapter = self.adapter(tool)?;
         let project = self.project_collected(&scan, project_root, tool)?;
-        Ok(crate::resolver::effective_context(
-            &scan,
-            adapter,
-            &project,
-            project_root,
-        ))
+        let mut context =
+            crate::resolver::effective_context(&scan, adapter, &project, project_root);
+        // 项目预算写在 `fangcun.toml`，没写时用默认值（D-22）。
+        if let Some(budget) = crate::manifest::project_budget(project_root)? {
+            context.budget.limit = crate::model::TokenEstimate(budget);
+        }
+        Ok(context)
     }
 
     /// `fangcun status`。
