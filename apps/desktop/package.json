@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "screens": "node scripts/screens.mjs",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "window-shot": "node scripts/window-shot.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
