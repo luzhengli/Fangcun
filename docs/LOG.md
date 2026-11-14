@@ -8,7 +8,7 @@
 
 - 人让把云端分支 `claude/nifty-rubin-jc7pvh` 合进 main：开 PR #8，CI 两项过后合并（`3f503e2`）。
 - 人让整理工作流并优化。新建 `docs/WORKFLOW.md`（角色、一轮迭代、口令、交接规则、同步原型、质量关、复盘），`AGENTS.md` 的同步步骤挪过去；BACKLOG 加「待人处理」「原型待改」「工作流」；STATUS 限 40 行，「接手须知」进 ARCHITECTURE「实现要点」。
-- 新工具：`pnpm workflow`（卡在哪，CI 留示例数据警告）、`pnpm screens --compare`（三栏差异拼图）、`pnpm window-shot`（真实窗口截图、量按钮）。`pnpm workflow` 翻出 11-13 没合并的旧分支 `claude/zen-dirac-3ba2zc`，进了 H-03。
+- 随 PR #9 合并。新工具：`pnpm workflow`（卡在哪，CI 留示例数据警告）、`pnpm screens --compare`（三栏差异拼图）、`pnpm window-shot`（真实窗口截图、量按钮）。`pnpm workflow` 翻出 11-13 没合并的旧分支 `claude/zen-dirac-3ba2zc`，进了 H-03。
 - 留下的：H-01 屏幕录制权限后 `window-shot` 才能真截图；M0-22；W-08 至 W-11。
 
 ## 2026-11-14 原型全量对照第 6 节，改五处并同步到 1794656963-e22c

@@ -10,7 +10,7 @@ M0（透视版，只读）功能全部实现，只剩 M0-12 窗口按钮再看�
 
 - **能用的**：命令行 `doctor`、`status`、`why`、`log`；桌面应用的体检报告、项目页、全局页、活动页，资产库、套装是占位（M1）。体检扫 8 个工具，Claude Code、Codex 完整支持。本机 `fangcun doctor` 约 7 秒，只写 `~/.fangcun/journal`。
 - **原型**：`prototype/` 在画布版本 1794656963-e22c，`check.js` 七张画板通过，和第 6 节没有已知不一致。PR #8 已合并。
-- **工作流**：新建 `docs/WORKFLOW.md`（一轮迭代、口令、交接规则、质量关、复盘）。新工具 `pnpm workflow`、`pnpm screens --compare`、`pnpm window-shot`；CI 在示例数据落后时留警告。BACKLOG 加了「待人处理」「原型待改」「工作流」三节。都在分支 `workflow-loop` 上，还没提交。
+- **工作流**：新建 `docs/WORKFLOW.md`（一轮迭代、口令、交接规则、质量关、复盘）。新工具 `pnpm workflow`、`pnpm screens --compare`、`pnpm window-shot`；CI 在示例数据落后时留警告。BACKLOG 加了「待人处理」「原型待改」「工作流」三节。随 PR #9 合进 main。
 - **检查**：`pnpm screens --compare` 本机跑通，六张画板差异 1.6%–6.7%，Global 的拼图里能看到 frontend-design 还是「被覆盖 2 处」（M0-22）。`pnpm window-shot` 的找窗口、报错路径跑过，真正截图要等屏幕录制权限（H-01）。
 
 ## 下一步
