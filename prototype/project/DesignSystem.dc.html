@@ -364,7 +364,7 @@ class Component extends DCLogic {
       ['project-harness', '4d9b1eb', '项目', 2, 'warn', '已漂移', '0.4k', false],
       ['tdd', 'a1b2c3', '套装 · 工程基线', 1, 'info', '可更新 ↑ b7e9f0', '0.2k', false],
       ['pr-review', '', '全局', 0, 'unknown', '来源未知', '0.3k', false],
-      ['frontend-design', 'v1.1.0', '全局', 0, 'muted', '被项目同名项覆盖', '—', true]
+      ['frontend-design', 'v1.3.0', '项目', 2, 'muted', '被全局层同名项覆盖', '—', true]
     ];
     const rows = RW.map(([name, version, layer, li, tone, status, cost, struck], i) => {
       const tc = tone === 'muted' ? 'var(--tx-3)' : 'var(--' + tone + ')';

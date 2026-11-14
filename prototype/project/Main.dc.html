@@ -407,8 +407,13 @@ body{margin:0}
         <!-- 被覆盖 -->
         <sc-if value="{{sel.isOverridden}}" hint-placeholder-val="{{false}}">
           <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
-            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">项目层有同名 skill。Claude Code 只加载项目层版本，这份全局副本不生效，常驻成本为 0。</p>
-            <button type="button" class="fc-btn" onClick="{{goOverrider}}" style="align-self: flex-start; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">查看覆盖它的项</button>
+            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">全局层有同名 skill。Claude Code 同名时全局优先，项目里这份 v1.3.0 不加载，常驻成本为 0。同步不会自动移走全局那一份：其他项目也在读它。</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="fc-btn" onClick="{{goOverrider}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">查看覆盖它的项</button>
+              <a href="Global.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">转成套装…</a>
+              <a href="Global.dc.html" class="fc-btn" style="display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-decoration: none;">从全局移除…</a>
+            </div>
+            <span style="font-size: 11px; color: var(--tx-3);">两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。</span>
           </div>
         </sc-if>
 
@@ -433,6 +438,9 @@ body{margin:0}
             </sc-for>
           </ol>
           <span style="font-size: 11px; color: var(--tx-3);">从上到下优先级递增，下层覆盖上层。</span>
+          <sc-if value="{{sel.reversed}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 11px; color: var(--tx-2);">这个工具同名时上层优先，与「下层覆盖上层」相反。</span>
+          </sc-if>
         </section>
 
         <section aria-label="上下文占用" style="display: flex; flex-direction: column; gap: 6px;">
@@ -567,16 +575,17 @@ class Component extends DCLogic {
       claude: { name: 'CLAUDE.md', version: '', layer: 'project', tone: 'neutral', status: '镜像自 AGENTS.md', cost: '0.1k', kind: '指令文件', fields: [['路径', 'CLAUDE.md', 1], ['内容', '@AGENTS.md（引用，不复制）'], ['生成', '由方寸物化']], why: '这份文件由方寸自动生成，内容只有一行对 AGENTS.md 的引用。\n要改指令请编辑 AGENTS.md，不要直接改它。' },
       harness: { name: 'project-harness', version: '7月版 · 4d9b1eb', layer: 'project', tone: 'warn', status: '已漂移', cost: '0.4k', kind: 'Skill', drift: true, fields: [['来源', 'local:luyao-skills', 1], ['版本', 'pin 4d9b1eb', 1], ['物化', '链接 → ~/.fangcun/lib', 1], ['使用中', '5 个项目']], why: '项目清单固定使用 4d9b1eb 版本。\n但项目里的这份副本被改动过，和锁定的版本对不上，所以标为漂移。' },
       tdd: { name: 'tdd', version: 'a1b2c3', layer: 'bundle', tone: 'info', status: '可更新 ↑ b7e9f0', cost: '0.2k', kind: 'Skill', update: true, fields: [['来源', 'github:obra/superpowers', 1], ['跟随', 'track main', 1], ['套装', '工程基线'], ['含脚本', '是 · 1 个']], why: '它来自本项目启用的套装「工程基线」。\n套装设定跟随上游 main 分支。上游出了新版本 b7e9f0，你确认后才会更新。' },
-      fedp: { name: 'frontend-design', version: 'v1.3.0', layer: 'project', tone: 'neutral', status: '覆盖全局同名项', cost: '0.2k', kind: 'Skill', fields: [['来源', 'github:acme/skills', 1], ['版本', 'pin v1.3.0', 1], ['覆盖', '全局 frontend-design']], why: '项目清单里声明了它。\n全局也装了一个同名 skill，同名时以项目里的为准，所以生效的是这一份。' },
+      fedp: { name: 'frontend-design', version: 'v1.3.0', layer: 'project', tone: 'muted', status: '被全局层同名项覆盖', cost: '0', kind: 'Skill', overridden: true, struck: true, reversed: true, fields: [['来源', 'github:acme/skills', 1], ['版本', 'pin v1.3.0', 1], ['生效', '否 · 被全局 v1.1.0 遮蔽']], why: '项目清单里声明了它，但它没有生效。\n全局也装了一个同名 skill。Claude Code 同名时全局优先，这份项目版本被挡住，不会加载。' },
       lark: { name: 'lark-doc …等 16 项', version: '', layer: 'global', tone: 'muted', status: '本项目从未使用', cost: '6.4k', kind: 'Skill · 16 项', unused: true, fields: [['位置', '~/.claude/skills', 1], ['来源', '~/.agents/skills', 1], ['触发', '近 30 天 0 次']], why: '它们装在全局目录里，而全局的东西会加载进每一个项目。\n本项目没有用到它们，近 30 天也从未触发，却一直占着上下文。' },
       prrev: { name: 'pr-review', version: '', layer: 'global', tone: 'unknown', status: '来源未知', cost: '0.3k', kind: 'Skill', unknown: true, fields: [['位置', '~/.agents/skills/pr-review', 1], ['来源', '未知'], ['含脚本', '否']], why: '它装在全局目录里，所以对本项目也生效。\n方寸查不到它从哪来，无法判断版本，也没法提醒更新。' },
-      fedg: { name: 'frontend-design', version: 'v1.1.0', layer: 'global', tone: 'muted', status: '被项目同名项覆盖', cost: '0', kind: 'Skill', overridden: true, struck: true, fields: [['位置', '~/.claude/skills', 1], ['版本', 'v1.1.0', 1], ['生效', '否']], why: '它没有生效。\n本项目里有一个同名 skill，同名时以项目里的为准，这份全局版本被挡住，不会加载。' },
+      fedg: { name: 'frontend-design', version: 'v1.1.0', layer: 'global', tone: 'neutral', status: '覆盖项目同名项', cost: '0.2k', kind: 'Skill', reversed: true, fields: [['位置', '~/.claude/skills', 1], ['版本', 'v1.1.0', 1], ['遮蔽', '项目 frontend-design v1.3.0']], why: '它装在全局目录里，所以对本项目生效。\n本项目也声明了同名的 v1.3.0，但 Claude Code 同名时全局优先，生效的是这一份。' },
       github: { name: 'github', version: 'server-github', layer: 'project', tone: 'neutral', status: '密钥在钥匙串', cost: '4.8k', kind: 'MCP 服务', fields: [['命令', 'npx -y @modelcontextprotocol/server-github', 1], ['密钥', 'GITHUB_TOKEN → 钥匙串'], ['写入', '.mcp.json 按键合并', 1]], why: '项目清单里声明了这个 MCP 服务，所以它对本项目生效。\nGitHub 令牌存在钥匙串里，配置文件只写引用，不写明文。' }
     };
 
     if (s.drift) { R.harness.tone = 'ok'; R.harness.status = driftDoneMap[s.drift].status; }
     if (s.tddQueued) { R.tdd.status = '待同步 ↑ b7e9f0'; }
     if (s.larkOff) { R.lark.status = '已停用（待同步）'; R.lark.struck = true; R.lark.cost = '0'; }
+    if (s.tool !== 'claude') Object.assign(R.fedp, { tone: 'neutral', status: '固定 v1.3.0', cost: '0.2k', overridden: false, struck: false, reversed: false, fields: [['来源', 'github:acme/skills', 1], ['版本', 'pin v1.3.0', 1]], why: '项目清单里声明了它，所以它对本项目生效。\nCodex 不读 Claude Code 的全局目录，这里没有同名项。' });
 
     const layout = s.tool === 'claude'
       ? [['指令', ['agents', 'claude']], ['Skills', ['harness', 'tdd', 'fedp', 'lark', 'prrev', 'fedg']], ['MCP', ['github']]]
@@ -622,9 +631,9 @@ class Component extends DCLogic {
     const STK = {
       agents: ['', '', '生效 · 正本', ''], claude: ['', '', '生效 · 生成的镜像', ''],
       harness: ['', '', '生效 · 固定 4d9b1eb', ''], tdd: ['', '生效 · 来自「工程基线」', '', ''],
-      fedp: ['同名 v1.1.0 · 被遮蔽', '', '生效 · v1.3.0', ''],
+      fedp: s.tool === 'claude' ? ['生效 · 同名 v1.1.0', '', 'v1.3.0 · 被遮蔽', ''] : ['', '', '生效 · v1.3.0', ''],
       lark: [s.larkOff ? '已安装 · 被本项目停用' : '生效 · 16 项', '', s.larkOff ? '本项目停用（待同步）' : '', ''],
-      prrev: ['生效 · 来源未知', '', '', ''], fedg: ['v1.1.0 · 被遮蔽', '', '同名 v1.3.0 生效', ''],
+      prrev: ['生效 · 来源未知', '', '', ''], fedg: ['生效 · v1.1.0', '', '同名 v1.3.0 · 被遮蔽', ''],
       github: ['', '', '生效 · 密钥在钥匙串', '']
     };
     const LNAMES = ['全局', '套装', '项目', '个人'];
@@ -640,17 +649,17 @@ class Component extends DCLogic {
       agents: ['AGENTS.md'], claude: ['CLAUDE.md · 内容为 @AGENTS.md'],
       harness: ['.agents/skills/project-harness → 资产库', '.claude/skills/project-harness → .agents/skills/project-harness'],
       tdd: ['.agents/skills/tdd → 资产库', '.claude/skills/tdd → .agents/skills/tdd'],
-      fedp: ['.agents/skills/frontend-design → 资产库', '.claude/skills/frontend-design → .agents/skills/frontend-design'],
+      fedp: ['.agents/skills/frontend-design → 资产库', '.claude/skills/frontend-design → .agents/skills/frontend-design' + (s.tool === 'claude' ? '（被遮蔽，未加载）' : '')],
       lark: ['~/.claude/skills/lark-*（16 个链接，全局）'], prrev: ['~/.claude/skills/pr-review → ~/.agents/skills/pr-review'],
-      fedg: ['~/.claude/skills/frontend-design（全局，未加载）'], github: ['.mcp.json → mcpServers.github（按键合并）', 'Codex 配置 → github（按键合并）']
+      fedg: ['~/.claude/skills/frontend-design（全局，生效）'], github: ['.mcp.json → mcpServers.github（按键合并）', 'Codex 配置 → github（按键合并）']
     };
     const filesOut = (FILES[selId] || []).map((p) => ({ p }));
     const ACT = {
       agents: [['11-13', '同步 · 内容未变'], ['11-01', '正本更新到 5e2a7c1']], claude: [['11-10', '由方寸生成镜像']],
       harness: [['5 分钟前', '检测到漂移 · 多 3 行、少 1 行'], ['11-11', '收编进资产库'], ['07-02', '固定到 4d9b1eb']],
-      tdd: [['11-12', '上游新提交 b7e9f0'], ['10-28', '升级到 a1b2c3']], fedp: [['11-12', '升级 v1.1.0 → v1.3.0']],
+      tdd: [['11-12', '上游新提交 b7e9f0'], ['10-28', '升级到 a1b2c3']], fedp: [['11-12', '升级 v1.1.0 → v1.3.0'], ['11-12', '全局层有同名 v1.1.0，Claude Code 仍加载全局那一份']],
       lark: [['近 30 天', '本项目触发 0 次'], ['07-05', '装入全局']], prrev: [['11-11', '体检发现 · 来源未知']],
-      fedg: [['11-12', '项目层同名项升级后开始遮蔽'], ['09-20', '装入全局']], github: [['11-10', '密钥迁入钥匙串'], ['11-10', '写入 .mcp.json']]
+      fedg: [['11-12', '项目层同名项升级到 v1.3.0，这一份仍生效'], ['09-20', '装入全局']], github: [['11-10', '密钥迁入钥匙串'], ['11-10', '写入 .mcp.json']]
     };
     if (s.drift && selId === 'harness') ACT.harness.unshift(['刚刚', driftDoneMap[s.drift].title]);
     const actsOut = (ACT[selId] || []).map(([when, text]) => ({ when, text }));
@@ -665,7 +674,7 @@ class Component extends DCLogic {
       fields: [['作用层', LAYERS[r.layer][0]], ['常驻', r.cost === '0' ? '不计入' : r.cost + ' tokens（估算）']].concat(r.fields).map((f) => ({ k: f[0], v: f[1], s: 'margin: 0; min-width: 0; word-break: break-all; color: var(--tx-1);' + (f[2] ? ' font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') })),
       why: r.why,
       isDriftOpen: !!r.drift && !s.drift, isDriftDone: !!r.drift && !!s.drift,
-      isUpdate: !!r.update, isUnused: !!r.unused, isOverridden: !!r.overridden, isUnknown: !!r.unknown,
+      isUpdate: !!r.update, isUnused: !!r.unused, isOverridden: !!r.overridden, isUnknown: !!r.unknown, reversed: !!r.reversed,
       stack: stackOut, files: filesOut, acts: actsOut, shareText, shareBar
     };
 
@@ -844,7 +853,7 @@ class Component extends DCLogic {
       sheet: s.sheet, palette: s.palette, query: s.query, noResults: results.length === 0,
       toast: s.toast, toastText: s.toastText,
       goDrift: () => set({ tab: 'effective', sel: 'harness' }),
-      goOverrider: () => set({ sel: 'fedp' }),
+      goOverrider: () => set({ sel: 'fedg' }),
       confirmDrift: () => set({ drift: s.driftPick, toast: true, toastText: driftDoneMap[s.driftPick].title + ' · 已留快照，可撤销' }),
       undoDrift: () => set({ drift: null }),
       toggleTdd: () => set({ tddQueued: !s.tddQueued, synced: false }),

@@ -148,7 +148,7 @@ body{margin:0}
               </span>
               <span style="flex: 0 0 64px; color: var(--tx-2);">{{r.kind}}</span>
               <span style="flex: 0 0 112px; display: flex; align-items: center; gap: 8px;">
-                <span aria-hidden="true" style="flex: 0 0 40px; height: 4px; border-radius: 2px; background: var(--bg-hover); overflow: hidden;"><span style="{{r.useBar}}"></span></span>
+                <span aria-hidden="true" style="{{r.useTrack}}"><span style="{{r.useBar}}"></span></span>
                 <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-2);">{{r.useText}}</span>
               </span>
               <span style="{{r.statusStyle}}"><span aria-hidden="true" style="{{r.dotStyle}}"></span>{{r.status}}</span>
@@ -208,6 +208,7 @@ body{margin:0}
           <span style="font-family: var(--mono); font-size: 11px; color: var(--tx-3);">$ fangcun why {{d.cli}} --global</span>
         </section>
 
+        <sc-if value="{{d.hasProjects}}" hint-placeholder-val="{{true}}">
         <section aria-label="用到它的项目" style="display: flex; flex-direction: column; gap: 6px;">
           <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">用到它的项目 · 近 30 天</h3>
           <ol style="margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); overflow: hidden;">
@@ -219,6 +220,7 @@ body{margin:0}
             </sc-for>
           </ol>
         </section>
+        </sc-if>
 
         <section aria-label="分发到哪些工具" style="display: flex; flex-direction: column; gap: 6px;">
           <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">分发到哪些工具</h3>
@@ -360,15 +362,15 @@ class Component extends DCLogic {
           summary: '查询第三方库文档的 MCP 服务。6 个项目里有 4 个经常用到。',
           advice: '多数项目在用，留在全局合理。若想让 notes-kit 与 client-acme 更轻，可在这两个项目单独停用。',
           acts: [['11-06', '在 4 个项目被调用'], ['07-14', '写入 ~/.claude.json']] }),
-      R('claudemd', 'CLAUDE.md', '指令', 'ins', 1, '~/.claude/CLAUDE.md', ['cc'], 0.9, PROJS, 'ok', '每个项目都用',
-        { src: '本机', ver: '内容哈希 7c01d2e', cli: 'CLAUDE.md', act: 'keep',
-          summary: '用户级指令：语言偏好、提交规范与个人习惯。Claude Code 在每个项目都会全文加载。',
-          advice: '每个项目都需要，适合留在全局。注意保持精简，它的每一行都按项目缴税。',
+      R('claudemd', 'CLAUDE.md', '指令', 'ins', 1, '~/.claude/CLAUDE.md', ['cc'], 0.9, [], 'neutral', '全文加载',
+        { src: '本机', ver: '内容哈希 7c01d2e', cli: 'CLAUDE.md', act: 'keep', fulltext: true,
+          summary: '用户级指令：语言偏好、提交规范与个人习惯。Claude Code 在每个项目的每次会话都全文加载，没有「触发」可统计。',
+          advice: '只放每个项目都需要的约定。它的每一行都按项目缴税。',
           acts: [['11-09', '内容变更 · 新增 3 行'], ['06-02', '首次发现']] }),
-      R('agentsmd', 'AGENTS.md', '指令', 'ins', 1, '~/.codex/AGENTS.md', ['cx'], 0.6, PROJS, 'ok', '每个项目都用',
-        { src: '本机', ver: '内容哈希 a9e4410', cli: 'AGENTS.md', act: 'keep',
-          summary: 'Codex 的用户级指令。与 ~/.claude/CLAUDE.md 有 70% 内容重复。',
-          advice: '每个项目都需要，适合留在全局。它与 CLAUDE.md 大部分重复，后续版本可改为同一正本的镜像。',
+      R('agentsmd', 'AGENTS.md', '指令', 'ins', 1, '~/.codex/AGENTS.md', ['cx'], 0.6, [], 'neutral', '全文加载',
+        { src: '本机', ver: '内容哈希 a9e4410', cli: 'AGENTS.md', act: 'keep', fulltext: true,
+          summary: 'Codex 的用户级指令，每个项目的每次会话都全文加载。与 ~/.claude/CLAUDE.md 有 70% 内容重复。',
+          advice: '只放每个项目都需要的约定。它与 CLAUDE.md 大部分重复，后续版本可改为同一正本的镜像。',
           acts: [['10-12', '内容变更'], ['06-02', '首次发现']] }),
       SK('pdf', 'pdf', ['cc', 'ws'], 0.3, ['notes-kit'], 'info', '建议转套装',
         { src: 'github:anthropics/skills', ver: '跟随 main · 0d81aa3', cli: 'pdf', act: 'bundle', script: true,
@@ -398,11 +400,11 @@ class Component extends DCLogic {
         { src: 'local:luyao-skills', ver: '开发模式 · 活链接', cli: 'mermaid', act: 'remove',
           summary: '生成 Mermaid 图的约定。', advice: '近 30 天没有任何项目触发它。可以直接从全局移除，资产库仍保留正本，随时可加回。',
           acts: [['07-11', '装入全局层']] }),
-      SK('fed', 'frontend-design', ['cc', 'ws'], 0.2, [], 'neutral', '被覆盖 2 处',
-        { src: 'github:acme/skills', ver: '固定 v1.1.0 · 旧版', cli: 'frontend-design', act: 'remove', shadowed: ['evals_studio', 'blog-site'], struck: true,
-          summary: '全局层里的旧版 v1.1.0。evals_studio 与 blog-site 在项目层固定了 v1.3.0，把它遮蔽了。',
-          advice: '被遮蔽的两个项目用不到它，其余 4 个项目也从未触发。可以从全局移除，项目层的 v1.3.0 不受影响。',
-          acts: [['11-12', 'v1.3.0 发布，2 个项目在项目层升级'], ['09-20', 'v1.1.0 装入全局']] }),
+      SK('fed', 'frontend-design', ['cc', 'ws'], 0.2, [], 'neutral', '同名冲突 2 处',
+        { src: 'github:acme/skills', ver: '固定 v1.1.0 · 旧版', cli: 'frontend-design', act: 'bundle', conflict: ['evals_studio', 'blog-site'],
+          summary: '全局层里的旧版 v1.1.0。evals_studio 与 blog-site 在项目层固定了同名的 v1.3.0，但 Claude Code 同名时全局优先，两个项目加载的仍是这一份。',
+          advice: '方寸不会自动移走它：全局目录是所有项目共用的。从全局移除后，两个项目改用各自的 v1.3.0；其余 4 个项目从未触发，每个省下 0.2k 常驻。',
+          acts: [['11-12', '2 个项目在项目层升级到 v1.3.0，全局这份仍生效'], ['09-20', 'v1.1.0 装入全局']] }),
       SK('wstyle', 'writing-style', ['cc'], 0.2, ['fangcun', 'blog-site', 'notes-kit'], 'ok', '常用',
         { src: 'local:luyao-skills', ver: '开发模式 · 活链接', cli: 'writing-style', act: 'keep',
           summary: '中文写作风格约定。', advice: '一半项目在用。留在全局可以接受；若要更精准，可转成「写作」套装。',
@@ -452,7 +454,7 @@ class Component extends DCLogic {
     const togglePick = (id) => { const p = Object.assign({}, s.picked); if (p[id]) delete p[id]; else p[id] = true; set({ picked: p }); };
     const pickWhere = (fn) => { const p = {}; shown.filter(fn).forEach((r) => { p[r.id] = true; }); set({ picked: p }); };
     const rare = shown.filter((r) => r.tone === 'info');
-    const never = shown.filter((r) => r.tone === 'warn' || r.shadowed);
+    const never = shown.filter((r) => r.tone === 'warn' || r.shadowed || r.conflict);
 
     const rows = shown.map((r) => {
       const t = TONE[r.tone];
@@ -462,7 +464,8 @@ class Component extends DCLogic {
         countText: r.count > 1 ? r.count + ' 项' : '', countStyle: r.count > 1 ? 'flex: none; font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--bg-hover); color: var(--tx-2);' : 'display: none;',
         checkLabel: '选择 ' + r.name,
         toggle: () => togglePick(r.id), pick: () => set({ sel: r.id, inspOpen: true }),
-        useText: n + ' / 6',
+        useText: r.fulltext ? '—' : n + ' / 6',
+        useTrack: r.fulltext ? 'display: none;' : 'flex: 0 0 40px; height: 4px; border-radius: 2px; background: var(--bg-hover); overflow: hidden;',
         useBar: 'display: block; height: 100%; width: ' + (n / 6 * 100).toFixed(0) + '%; background: ' + (n === 0 ? 'transparent' : (n <= 2 ? 'var(--warn-dot)' : 'var(--ok-dot)')) + ';',
         nameStyle: 'min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;' + (r.struck ? ' text-decoration: line-through; color: var(--tx-3);' : ''),
         statusStyle: 'flex: 0 0 104px; display: flex; align-items: center; gap: 6px; color: ' + t[0] + ';',
@@ -478,8 +481,9 @@ class Component extends DCLogic {
     const tagS = (tone) => 'flex: 0 0 auto; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg-hover); color: ' + TONE[tone][0] + ';';
     const projects = PROJS.map((p, i) => {
       const sh = cur.shadowed && cur.shadowed.indexOf(p) >= 0;
+      const cf = cur.conflict && cur.conflict.indexOf(p) >= 0;
       const used = cur.used.indexOf(p) >= 0;
-      return { name: p, tag: sh ? '被项目层覆盖' : (used ? '用到' : '未用到'), tagStyle: tagS(sh ? 'neutral' : (used ? 'ok' : 'neutral')) + (used || sh ? '' : ' opacity: .8;'), rowStyle: rowS(i) };
+      return { name: p, tag: sh ? '被项目层覆盖' : (cf ? '同名冲突' : (used ? '用到' : '未用到')), tagStyle: tagS(sh || cf ? 'neutral' : (used ? 'ok' : 'neutral')) + (used || sh || cf ? '' : ' opacity: .8;'), rowStyle: rowS(i) };
     });
     const dist = cur.type === 'skill'
       ? ['cc', 'cx', 'ws'].map((tl, i) => { const has = cur.tools.indexOf(tl) >= 0;
@@ -493,12 +497,12 @@ class Component extends DCLogic {
       dotStyle: 'width: 7px; height: 7px; border-radius: 4px; background: ' + ct[1] + ';',
       fields: [FS('位置', cur.loc, true), FS('来源', cur.src, true, cur.tone === 'unknown' ? 'var(--unknown)' : null), FS('版本', cur.ver, true),
         FS('常驻', k(cur.cost) + ' / 每个项目（估算）', false, cur.cost >= 3 ? 'var(--warn)' : null),
-        FS('用到它', cur.used.length + ' / 6 个项目'), FS('含脚本', cur.script ? (cur.type === 'mcp' ? '启动命令' : '是') : '否', false, cur.script ? 'var(--danger)' : null)],
+        FS('用到它', cur.fulltext ? '— · 全文加载，没有触发可统计' : cur.used.length + ' / 6 个项目'), FS('含脚本', cur.script ? (cur.type === 'mcp' ? '启动命令' : '是') : '否', false, cur.script ? 'var(--danger)' : null)],
       advice: cur.advice,
       adviceStyle: 'display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; ' + (cur.act === 'keep' ? 'background: var(--bg); border: 1px solid var(--line); color: var(--tx-2);' : (cur.act === 'adopt' ? 'background: var(--unknown-weak); color: var(--unknown);' : 'background: var(--info-weak); color: var(--info);')),
       canBundle: cur.act === 'bundle', canRemove: cur.act === 'remove' || cur.act === 'bundle', canAdopt: cur.act === 'adopt',
       doBundle: () => openSheet('bundle', [cur.id]), doRemove: () => openSheet('remove', [cur.id]),
-      projects, dist, acts: cur.acts.map(([when, text]) => ({ when, text })) };
+      projects, hasProjects: !cur.fulltext, dist, acts: cur.acts.map(([when, text]) => ({ when, text })) };
 
     // 变更计划
     const sel = ROWS.filter((r) => s.picked[r.id] && !s.removed[r.id]);
@@ -544,7 +548,7 @@ class Component extends DCLogic {
       noRows: shown.length === 0, clearFilter: () => set({ filter: 'all' }),
       otherToolNote: otherOnly.length ? '另有 ' + cnt(otherOnly) + ' 项只被' + (s.tool === 'cc' ? ' Codex ' : ' Claude Code 或 Windsurf ') + '加载，切换工具查看。' : '',
       rareCount: cnt(rare), neverCount: cnt(never),
-      pickRare: () => pickWhere((r) => r.tone === 'info'), pickNever: () => pickWhere((r) => r.tone === 'warn' || !!r.shadowed),
+      pickRare: () => pickWhere((r) => r.tone === 'info'), pickNever: () => pickWhere((r) => r.tone === 'warn' || !!r.shadowed || !!r.conflict),
       allOn: shown.length > 0 && picked.length === shown.length,
       toggleAll: () => (picked.length === shown.length ? set({ picked: {} }) : pickWhere(() => true)),
       hasPicked: picked.length > 0, pickedText: cnt(picked) + ' 项', pickedSave: k(sum(picked)),
