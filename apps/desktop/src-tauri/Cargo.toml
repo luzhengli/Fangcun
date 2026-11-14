@@ -1,0 +1,18 @@
+[package]
+name = "fangcun-desktop"
+description = "方寸桌面应用的 Tauri 外壳。业务逻辑在 fangcun-core。"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+fangcun-core.workspace = true
+serde.workspace = true
+tauri = { version = "2", features = [] }
+
+[lints]
+workspace = true

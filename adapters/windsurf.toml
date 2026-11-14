@@ -1,0 +1,44 @@
+# Windsurf 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14 核实：docs.windsurf.com 已跳转到 Devin 的文档，Windsurf 的目录作为旧位置仍被读取：
+#   https://docs.devin.ai/desktop/cascade/skills
+# 没读的：MCP（字段名要对照 https://docs.devin.ai/cli/extensibility/mcp/configuration.md 再写）、
+# .windsurfrules、.windsurf/global_rules.md。
+schema = 1
+
+[tool]
+id = "windsurf"
+name = "Windsurf"
+support = "scan-only"
+
+[[skills]]
+scope = "global"
+path = "~/.config/devin/skills"
+
+[[skills]]
+scope = "global"
+path = "~/.agents/skills"
+
+[[skills]]
+scope = "project"
+path = ".devin/skills"
+
+[[skills]]
+scope = "project"
+path = ".agents/skills"
+
+[[skills]]
+scope = "project"
+path = ".windsurf/skills"
+
+[[instructions]]
+scope = "global"
+names = ["~/.devin/global_rules.md"]
+
+[[rules]]
+scope = "global"
+dir = "~/.devin/rules"
+
+[[rules]]
+scope = "project"
+dir = ".windsurf/rules"

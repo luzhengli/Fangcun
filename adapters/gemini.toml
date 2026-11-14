@@ -1,0 +1,40 @@
+# Gemini CLI 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照当期文档核实。文档首页写明 Gemini CLI 已在 2026-06-18 被 Antigravity CLI 取代，
+# 本机的 ~/.gemini 仍在，所以照旧扫描：
+#   https://geminicli.com/docs/cli/gemini-md/
+#   https://geminicli.com/docs/tools/mcp-server/
+# 没读的：context.fileName 改过的文件名、Agent Skills（文档没写目录）。
+schema = 1
+
+[tool]
+id = "gemini"
+name = "Gemini CLI"
+support = "scan-only"
+
+[[instructions]]
+scope = "global"
+names = ["~/.gemini/GEMINI.md"]
+
+[[instructions]]
+scope = "project"
+names = ["GEMINI.md"]
+walk = "ancestors"
+
+[[mcp]]
+scope = "global"
+file = "~/.gemini/settings.json"
+format = "json"
+key = ["mcpServers"]
+
+[[mcp]]
+scope = "project"
+file = ".gemini/settings.json"
+format = "json"
+key = ["mcpServers"]
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"

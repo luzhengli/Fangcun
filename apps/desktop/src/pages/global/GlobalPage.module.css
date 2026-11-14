@@ -1,0 +1,374 @@
+/* 全局页（6.6）。尺寸照抄 prototype/project/Global.dc.html。 */
+
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.subtitle {
+  color: var(--tx-3);
+  font-size: 12px;
+  flex: 1 1 200px;
+}
+
+.budgetLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  font-size: 12px;
+}
+
+.budgetText {
+  color: var(--tx-2);
+}
+
+.budgetText strong {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--tx-1);
+}
+
+.legends {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--tx-3);
+}
+
+.legends > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legends i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+}
+
+.listColumn {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.quickLabel {
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.quick {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--tx-1);
+  font-size: 12px;
+}
+
+.colHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px 4px;
+  font-size: 11px;
+  color: var(--tx-3);
+  font-weight: 500;
+}
+
+.colHead input,
+.row input {
+  flex: none;
+  margin: 0 4px 0 0;
+  accent-color: var(--accent);
+}
+
+.cols {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.row[data-current="true"] {
+  background: var(--bg-selected);
+}
+
+.row button.cols {
+  min-height: 46px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--tx-1);
+}
+
+.colName {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nameLine {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.count {
+  flex: none;
+  font-size: 11px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--tx-2);
+}
+
+.loc {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.colKind {
+  flex: 0 0 64px;
+  color: var(--tx-2);
+}
+
+.colUse {
+  flex: 0 0 112px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.useBar {
+  flex: 0 0 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.useBar > span {
+  display: block;
+  height: 100%;
+}
+
+.useText {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-2);
+}
+
+.colStatus {
+  flex: 0 0 104px;
+  min-width: 0;
+  display: flex;
+}
+
+.colCost {
+  flex: 0 0 64px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--tx-1);
+}
+
+.emptyFilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  color: var(--tx-3);
+}
+
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+}
+
+.foot {
+  margin: 0;
+  padding: 12px 20px 20px;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.batch {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.batchText {
+  flex: 1 1 240px;
+  color: var(--tx-2);
+}
+
+.batchText strong {
+  font-weight: 600;
+  color: var(--tx-1);
+}
+
+.save {
+  font-family: var(--mono);
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.ghost {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--tx-2);
+}
+
+.advice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: var(--info-weak);
+  color: var(--info);
+}
+
+.advice p {
+  margin: 0;
+}
+
+.advice[data-tone="keep"] {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--tx-2);
+}
+
+.advice[data-tone="adopt"] {
+  background: var(--unknown-weak);
+  color: var(--unknown);
+}
+
+.adviceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adviceLink {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.cli {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.projectName {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.tag {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+}
+
+.distTool {
+  flex: 0 0 88px;
+  font-weight: 500;
+}
+
+.distPath {
+  flex: 1 1 140px;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-2);
+  word-break: break-all;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tx-3);
+}

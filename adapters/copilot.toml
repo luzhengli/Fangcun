@@ -1,0 +1,81 @@
+# GitHub Copilot CLI 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照 GitHub 当期文档核实：
+#   https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions
+#   https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills
+#   https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers
+# 没读的：COPILOT_CUSTOM_INSTRUCTIONS_DIRS、子目录里的指令文件、.mcp.json 从工作目录到仓库根的逐层查找。
+schema = 1
+
+[tool]
+id = "copilot"
+name = "Copilot CLI"
+support = "scan-only"
+
+# 文档：设置 COPILOT_HOME 可以换掉 ~/.copilot。
+[path-vars]
+COPILOT_HOME = "~/.copilot"
+
+[[skills]]
+scope = "global"
+path = "$COPILOT_HOME/skills"
+
+[[skills]]
+scope = "global"
+path = "~/.agents/skills"
+
+[[skills]]
+scope = "project"
+path = ".github/skills"
+
+[[skills]]
+scope = "project"
+path = ".claude/skills"
+
+[[skills]]
+scope = "project"
+path = ".agents/skills"
+
+[[instructions]]
+scope = "global"
+names = ["$COPILOT_HOME/copilot-instructions.md"]
+
+[[instructions]]
+scope = "project"
+names = [".github/copilot-instructions.md", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md", "GEMINI.md"]
+
+[[rules]]
+scope = "global"
+dir = "$COPILOT_HOME/instructions"
+
+[[rules]]
+scope = "project"
+dir = ".github/instructions"
+
+[[mcp]]
+scope = "global"
+file = "$COPILOT_HOME/mcp-config.json"
+format = "json"
+key = ["mcpServers"]
+
+[[mcp]]
+scope = "project"
+file = ".github/mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+# 文档：同一目录里 .mcp.json 盖过 .github/mcp.json，项目层盖过用户层。
+[[mcp]]
+scope = "project"
+file = ".mcp.json"
+format = "json"
+key = ["mcpServers"]
+
+[mcp-fields]
+command = "command"
+args = "args"
+env = "env"
+url = "url"
+
+[precedence]
+mcp = ["project", "global"]

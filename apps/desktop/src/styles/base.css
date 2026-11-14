@@ -1,0 +1,55 @@
+/* 全局基础样式。对应原型各画板 <helmet><style> 里与 token 无关的部分。 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tx-1);
+  font-family: var(--font);
+  /* 正文 13px（6.10）。 */
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  /* 桌面应用：文字默认不可选，路径、哈希等等宽内容单独放开。 */
+  user-select: none;
+  cursor: default;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--tx-1);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+code,
+pre,
+.mono {
+  font-family: var(--mono);
+  user-select: text;
+}

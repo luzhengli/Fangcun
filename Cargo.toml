@@ -1,0 +1,36 @@
+[workspace]
+resolver = "3"
+members = ["crates/fangcun-core", "crates/fangcun-cli", "apps/desktop/src-tauri"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+repository = "https://github.com/luzhengli/Fangcun"
+publish = false
+# 许可证未定（BACKLOG D-09）。定了之后在这里加 license 字段。
+
+[workspace.dependencies]
+fangcun-core = { path = "crates/fangcun-core" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+toml = "1"
+ts-rs = "12"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+# 骨架里未实现的地方一律返回 Error::NotImplemented，不用会 panic 的宏。
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

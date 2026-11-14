@@ -1,0 +1,273 @@
+/* 窗口骨架。尺寸取自 prototype/project/Main.dc.html 的工具栏和侧栏。 */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 640px;
+  overflow: hidden;
+}
+
+/* ── 整窗工具栏 ── */
+
+.toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 给系统画的三个窗口按钮留位置：3 × 12px，间隔 8px，右边空 16px。 */
+.trafficLights {
+  flex: 0 0 auto;
+  width: 52px;
+  margin-right: 16px;
+}
+
+.toolbarButton {
+  width: 28px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-2);
+}
+
+.toolbarButton:hover {
+  box-shadow: inset 0 0 0 999px var(--veil);
+}
+
+.toolbarButton[data-active="true"] {
+  background: var(--bg-hover);
+}
+
+/* ── 侧栏与主区 ── */
+
+.split {
+  flex: 1;
+  display: flex;
+  flex-wrap: nowrap;
+  min-height: 0;
+}
+
+.sidebar {
+  flex: 0 0 216px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px 10px 16px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.sidebar[data-collapsed="true"] {
+  flex-basis: 56px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 原型是内容高 28px 加上下各 2px 的内边距。这里全局是 border-box，所以写 32px。 */
+  height: 32px;
+  padding: 2px 6px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.brandMark {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--tx-1);
+  text-decoration: none;
+}
+
+.navItem:hover {
+  color: var(--tx-1);
+  box-shadow: inset 0 0 0 999px var(--veil);
+}
+
+.navItem[aria-current="page"] {
+  background: var(--bg-hover);
+  font-weight: 500;
+}
+
+.navItem svg {
+  flex: 0 0 auto;
+  color: var(--tx-2);
+}
+
+.navItem[aria-current="page"] svg {
+  color: var(--accent);
+}
+
+.navLabel {
+  flex: 1;
+}
+
+.navCount {
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.navCount[data-tone="warn"] {
+  color: var(--warn);
+}
+
+/* 折叠后只保留图标，文字留给读屏软件。 */
+.sidebar[data-collapsed="true"] .navItem {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar[data-collapsed="true"] .navLabel,
+.sidebar[data-collapsed="true"] .navCount {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.footnote {
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 窗口窄于 900px：各栏上下堆叠，整页滚动。 */
+@media (max-width: 900px) {
+  .shell {
+    height: auto;
+    overflow: visible;
+  }
+
+  .split {
+    flex-wrap: wrap;
+  }
+
+  .sidebar,
+  .sidebar[data-collapsed="true"] {
+    flex: 1 1 100%;
+    overflow: visible;
+  }
+
+  .main {
+    flex: 1 1 100%;
+    overflow: visible;
+  }
+}
+
+/* ── 项目列表 ── */
+
+.groupTitle {
+  padding: 0 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-3);
+}
+
+.projectItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--tx-1);
+  text-decoration: none;
+}
+
+.projectItem:hover {
+  color: var(--tx-1);
+  box-shadow: inset 0 0 0 999px var(--veil);
+}
+
+.projectItem[aria-current="page"] {
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--line);
+  font-weight: 500;
+}
+
+.projectDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--muted-dot);
+}
+
+.projectName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.navItem {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+.toolbarButton:disabled {
+  color: var(--tx-3);
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+
+.projectNote {
+  font-size: 11px;
+  color: var(--tx-3);
+}

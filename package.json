@@ -1,0 +1,29 @@
+{
+  "name": "fangcun",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @fangcun/desktop dev",
+    "dev:web": "pnpm --filter @fangcun/desktop dev:web",
+    "dev:fixtures": "pnpm --filter @fangcun/desktop dev:fixtures",
+    "build": "pnpm --filter @fangcun/desktop build",
+    "build:web": "pnpm --filter @fangcun/desktop build:web",
+    "cli": "cargo run --quiet -p fangcun-cli --",
+    "bindings": "cargo test --quiet -p fangcun-core export_bindings",
+    "screens": "pnpm --filter @fangcun/desktop screens",
+    "prototype:preview": "python3 -m http.server 8000",
+    "prototype:check": "node tools/prototype-preview/check.js",
+    "format": "cargo fmt --all && biome format --write",
+    "lint": "biome check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "typecheck": "pnpm --filter @fangcun/desktop typecheck",
+    "test": "cargo test --workspace && pnpm --filter @fangcun/desktop test",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build:web"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.7",
+    "playwright": "^1.65.0"
+  }
+}

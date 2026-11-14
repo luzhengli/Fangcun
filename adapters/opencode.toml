@@ -1,0 +1,50 @@
+# opencode 适配器（只读扫描）。格式说明见 adapters/README.md。
+#
+# 2026-11-14 对照 opencode 当期文档核实：
+#   https://opencode.ai/docs/skills/
+#   https://opencode.ai/docs/rules/
+# 没读的：MCP。配置是 JSONC，服务在 mcp.servers 下，command 是数组，停用写 disabled，
+# 需要另写解析，见 BACKLOG M0-16。opencode.json 里 instructions 数组列出的文件也没读。
+schema = 1
+
+[tool]
+id = "opencode"
+name = "opencode"
+support = "scan-only"
+
+[[skills]]
+scope = "global"
+path = "~/.config/opencode/skills"
+
+[[skills]]
+scope = "global"
+path = "~/.claude/skills"
+
+[[skills]]
+scope = "global"
+path = "~/.agents/skills"
+
+[[skills]]
+scope = "project"
+path = ".opencode/skills"
+
+[[skills]]
+scope = "project"
+path = ".claude/skills"
+
+[[skills]]
+scope = "project"
+path = ".agents/skills"
+
+# rules 文档：全局取 ~/.config/opencode/AGENTS.md，没有时用 ~/.claude/CLAUDE.md；
+# 项目从工作目录往上找，AGENTS.md 先于 CLAUDE.md，每类取第一个。
+[[instructions]]
+scope = "global"
+names = ["~/.config/opencode/AGENTS.md", "~/.claude/CLAUDE.md"]
+pick = "first"
+
+[[instructions]]
+scope = "project"
+names = ["AGENTS.md", "CLAUDE.md"]
+walk = "ancestors"
+pick = "first"

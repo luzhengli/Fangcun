@@ -1,0 +1,33 @@
+.placeholder {
+  padding: 24px 28px;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0 0 16px;
+  color: var(--tx-2);
+}
+
+.refs {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.refs dt {
+  color: var(--tx-3);
+}
+
+.refs dd {
+  margin: 0;
+  font-family: var(--mono);
+  user-select: text;
+}

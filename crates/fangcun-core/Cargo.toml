@@ -1,0 +1,18 @@
+[package]
+name = "fangcun-core"
+description = "方寸内核：扫描、资产库、解析、物化、监听、估算。桌面应用与命令行共用。"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+ts-rs.workspace = true
+
+[lints]
+workspace = true

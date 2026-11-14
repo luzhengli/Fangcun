@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "skills": {
+    "tdd": { "source": "obra/superpowers", "sourceType": "github" },
+    "lark-vc": { "source": "larksuite/cli", "sourceType": "github" }
+  }
+}

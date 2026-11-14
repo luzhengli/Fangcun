@@ -1,0 +1,283 @@
+/* 跨页面复用的组件。尺寸照抄原型各画板的行内样式。 */
+
+/* ── 状态：圆点加短标签 ── */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+}
+
+.badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+/* ── 层级刻度 ── */
+
+.ticks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
+  border: 1px solid var(--line-strong);
+}
+
+.tick[data-on="true"] {
+  border: 0;
+  background: var(--accent);
+}
+
+/* ── 预算条 ── */
+
+.budget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.budgetLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tx-2);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+}
+
+/* ── 分段控件 ── */
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--bg-hover);
+  gap: 2px;
+}
+
+.segmented button {
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-2);
+  font-size: 12px;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--bg);
+  color: var(--tx-1);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ── 检查器 ── */
+
+.inspector {
+  flex: 1 1 320px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+  border-left: 1px solid var(--line);
+  background: var(--bg-subtle);
+  padding: 18px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inspectorHead {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 32px;
+}
+
+.close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-2);
+}
+
+.close:hover {
+  box-shadow: inset 0 0 0 999px var(--veil);
+}
+
+.kind {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-3);
+}
+
+.inspectorName {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.intro {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--tx-2);
+}
+
+.fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px 12px;
+  font-size: 12px;
+}
+
+.fields dt {
+  color: var(--tx-3);
+}
+
+.fields dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-all;
+  color: var(--tx-1);
+}
+
+.fields dd.mono {
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sectionHead h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-3);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.mono {
+  font-family: var(--mono);
+  user-select: text;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--tx-1);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+fieldset.segmented {
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
