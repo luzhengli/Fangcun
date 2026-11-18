@@ -10,7 +10,7 @@ import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
-import { useEffectiveContext, useProjects } from "@/ipc/queries";
+import { useEffectiveContext, useProjects, useTools } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
@@ -169,7 +169,12 @@ function ProjectView({ root }: { root: string | undefined }) {
           )}
         </section>
         {tab === "effective" && inspectorOpen && current && data && (
-          <ItemInspector item={current} context={data} onClose={() => setInspectorOpen(false)} />
+          <ItemInspector
+            item={current}
+            context={data}
+            onPick={setSelected}
+            onClose={() => setInspectorOpen(false)}
+          />
         )}
       </div>
     </div>
@@ -275,12 +280,16 @@ function EffectiveList({
 function ItemInspector({
   item,
   context,
+  onPick,
   onClose,
 }: {
   item: EffectiveItem;
   context: EffectiveContext;
+  onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const tools = useTools();
+  const toolName = tools.data?.find((t) => t.id === context.tool)?.name ?? context.tool;
   const total = context.budget.instructions + context.budget.skills + context.budget.mcp;
   const share =
     item.counted && item.resident !== null && total > 0
@@ -352,6 +361,14 @@ function ItemInspector({
         <p className={page.why}>{item.reason}</p>
         <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
       </Section>
+      {item.overriddenBy && (
+        <OverriddenBox
+          item={item}
+          winner={context.items.find((i) => i.id === item.overriddenBy)}
+          toolName={toolName}
+          onPick={onPick}
+        />
+      )}
       <Section title="在哪一层声明 · 谁覆盖谁">
         <ol className={styles.stack}>
           {item.declared.map((d) => (
@@ -396,6 +413,59 @@ function ItemInspector({
         <p className={styles.sectionNote}>还没有活动。M0 只记录体检。</p>
       </Section>
     </Inspector>
+  );
+}
+
+/**
+ * 被覆盖的项的处理块（6.3 检查器「被覆盖」）。一律能跳到覆盖它的项；
+ * 全局层那一份赢、被挡住的是下层这一份时（Claude Code 的 skill），另给两个处理全局那一份的动作，M1 开放。
+ */
+function OverriddenBox({
+  item,
+  winner,
+  toolName,
+  onPick,
+}: {
+  item: EffectiveItem;
+  winner: EffectiveItem | undefined;
+  toolName: string;
+  onPick: (id: string) => void;
+}) {
+  const winLayer = winner ? SCOPE_NAMES[winner.scope] : "其他";
+  const thisOne = `${SCOPE_NAMES[item.scope]}里这份${item.version ? ` ${item.version} ` : ""}`;
+  const globalWins = winner?.scope === "global" && item.scope !== "global";
+  const kind = item.kind === "skill" ? "skill" : KIND_LABEL[item.kind];
+  const text = globalWins
+    ? `全局层有同名 ${kind}。${toolName} 同名时全局优先，${thisOne}不加载，常驻成本为 0。同步不会自动移走全局那一份：其他项目也在读它。`
+    : `${winLayer}层有同名 ${kind}。${toolName} 同名时以${winLayer}层的为准，${thisOne}不加载，常驻成本为 0。`;
+  return (
+    <div className={styles.stateBox}>
+      <p className={styles.stateText}>{text}</p>
+      <div className={styles.stateActions}>
+        {winner && (
+          <button type="button" className={page.button} onClick={() => onPick(winner.id)}>
+            查看覆盖它的项
+          </button>
+        )}
+        {globalWins &&
+          ["转成套装…", "从全局移除…"].map((a) => (
+            <button
+              key={a}
+              type="button"
+              className={page.button}
+              disabled
+              title="M0 只读，在 M1 开放"
+            >
+              {a}
+            </button>
+          ))}
+      </div>
+      {globalWins && (
+        <span className={styles.sectionNote}>
+          两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。M0 只读，在 M1 开放。
+        </span>
+      )}
+    </div>
   );
 }
 

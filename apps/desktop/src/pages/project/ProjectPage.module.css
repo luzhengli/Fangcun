@@ -179,3 +179,24 @@
   flex-direction: column;
   gap: 4px;
 }
+
+/* 检查器里的状态处理块（6.3「状态专属操作区」），照原型：上面一条线，正文、按钮、小字三行。 */
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.stateText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tx-2);
+}
+
+.stateActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
