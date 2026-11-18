@@ -51,11 +51,6 @@ impl FangcunHome {
         self.root.join("git")
     }
 
-    /// 资产库的 SQLite 索引。
-    pub fn index_db(&self) -> PathBuf {
-        self.root.join("index.sqlite")
-    }
-
     pub fn bundles_dir(&self) -> PathBuf {
         self.root.join("bundles")
     }
