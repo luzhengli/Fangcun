@@ -128,7 +128,7 @@
 **第一段 · 地基**（内核，界面不动）
 
 - [x] M1-03 内容哈希改成 `skills-lock.json` v2 算法：路径按字节排序，喂「路径、`\0`、长度、`\0`、内容」，CRLF 换 LF，跳过 `.git`、`__pycache__`、`__pypackages__`、`metadata.json`。用本机 `skills-lock.json` 的哈希做回归样例（v1 的换算放 M1-08）。`scanner/fsutil.rs` 的 `hash_dir`。出处：7.4。2026-11-19 完成：照 `skills` 1.9.0 源码实现，比 7.4 多出的细节已补进 7.4（含 NUL 的不换行尾、`.DS_Store` 与 `node_modules` 计入、软链只跟随到目录以内）。本机没有 v2 的锁，回归样例改成一组边界文件，期望值由照源码写的 Python 参考实现算出。本机体检前后输出逐字一致
-- [ ] M1-04 写入的地基：`Access::ReadWrite`，写入范围检查，`ChangePlan` 与 `Kernel::apply` 的骨架，规则 3 按 M1-pre-05 改写（AGENTS.md、ARCHITECTURE 同步改）。出处：4.6、7.5
+- [x] M1-04 写入的地基：`Access::ReadWrite`，写入范围检查，`ChangePlan` 与 `Kernel::apply` 的骨架，规则 3 按 M1-pre-05 改写（AGENTS.md、ARCHITECTURE 同步改）。出处：4.6、7.5。2026-11-19 完成：`Kernel::open_configured`（设置里的只读模式、命令行 `--read-only`，默认可写）；`WriteScope`；`PlanBuilder` 与 `Kernel::issue`，计划的动作留在内核里按编号应用；`apply` 查范围、核对磁盘、按范围留快照（M1-pre-07 的格式）、原子写入、失败时倒着还原、记活动；登记表 `projects.toml` 只读。各写入用例仍是「尚未实现」。取舍见 DECISIONS
 - [ ] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2。注意：v2 哈希把 `.DS_Store` 算进去（为了和 `skills-lock.json` 对得上），两份副本只差 `.DS_Store` 时会被当成已分叉。本机现在不受影响；做归并和收编（M1-12）时要定：归并另用一个跳过 `.DS_Store` 的哈希，或者收编时清掉 `.DS_Store`
 - [ ] M1-06 来源：git 来源拉取并把 pin/track 解析到确切提交和标签；本地开发目录是活链接；市场按 M1-pre-08。出处：F2、4.4
 - [ ] M1-07 清单与锁的读写：`load_project` 读 `fangcun.toml`、`fangcun.local.toml`、引用的套装；`[disable]`；项目清单盖过套装；`resolve_lock` 写锁；`fangcun lock`。出处：F3、7.4
@@ -158,6 +158,7 @@
 - [ ] M1-20 界面：资产库页，照原型 Library。来源未知的项在底部给「收编到资产库」。出处：6.4
 - [ ] M1-21 界面：套装页，照原型 Bundles。出处：6.5
 - [ ] M1-22 界面：项目页检查器的来源未知块「在资产库中收编」，以及命令面板 `⌘K`（搜索、回车加入、弹变更计划）。`fangcun add`。出处：6.3、6.9
+- [ ] M1-24 设置页：只读模式（7.5）、快照保留期（6.7）都写「在设置里」，文档没写设置页放在哪、长什么样，原型也没有。做之前问人，先给选项。现在能手改 `~/.fangcun/settings.toml`。出处：6.7、7.5
 - [ ] M1-23 命令行对齐：第 5 节「配套：命令行」的每条命令都能用，`why`、`log` 覆盖 M1 的新记录类型；界面每个写入动作在活动页附命令。出处：第 5 节、6.7
 
 不在 M1：菜单栏常驻图标（6.1，等 D-30 出图后排）、V1.x 起的事。
