@@ -134,3 +134,4 @@
 - [x] 2026-11-14 LOG 一天 10 条，和 STATUS、PR 描述重复；STATUS 的「接手须知」是长期规则，却每次跟着整份改写。→ W-04
 - [x] 2026-11-14 11-13 的云端分支 `claude/zen-dirac-3ba2zc` 一直没合并也没删，没人知道。→ W-07（`pnpm workflow --fetch` 会列出来）
 - [ ] 2026-11-19 `pnpm screens --compare` 只截默认状态，改动在检查器里（选中 frontend-design、Codex 切换）时看不到；拼图缩到 2000 宽，字认不出，要手动 `sips` 裁图放大。M0-23 又为看检查器状态临时写了一段 Playwright。
+- [ ] 2026-11-19 PR #12 叠在 #11 的分支上，#11 合并时 `--delete-branch` 删了 base，GitHub 直接关掉 #12（不会自动改到 main），只能用同一分支重开 #13。叠 PR 时先合下层、不删分支，改完上层的 base 再删。
