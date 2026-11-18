@@ -129,17 +129,20 @@ const R = {
     kind: "skill",
     scope: "project",
     version: "v1.3.0",
-    label: "覆盖全局同名项",
-    resident: 200,
+    state: "overridden",
+    label: "被全局层同名项覆盖",
+    resident: 0,
+    counted: false,
     source: "github:acme/skills",
     location: ".agents/skills/frontend-design",
-    declared: stack(["同名 v1.1.0 · 被遮蔽", "", "生效 · v1.3.0", ""]),
+    declared: stack(["生效 · 同名 v1.1.0", "", "v1.3.0 · 被遮蔽", ""]),
     files: [
       ".agents/skills/frontend-design → 资产库",
-      ".claude/skills/frontend-design → .agents/skills/frontend-design",
+      ".claude/skills/frontend-design → .agents/skills/frontend-design（被遮蔽，未加载）",
     ],
     reason:
-      "项目清单里声明了它。\n全局也装了一个同名 skill，同名时以项目里的为准，所以生效的是这一份。",
+      "项目清单里声明了它，但它没有生效。\n全局也装了一个同名 skill。Claude Code 同名时全局优先，这份项目版本被挡住，不会加载。",
+    overriddenBy: "fedg",
   }),
   lark: item({
     id: "lark",
@@ -177,15 +180,13 @@ const R = {
     kind: "skill",
     scope: "global",
     version: "v1.1.0",
-    state: "overridden",
-    label: "被项目同名项覆盖",
-    resident: 0,
-    counted: false,
+    label: "覆盖项目同名项",
+    resident: 200,
     location: "~/.claude/skills",
-    declared: stack(["v1.1.0 · 被遮蔽", "", "生效 · 同名 v1.3.0", ""]),
-    files: ["~/.claude/skills/frontend-design（全局，未加载）"],
+    declared: stack(["生效 · v1.1.0", "", "同名 v1.3.0 · 被遮蔽", ""]),
+    files: ["~/.claude/skills/frontend-design（全局，生效）"],
     reason:
-      "它没有生效。\n本项目里有一个同名 skill，同名时以项目里的为准，这份全局版本被挡住，不会加载。",
+      "它装在全局目录里，所以对本项目生效。\n本项目也声明了同名的 v1.3.0，但 Claude Code 同名时全局优先，生效的是这一份。",
   }),
   github: item({
     id: "github",
@@ -203,6 +204,26 @@ const R = {
       "项目清单里声明了这个 MCP 服务，所以它对本项目生效。\nGitHub 令牌存在钥匙串里，配置文件只写引用，不写明文。",
   }),
 };
+
+/** Codex 不读 Claude Code 的全局目录，没有同名项，项目层的 frontend-design 照常生效。 */
+const fedpCodex = item({
+  id: "fedp",
+  name: "frontend-design",
+  kind: "skill",
+  scope: "project",
+  version: "v1.3.0",
+  label: "固定 v1.3.0",
+  resident: 200,
+  source: "github:acme/skills",
+  location: ".agents/skills/frontend-design",
+  declared: stack(["", "", "生效 · v1.3.0", ""]),
+  files: [
+    ".agents/skills/frontend-design → 资产库",
+    ".claude/skills/frontend-design → .agents/skills/frontend-design",
+  ],
+  reason:
+    "项目清单里声明了它，所以它对本项目生效。\nCodex 不读 Claude Code 的全局目录，这里没有同名项。",
+});
 
 /** Claude Code 下的生效上下文。预算 14.8k：指令 2.5k、Skill 7.5k、MCP 4.8k。 */
 export const effectiveClaude: EffectiveContext = {
@@ -233,12 +254,12 @@ export const effectiveClaude: EffectiveContext = {
   observedMissing: ["subagent"],
 };
 
-/** Codex 下的生效上下文：不读 CLAUDE.md，也没有全局的飞书 skill。 */
+/** Codex 下的生效上下文：不读 CLAUDE.md，也没有全局的飞书 skill 和 frontend-design。 */
 export const effectiveCodex: EffectiveContext = {
   ...effectiveClaude,
   tool: "codex",
   budget: { limit: 20000, instructions: 2400, skills: 800, mcp: 4800, mcpUnestimated: 0 },
-  items: [R.agents, R.harness, R.tdd, R.fedp, R.github],
+  items: [R.agents, R.harness, R.tdd, fedpCodex, R.github],
   observed: [],
   observedMissing: ["plugin", "hook"],
 };

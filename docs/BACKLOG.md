@@ -4,7 +4,7 @@
 
 每条的格式是：编号、一句话、出处（设计文档的章节）。做完时在后面补一句结果。只读当前一期；后面几期只有粗粒度条目，开工那一期时再拆细。
 
-当前一期：**M0**。只剩 M0-12 窗口按钮再看一眼，以及示例数据跟上原型的 M0-22。
+当前一期：**M0**。只剩 M0-12 窗口按钮再看一眼，以及项目页检查器补被覆盖项说明框的 M0-23。
 
 `pnpm workflow` 会列出「待人处理」「原型待改」里没勾的条目，以及示例数据落后的画板。
 
@@ -100,7 +100,8 @@
 - [x] M0-19 体检记录写进 `~/.fangcun/journal/records.jsonl`，重启后活动页、`fangcun log` 都能看到。只写 `~/.fangcun`，同步改 `AGENTS.md`、`ARCHITECTURE.md` 的「M0 不写任何文件」和 M0 出口标准。出处：6.7、第 8 节、D-15。2026-11-14 完成：只有明确的体检记（桌面扫描、`doctor`），`status`、`why` 顺带的不记；写不进去留在内存里
 - [x] M0-20 全局页同名 skill 的状态按工具规则给：Claude Code、Codex 下项目层有同名 skill 时是「同名冲突 N 处」（不划线，建议转成套装或从全局移除），只有项目层真正生效时（MCP）才是「被覆盖 N 处」。检查器「用到它的项目」加「同名冲突」标记。出处：4.3、6.6、D-19。2026-11-14 完成：新状态 `SameNameConflict`、标记 `Conflict`，建议按工具写明是「全局这一份生效」还是「两份都加载」；回归样例两种都覆盖。本机全局层眼下没有同名冲突
 - [x] M0-21 项目预算读 `fangcun.toml` 的 `[project].budget`，没写时 20k。出处：F5、7.4、D-22。2026-11-14 完成：只读 `budget` 一个键，写错报错
-- [ ] M0-22 示例数据跟上 D-23 至 D-28 后的原型（`pnpm workflow` 列出 Main、Checkup、Global、Activity 四张落后）：`apps/desktop/src/ipc/fixtures/main.ts`（frontend-design 两行互换生效与遮蔽，Codex 下项目层照常生效）、`global.ts`（frontend-design「同名冲突 2 处」，CLAUDE.md、AGENTS.md「全文加载」）、`activity.ts`（g1 记录）。`checkup.ts` 看体检停留 1.5 秒（D-25）是否影响示例数据。改完 `pnpm screens --compare Main Checkup Global Activity` 看拼图，跟上的画板 `pnpm workflow accept <画板>`。出处：6.3、6.6、D-23 至 D-28
+- [x] M0-22 示例数据跟上 D-23 至 D-28 后的原型（`pnpm workflow` 列出 Main、Checkup、Global、Activity 四张落后）：`apps/desktop/src/ipc/fixtures/main.ts`（frontend-design 两行互换生效与遮蔽，Codex 下项目层照常生效）、`global.ts`（frontend-design「同名冲突 2 处」，CLAUDE.md、AGENTS.md「全文加载」）、`activity.ts`（g1 记录）。`checkup.ts` 看体检停留 1.5 秒（D-25）是否影响示例数据。改完 `pnpm screens --compare Main Checkup Global Activity` 看拼图，跟上的画板 `pnpm workflow accept <画板>`。出处：6.3、6.6、D-23 至 D-28。2026-11-19 完成：四张都 accept 到 1794656963-e22c。Checkup 不用改（M0 的处理按钮禁用，1.5 秒停留到 M1 才用得上）；侧栏第二组按 D-28 是 M1 的事，没加；全局页检查器补「用到它：— · 全文加载」一行。差异 Main 6.7%、Checkup 4.3%、Global 5.8%、Activity 5.3%
+- [ ] M0-23 项目页检查器：被覆盖的项（如 Claude Code 下项目层的 frontend-design）要有原型里的说明框——一句「全局层有同名 skill…常驻成本为 0。同步不会自动移走全局那一份」，按钮「查看覆盖它的项」跳到生效那一项（`overriddenBy`），「转成套装…」「从全局移除…」M0 禁用，下面一行「两个动作处理的是全局那一份，都先出变更计划」。应用里现在没有这一块。出处：6.3、D-19，原型 Main.dc.html「查看覆盖它的项」
 
 ## 工作流
 

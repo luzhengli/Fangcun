@@ -24,6 +24,10 @@ interface X {
   advice: string;
   script?: boolean;
   shadowed?: string[];
+  /** 项目层有同名项、但没能盖过全局这一份的项目，原型的 `conflict`。 */
+  conflict?: string[];
+  /** 指令文件全文加载，没有触发可统计，原型的 `fulltext`。 */
+  fulltext?: boolean;
   act: "bundle" | "remove" | "keep" | "adopt";
 }
 
@@ -47,6 +51,7 @@ function R(
   x: X,
 ): GlobalRow {
   const shadowed = x.shadowed ?? [];
+  const conflict = x.conflict ?? [];
   const distribution: Distribution[] = (["cc", "cx", "ws"] as T[]).map((t) => ({
     tool: t,
     toolName: TOOLN[t],
@@ -76,18 +81,26 @@ function R(
     source: x.src,
     version: x.ver,
     resident: Math.round(cost * 1000),
-    usedBy: used.length,
+    usedBy: x.fulltext ? null : used.length,
     status,
     overridden: shadowed.length,
-    conflicts: 0,
+    conflicts: conflict.length,
     hasScripts: x.script ?? false,
     command: null,
-    usage: PROJS.map((p) => ({
-      name: p,
-      path: `~/code/${p}`,
-      mark: shadowed.includes(p) ? "overridden" : used.includes(p) ? "used" : "unused",
-      triggers: used.includes(p) ? 1 : 0,
-    })),
+    usage: x.fulltext
+      ? []
+      : PROJS.map((p) => ({
+          name: p,
+          path: `~/code/${p}`,
+          mark: shadowed.includes(p)
+            ? "overridden"
+            : conflict.includes(p)
+              ? "conflict"
+              : used.includes(p)
+                ? "used"
+                : "unused",
+          triggers: used.includes(p) ? 1 : 0,
+        })),
     distribution,
     summary: x.summary,
     advice: x.advice,
@@ -166,14 +179,16 @@ export const globalClaude: GlobalOverview = {
       "~/.claude/CLAUDE.md",
       ["cc"],
       0.9,
-      PROJS,
-      "every-project",
+      [],
+      "always-loaded",
       {
         src: "本机",
         ver: "内容哈希 7c01d2e",
         act: "keep",
-        summary: "用户级指令：语言偏好、提交规范与个人习惯。Claude Code 在每个项目都会全文加载。",
-        advice: "每个项目都需要，适合留在全局。注意保持精简，它的每一行都按项目缴税。",
+        fulltext: true,
+        summary:
+          "用户级指令：语言偏好、提交规范与个人习惯。Claude Code 在每个项目的每次会话都全文加载，没有「触发」可统计。",
+        advice: "只放每个项目都需要的约定。它的每一行都按项目缴税。",
       },
     ),
     SK("pdf", "pdf", ["cc", "ws"], 0.3, ["notes-kit"], "suggest-bundle", {
@@ -229,15 +244,15 @@ export const globalClaude: GlobalOverview = {
       summary: "生成 Mermaid 图的约定。",
       advice: NEVER,
     }),
-    SK("fed", "frontend-design", ["cc", "ws"], 0.2, [], "overridden", {
+    SK("fed", "frontend-design", ["cc", "ws"], 0.2, [], "same-name-conflict", {
       src: "github:acme/skills",
       ver: "固定 v1.1.0 · 旧版",
-      act: "remove",
-      shadowed: ["evals_studio", "blog-site"],
+      act: "bundle",
+      conflict: ["evals_studio", "blog-site"],
       summary:
-        "全局层里的旧版 v1.1.0。evals_studio 与 blog-site 在项目层固定了 v1.3.0，把它遮蔽了。",
+        "全局层里的旧版 v1.1.0。evals_studio 与 blog-site 在项目层固定了同名的 v1.3.0，但 Claude Code 同名时全局优先，两个项目加载的仍是这一份。",
       advice:
-        "被遮蔽的两个项目用不到它，其余 4 个项目也从未触发。可以从全局移除，项目层的 v1.3.0 不受影响。",
+        "方寸不会自动移走它：全局目录是所有项目共用的。从全局移除后，两个项目改用各自的 v1.3.0；其余 4 个项目从未触发，每个省下 0.2k 常驻。",
     }),
     SK("wstyle", "writing-style", ["cc"], 0.2, ["fangcun", "blog-site", "notes-kit"], "common", {
       src: "local:luyao-skills",
