@@ -4,7 +4,7 @@
 
 每条的格式是：编号、一句话、出处（设计文档的章节）。做完时在后面补一句结果。只读当前一期；后面几期只有粗粒度条目，开工那一期时再拆细。
 
-当前一期：**M0**。M0 的条目都已完成，下一步进 M1。
+当前一期：**M1**。拆成四段，见「M1 MVP 闭环」。开工前要人定的 M1-pre-01 至 08 都定了。
 
 `pnpm workflow` 会列出「待人处理」「原型待改」里没勾的条目，以及示例数据落后的画板。
 
@@ -30,6 +30,7 @@
   - A（推荐）：包标识用你持有的域名倒写，显示名「方寸」。
   - B：包标识保持 `app.fangcun.desktop`，显示名「方寸」。
   - C：都保持现状，显示名用 `Fangcun`。
+- [x] H-05 M1 开工前四件文档没写的设计，见「M1 MVP 闭环」的 M1-pre-05 至 08：写入范围怎么放开、项目怎么登记、快照存什么、公开市场指哪个。Agent 逐件给选项来问，做到对应条目前要定。2026-11-19 人四件都选推荐项；快照保留期沿用 11-14 的结论（9.3），见 DECISIONS
 - [x] D-17 应用图标。现在是 Agent 按侧栏标志画的占位（黛蓝底，白色「方中之方」），没有经过设计。出处：6.10。2026-11-19 人选 A，接着做 D-29
   - A（推荐）：先在原型的设计系统画板里补图标规范，再照着出图。
   - B：占位图标直接转正。
@@ -40,6 +41,7 @@
 设计确认后，要改原型的地方一条一处写在这里：画板、位置、改成什么、出处。云端会话按这里改画布，同步时勾掉。见 `docs/WORKFLOW.md` 第 ② 步。
 
 - [ ] P-01 设计系统画板（DesignSystem）加一节「应用图标」：「方中之方」在黛蓝圆角方形底板上的应用图标，浅色、深色、着色三种外观各一个；旁边是菜单栏模板图（描边版），无待处理与有小圆点两种状态；标出线宽、内外方比例、圆角。出处：6.10「应用图标」、6.1「菜单栏常驻图标」、D-29
+- [ ] P-02 项目页画板（Main）的侧栏：「近 30 天的项目」一组下面加「添加项目…」；选中 luyao-skills（未登记）时，检查器里有「登记」按钮。出处：6.1、F3、M1-pre-06
 
 ## 设计与原型
 
@@ -105,6 +107,61 @@
 - [x] M0-22 示例数据跟上 D-23 至 D-28 后的原型（`pnpm workflow` 列出 Main、Checkup、Global、Activity 四张落后）：`apps/desktop/src/ipc/fixtures/main.ts`（frontend-design 两行互换生效与遮蔽，Codex 下项目层照常生效）、`global.ts`（frontend-design「同名冲突 2 处」，CLAUDE.md、AGENTS.md「全文加载」）、`activity.ts`（g1 记录）。`checkup.ts` 看体检停留 1.5 秒（D-25）是否影响示例数据。改完 `pnpm screens --compare Main Checkup Global Activity` 看拼图，跟上的画板 `pnpm workflow accept <画板>`。出处：6.3、6.6、D-23 至 D-28。2026-11-19 完成：四张都 accept 到 1794656963-e22c。Checkup 不用改（M0 的处理按钮禁用，1.5 秒停留到 M1 才用得上）；侧栏第二组按 D-28 是 M1 的事，没加；全局页检查器补「用到它：— · 全文加载」一行。差异 Main 6.7%、Checkup 4.3%、Global 5.8%、Activity 5.3%
 - [x] M0-23 项目页检查器：被覆盖的项（如 Claude Code 下项目层的 frontend-design）要有原型里的说明框——一句「全局层有同名 skill…常驻成本为 0。同步不会自动移走全局那一份」，按钮「查看覆盖它的项」跳到生效那一项（`overriddenBy`），「转成套装…」「从全局移除…」M0 禁用，下面一行「两个动作处理的是全局那一份，都先出变更计划」。应用里现在没有这一块。出处：6.3、D-19，原型 Main.dc.html「查看覆盖它的项」。2026-11-19 完成：`OverriddenBox` 放在「为什么是这个状态」下面（原型的顺序）；「查看覆盖它的项」按 `overriddenBy` 选中生效那一项；全局层赢时才出两个全局动作，禁用。Playwright 点过：Claude Code 下有、跳转对、Codex 下没有
 
+## M1 MVP 闭环
+
+范围见设计文档第 8 节：收编、资产库、清单与锁、物化同步、漂移处理、更新回滚、基础密钥、简版套装、命令行，Claude Code 与 Codex。按依赖分四段，前一段做完再开下一段；段内可以并行。每条做完时，命令行和界面都要能做（规则 1），界面的样子按原型。
+
+开工前补的格式（已完成）：
+
+- [x] M1-pre-01 `fangcun.lock` 的文件格式。出处：4.2、7.4。2026-11-19 完成：7.4 补锁示例。TOML；哈希与 `skills-lock.json` v2 同算法，v1 先校验再换算；三类都记；物化的文件记在 `~/.fangcun/state/`
+- [x] M1-pre-02 套装文件 `~/.fangcun/bundles/<名称>.toml` 的内容。出处：6.5。2026-11-19 完成：7.4 补套装文件。与清单同结构多一节 `[bundle]`；队友机器按锁还原；项目清单优先
+- [x] M1-pre-03 `fangcun.toml` 里按项目停用、个人覆盖的写法。出处：F3、F5。2026-11-19 完成：7.4 补 `[disable]`（通配）与 `fangcun.local.toml`（清单子集）；不支持的工具置灰给「转成套装」。Claude Code 用 `skillOverrides`，适配器已改
+- [x] M1-pre-04 适配器还没读的位置：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）、Windsurf/Devin 的 MCP、Trae 对照官方页核实、Claude Code 的 `--add-dir` 与插件带的 MCP、Codex 的 `/etc/codex/skills` 与内置系统 skill。清单在各适配器文件开头。2026-11-19 完成 Claude Code 与 Codex 两个：Codex 加 `/etc/codex/skills` 和系统 skill 目录 `~/.codex/skills/.system`（来源记 `builtin:codex`）；Claude Code 插件那一行加 MCP 计数（`.mcp.json` 与 `plugin.json` 的 `mcpServers`）；`--add-dir` 是会话级，标为不读。其余工具挪到 V1-01
+
+开工前还要人定的（文档没写，做到对应条目前要问）：
+
+- [x] M1-pre-05 写入范围怎么放开：「不能破的规则」第 3 条（M0 只读）改成 M1 的规则。7.5 写的是「写入范围限定在已登记项目与已知工具配置目录」，要定：全局层（`~/.claude/skills` 等）在 M1 写不写，只读模式还留不留。卡 M1-04。出处：7.5、ARCHITECTURE 规则 3。2026-11-19 人定：全局层写，但只对已收编的项；只读模式保留成开关，默认可写。7.5、9.3 已写
+- [x] M1-pre-06 项目怎么登记、登记表存哪：D-18 说 M1 起登记，文档没写登记的入口（`fangcun init`、界面哪个按钮）和存放位置。卡 M1-09。出处：F3、6.1、D-18、D-28。2026-11-19 人定：三个入口（命令行、检查器「登记」、侧栏「添加项目…」），带清单的仓库发现即登记；登记表 `~/.fangcun/projects.toml`。F3、6.1、9.3 已写；原型见 P-02
+- [x] M1-pre-07 快照存什么、存多久：F6 要求回滚后逐字节一致，文档没写快照的内容（整文件还是差异）、位置和保留策略。卡 M1-11。出处：F6、6.3「历史页签」、6.7。2026-11-19 人定：只存要动的文件的原样，整文件按哈希去重，存 `~/.fangcun/snapshots/`；保留期沿用 6.7（30 天、每个项目至少 20 个）。F6、9.3 已写
+- [x] M1-pre-08 「公开 skill 市场」指哪个：F2 三种来源之一，文档没点名（skills.sh？npm？）。卡 M1-06 的市场部分，git 与本地来源不受影响。出处：F2、6.4。2026-11-19 人定：skills.sh，只用来搜索发现，落到 `github:` 来源。F2、9.3 已写；skills.sh 有没有公开搜索接口，M1-06 开工时先查
+
+**第一段 · 地基**（内核，界面不动）
+
+- [ ] M1-03 内容哈希改成 `skills-lock.json` v2 算法：路径按字节排序，喂「路径、`\0`、长度、`\0`、内容」，CRLF 换 LF，跳过 `.git`、`__pycache__`、`__pypackages__`、`metadata.json`。用本机 `skills-lock.json` 的哈希做回归样例（v1 的换算放 M1-08）。`scanner/fsutil.rs` 的 `hash_dir`。出处：7.4
+- [ ] M1-04 写入的地基：`Access::ReadWrite`，写入范围检查，`ChangePlan` 与 `Kernel::apply` 的骨架，规则 3 按 M1-pre-05 改写（AGENTS.md、ARCHITECTURE 同步改）。出处：4.6、7.5
+- [ ] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2
+- [ ] M1-06 来源：git 来源拉取并把 pin/track 解析到确切提交和标签；本地开发目录是活链接；市场按 M1-pre-08。出处：F2、4.4
+- [ ] M1-07 清单与锁的读写：`load_project` 读 `fangcun.toml`、`fangcun.local.toml`、引用的套装；`[disable]`；项目清单盖过套装；`resolve_lock` 写锁；`fangcun lock`。出处：F3、7.4
+- [ ] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4
+- [ ] M1-09 项目登记与 `fangcun init --from-existing`：从目录现状反推清单与锁。侧栏按 D-28 分两组。出处：F3、6.1、D-28
+
+**第二段 · 最小闭环**（登记 → 写锁 → 同步 → 回滚，命令行先通，界面跟上）
+
+- [ ] M1-10 物化：`plan_sync` 列出每个文件的新增、修改、删除；链接与入库两种方式；实体只放 `.agents/skills`，其他工具目录用相对软链；MCP 按键合并；指令的正本与镜像；文件台账 `~/.fangcun/state/`；不碰非受管文件。`fangcun sync`、`sync --frozen`。出处：F4、6.8、7.4
+- [ ] M1-11 快照与回滚：每次 apply 前留快照（按 M1-pre-07），跨项目每个范围各留一个；回滚逐字节一致。`fangcun rollback`。出处：F6、6.8
+- [ ] M1-12 收编：选中的资产移入资产库，原位置换成受管链接，事前备份；体检报告每条发现的一键动作接上。`fangcun adopt`。出处：F1、6.2
+- [ ] M1-13 界面：同步计划面板「同步 · N」（6.8），解锁 M0 置灰的写入按钮，应用后的提示条与撤销。出处：6.3、6.8
+- [ ] M1-14 界面：历史页签的快照列表与「回滚到此」，活动页「回滚到此之前…」。出处：6.3、6.7、6.9
+
+**第三段 · 日常维护**
+
+- [ ] M1-15 漂移：`watcher` 监听受管副本，五秒内出提示；回流、丢弃、分叉三选一，回流时列出同样用它的项目；外壳转发内核事件。界面是项目页检查器的漂移块。出处：F4、6.3、6.9
+- [ ] M1-16 更新：`check_upstream`，可更新的资产与受影响项目，差异里脚本、MCP 启动命令变更标红；逐项目或批量升级。`fangcun update [--dry-run] [--projects]`。界面是检查器的可更新块和活动页待处理。出处：F6、6.3、6.7、6.9
+- [ ] M1-17 密钥：`secrets` 接钥匙串，`secret:<名称>` 引用，提交的配置只含引用，明文只落不提交的本地配置；值不过 IPC、不进日志和快照（规则 9）。出处：F6、7.5
+- [ ] M1-18 按项目停用：`[disable]` 物化成 Claude Code 的 `skillOverrides`、Codex 的 `[[skills.config]]`；不支持的工具置灰给「转成套装」。界面是检查器的全局税块「在本项目停用」。出处：7.4、6.3
+- [ ] M1-02 「同名冲突」的处理：物化不自动移动上层同名项；冲突处给「转成套装」「从全局移除」，走变更计划，列出受影响的项目。出处：4.3、6.3、D-19。注意：Claude Code 的 `skillOverrides` 只按名字匹配，在项目里关掉全局同名 skill 可能连项目那份一起关，要实测
+- [ ] M1-01 MCP「试启动并测量」：显式动作，启动服务读工具定义算常驻，结果缓存。出处：F5、D-20
+
+**第四段 · 套装与资产管理界面**
+
+- [ ] M1-19 简版套装：套装文件读写，「转成套装」（全局页、检查器），从锁生成套装文件。出处：6.5、6.6、7.4
+- [ ] M1-20 界面：资产库页，照原型 Library。来源未知的项在底部给「收编到资产库」。出处：6.4
+- [ ] M1-21 界面：套装页，照原型 Bundles。出处：6.5
+- [ ] M1-22 界面：项目页检查器的来源未知块「在资产库中收编」，以及命令面板 `⌘K`（搜索、回车加入、弹变更计划）。`fangcun add`。出处：6.3、6.9
+- [ ] M1-23 命令行对齐：第 5 节「配套：命令行」的每条命令都能用，`why`、`log` 覆盖 M1 的新记录类型；界面每个写入动作在活动页附命令。出处：第 5 节、6.7
+
+不在 M1：菜单栏常驻图标（6.1，等 D-30 出图后排）、V1.x 起的事。
+
 ## 工作流
 
 工作流本身的改进，编号 W-xx。来自 `docs/WORKFLOW.md`「摩擦记录」的复盘，做完记进它的「改进记录」。
@@ -123,17 +180,6 @@
 
 ## 之后
 
-M1、V1.x、V2、V3 见设计文档第 8 节，开工时再拆。
+V1.x、V2、V3 见设计文档第 8 节，开工时再拆。
 
-M1 开工前要先补进设计文档的格式（文档现在没有写）：
-
-- [x] M1-pre-01 `fangcun.lock` 的文件格式。出处：4.2、7.4。2026-11-19 完成：7.4 补锁示例。TOML；哈希与 `skills-lock.json` v2 同算法，v1 先校验再换算；三类都记；物化的文件记在 `~/.fangcun/state/`
-- [x] M1-pre-02 套装文件 `~/.fangcun/bundles/<名称>.toml` 的内容。出处：6.5。2026-11-19 完成：7.4 补套装文件。与清单同结构多一节 `[bundle]`；队友机器按锁还原；项目清单优先
-- [x] M1-pre-04 适配器还没读的位置：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）、Windsurf/Devin 的 MCP、Trae 对照官方页核实、Claude Code 的 `--add-dir` 与插件带的 MCP、Codex 的 `/etc/codex/skills` 与内置系统 skill。清单在各适配器文件开头。2026-11-19 完成 Claude Code 与 Codex 两个：Codex 加 `/etc/codex/skills` 和系统 skill 目录 `~/.codex/skills/.system`（来源记 `builtin:codex`）；Claude Code 插件那一行加 MCP 计数（`.mcp.json` 与 `plugin.json` 的 `mcpServers`）；`--add-dir` 是会话级，标为不读。其余工具挪到 V1-01
 - [ ] V1-01 只读扫描的工具补没读的位置（第 8 节 V1.x「更多工具适配器」）：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）与 `instructions` 数组、Windsurf/Devin 的 MCP、Trae 对照官方页核实与 `~/.trae/user_rules`、Copilot 的 `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` 与逐层 `.mcp.json`、Cursor 的 Team rules、Gemini 的 `context.fileName` 与 skill 目录；Codex 项目配置的 `[skills.bundled] enabled = false`。清单在各适配器文件开头
-- [x] M1-pre-03 `fangcun.toml` 里按项目停用、个人覆盖的写法。出处：F3、F5。2026-11-19 完成：7.4 补 `[disable]`（通配）与 `fangcun.local.toml`（清单子集）；不支持的工具置灰给「转成套装」。Claude Code 用 `skillOverrides`，适配器已改
-
-M1 已定要做、开工时再拆的：
-
-- [ ] M1-01 MCP「试启动并测量」：显式动作，启动服务读工具定义算常驻，结果缓存。出处：F5、D-20
-- [ ] M1-02 「同名冲突」的处理：物化不自动移动上层同名项；冲突处给「转成套装」「从全局移除」，走变更计划，列出受影响的项目。出处：4.3、6.3、D-19。注意：Claude Code 的 `skillOverrides` 只按名字匹配，在项目里关掉全局同名 skill 可能连项目那份一起关，要实测
