@@ -129,7 +129,7 @@
 
 - [x] M1-03 内容哈希改成 `skills-lock.json` v2 算法：路径按字节排序，喂「路径、`\0`、长度、`\0`、内容」，CRLF 换 LF，跳过 `.git`、`__pycache__`、`__pypackages__`、`metadata.json`。用本机 `skills-lock.json` 的哈希做回归样例（v1 的换算放 M1-08）。`scanner/fsutil.rs` 的 `hash_dir`。出处：7.4。2026-11-19 完成：照 `skills` 1.9.0 源码实现，比 7.4 多出的细节已补进 7.4（含 NUL 的不换行尾、`.DS_Store` 与 `node_modules` 计入、软链只跟随到目录以内）。本机没有 v2 的锁，回归样例改成一组边界文件，期望值由照源码写的 Python 参考实现算出。本机体检前后输出逐字一致
 - [x] M1-04 写入的地基：`Access::ReadWrite`，写入范围检查，`ChangePlan` 与 `Kernel::apply` 的骨架，规则 3 按 M1-pre-05 改写（AGENTS.md、ARCHITECTURE 同步改）。出处：4.6、7.5。2026-11-19 完成：`Kernel::open_configured`（设置里的只读模式、命令行 `--read-only`，默认可写）；`WriteScope`；`PlanBuilder` 与 `Kernel::issue`，计划的动作留在内核里按编号应用；`apply` 查范围、核对磁盘、按范围留快照（M1-pre-07 的格式）、原子写入、失败时倒着还原、记活动；登记表 `projects.toml` 只读。各写入用例仍是「尚未实现」。取舍见 DECISIONS
-- [ ] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2。注意：v2 哈希把 `.DS_Store` 算进去（为了和 `skills-lock.json` 对得上），两份副本只差 `.DS_Store` 时会被当成已分叉。本机现在不受影响；做归并和收编（M1-12）时要定：归并另用一个跳过 `.DS_Store` 的哈希，或者收编时清掉 `.DS_Store`
+- [x] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2。注意：v2 哈希把 `.DS_Store` 算进去（为了和 `skills-lock.json` 对得上），两份副本只差 `.DS_Store` 时会被当成已分叉。本机现在不受影响；做归并和收编（M1-12）时要定：归并另用一个跳过 `.DS_Store` 的哈希，或者收编时清掉 `.DS_Store`。2026-11-19 完成：`library::content`（哈希挪过来，`fsutil` 转出）、`objects/<哈希>` 正本、`index.toml` 索引（带文件锁）、`open/entries/locate/ingest`。skill 与指令能存，MCP 等 M1-17。「被谁用」不进索引，M1-07 从锁算。本机 47 个 skill 存进临时库，0 出错，去重后 31 份正本。`.DS_Store` 的取舍仍留给 M1-12
 - [ ] M1-06 来源：git 来源拉取并把 pin/track 解析到确切提交和标签；本地开发目录是活链接；市场按 M1-pre-08。出处：F2、4.4
 - [ ] M1-07 清单与锁的读写：`load_project` 读 `fangcun.toml`、`fangcun.local.toml`、引用的套装；`[disable]`；项目清单盖过套装；`resolve_lock` 写锁；`fangcun lock`。出处：F3、7.4
 - [ ] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4。线索：`~/Project/article/skills-lock.json` 是 v1，照 v1 源码算本机 21 个目录只对上 1 个（只有两个文件的 `baoyu-compress-image` 也对不上，不是排序问题），先查锁记的是不是安装前源仓库那份目录
@@ -147,7 +147,7 @@
 
 - [ ] M1-15 漂移：`watcher` 监听受管副本，五秒内出提示；回流、丢弃、分叉三选一，回流时列出同样用它的项目；外壳转发内核事件。界面是项目页检查器的漂移块。出处：F4、6.3、6.9
 - [ ] M1-16 更新：`check_upstream`，可更新的资产与受影响项目，差异里脚本、MCP 启动命令变更标红；逐项目或批量升级。`fangcun update [--dry-run] [--projects]`。界面是检查器的可更新块和活动页待处理。出处：F6、6.3、6.7、6.9
-- [ ] M1-17 密钥：`secrets` 接钥匙串，`secret:<名称>` 引用，提交的配置只含引用，明文只落不提交的本地配置；值不过 IPC、不进日志和快照（规则 9）。出处：F6、7.5
+- [ ] M1-17 密钥：`secrets` 接钥匙串，`secret:<名称>` 引用，提交的配置只含引用，明文只落不提交的本地配置；值不过 IPC、不进日志和快照（规则 9）。顺带补 MCP 入库：`Library::ingest` 对 MCP 现在返回「尚未实现」，env 里的明文要先换成 `secret:` 引用再存。出处：F6、7.5
 - [ ] M1-18 按项目停用：`[disable]` 物化成 Claude Code 的 `skillOverrides`、Codex 的 `[[skills.config]]`；不支持的工具置灰给「转成套装」。界面是检查器的全局税块「在本项目停用」。出处：7.4、6.3
 - [ ] M1-02 「同名冲突」的处理：物化不自动移动上层同名项；冲突处给「转成套装」「从全局移除」，走变更计划，列出受影响的项目。出处：4.3、6.3、D-19。注意：Claude Code 的 `skillOverrides` 只按名字匹配，在项目里关掉全局同名 skill 可能连项目那份一起关，要实测
 - [ ] M1-01 MCP「试启动并测量」：显式动作，启动服务读工具定义算常驻，结果缓存。出处：F5、D-20
