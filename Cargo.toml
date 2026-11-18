@@ -7,7 +7,7 @@ version = "0.0.0"
 edition = "2024"
 repository = "https://github.com/luzhengli/Fangcun"
 publish = false
-# 许可证未定（BACKLOG D-09）。定了之后在这里加 license 字段。
+license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 fangcun-core = { path = "crates/fangcun-core" }
