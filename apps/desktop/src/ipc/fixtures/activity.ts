@@ -162,11 +162,12 @@ export const activity: ActivityRecord[] = [
     ],
     cli: "$ fangcun update skill-b",
   }),
-  E("g1", "11-12", "10:10", "sync", ["global"], "全局层：frontend-design 被 2 个项目覆盖", {
+  E("g1", "11-12", "10:10", "sync", ["global"], "全局层：frontend-design 与 2 个项目同名冲突", {
     status: "recorded",
     trigger: "watcher",
-    summary: "两个项目在项目层固定了 v1.3.0，全局的 v1.1.0 在那里被遮蔽。没有写入任何文件。",
-    changes: [["=", "~/.agents/skills/frontend-design", "v1.1.0 · 被遮蔽"]],
+    summary:
+      "两个项目在项目层固定了 v1.3.0，但 Claude Code 同名时全局优先，生效的仍是全局的 v1.1.0。没有写入任何文件。",
+    changes: [["=", "~/.agents/skills/frontend-design", "v1.1.0 · 仍生效 · 同名冲突 2 处"]],
     cli: "$ fangcun why frontend-design --global",
   }),
   E(

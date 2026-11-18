@@ -334,7 +334,11 @@ function RowInspector({
           : `${formatK(row.resident)} / 每个项目（估算）`,
       tone: residentTone,
     },
-    ...(row.usedBy !== null ? [{ k: "用到它", v: `${row.usedBy} / ${total} 个项目` }] : []),
+    ...(row.usedBy !== null
+      ? [{ k: "用到它", v: `${row.usedBy} / ${total} 个项目` }]
+      : row.kind === "instruction"
+        ? [{ k: "用到它", v: "— · 全文加载，没有触发可统计" }]
+        : []),
     ...(row.command
       ? [{ k: "命令", v: row.command, mono: true, tone: "danger" as const }]
       : [

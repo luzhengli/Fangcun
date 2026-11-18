@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-11-19 示例数据跟上原型 1794656963-e22c（M0-22）
+
+- `main.ts`：frontend-design 两行互换，Claude Code 下全局 v1.1.0 生效、项目 v1.3.0 被遮蔽；Codex 下项目层单独一份照常生效。`global.ts`：frontend-design 改「同名冲突 2 处」，CLAUDE.md 改「全文加载」。`activity.ts`：g1 记录改文案。
+- 全局页检查器对指令补「用到它：— · 全文加载，没有触发可统计」。Checkup、侧栏第二组不用改，理由见 DECISIONS。
+- `pnpm screens --compare` 四张差异 4.3%–6.7%，裁出 frontend-design 行逐字对过；`pnpm workflow accept` 四张。新发现 M0-23：项目页检查器缺被覆盖项的说明框。
+
 ## 2026-11-14 合并 PR #8，整理工作流并加三个工具（W-01 至 W-07）
 
 - 人让把云端分支 `claude/nifty-rubin-jc7pvh` 合进 main：开 PR #8，CI 两项过后合并（`3f503e2`）。
