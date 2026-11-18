@@ -259,6 +259,7 @@ fangcun update [资产]          # 检查并升级。--dry-run 只看差异，--
 fangcun rollback <快照>        # 回滚到某个快照
 fangcun log                   # 查看活动记录
 fangcun why <资产>             # 解释它为何生效、来自哪一层。--global 看全局层
+fangcun --read-only <命令>     # 只读模式：拒绝一切写入（7.5）
 ```
 
 活动页的检查器会给每条记录附上对应的命令，界面能做的事命令行都能做。

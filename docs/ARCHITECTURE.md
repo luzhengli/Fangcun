@@ -2,7 +2,7 @@
 
 代码怎么组织、哪些规则不能破。产品要做什么看 `product-design.md`，这里只讲工程。改了代码结构或规则，同步改这份文档。
 
-2026-11-14 建立（M0-01），同日实现 M0 的只读用例：扫描、体检、生效上下文、全局页、活动、命令行。写入用例仍返回「当前是只读模式」。
+2026-11-14 建立（M0-01），同日实现 M0 的只读用例：扫描、体检、生效上下文、全局页、活动、命令行。2026-11-19 M1-04 放开写入：写入的地基有了，各写入用例仍返回「尚未实现」，随 M1 各条补上。
 
 ## 总览
 
@@ -35,8 +35,8 @@ apps/desktop/src-tauri      Tauri 外壳：把内核用例暴露成命令      c
 
 1. **业务逻辑只在内核。** 外壳和命令行只做参数转换和输出。界面能做的事命令行都能做，行为一致（7.1）。
 2. **外壳只调 `Kernel`。** 不直接用内核下面的模块。一个用例一个方法。
-3. **M0 只读。** 外壳用 `Access::ReadOnly` 打开内核，写入用例直接返回 `Error::ReadOnly`，有测试守着。唯一的例外是体检记录写进 `~/.fangcun/journal`（D-15），方寸目录以外一律不写。打开内核不创建任何目录，第一条记录落盘时才建 `journal`。
-4. **写入先出计划。** 写入用例一律返回 `ChangePlan`，只有 `Kernel::apply` 落盘。方寸目录以外的文件只有 `materializer` 能改（4.6 第 3、4、5 条）。
+3. **只写写入范围，写前留快照**（7.5，M1-pre-05）。外壳用 `Kernel::open_configured` 打开内核：默认 `Access::ReadWrite`；`~/.fangcun/settings.toml` 里 `read-only = true` 或命令行 `--read-only` 时 `Access::ReadOnly`，写入用例直接返回 `Error::ReadOnly`，有测试守着，只写 `~/.fangcun/journal`（D-15）。可写时，`materializer::WriteScope` 只认三处：`~/.fangcun`、`~/.fangcun/projects.toml` 里登记的项目（不含 `.git` 下）、完整支持的工具在适配器里声明的、主目录下的全局与个人位置；企业托管目录和 `/etc` 不写。全局层的移除、降级只对已收编的项开放，由各用例在出计划时查。打开内核不创建任何目录。
+4. **写入先出计划。** 写入用例一律返回 `ChangePlan`，只有 `Kernel::apply` 落盘。方寸目录以外的文件只有 `materializer` 能改（4.6 第 3、4、5 条）。计划的动作留在内核里，界面拿到的只有编号、标题和每一行；`apply` 只认内核自己出过、还没应用的计划。
 5. **内核不写死任何工具的路径或格式。** 一律从适配器查（7.3）。
 6. **界面只经 `ipc/` 取数据。** 不给界面加文件、子进程、网络权限。CSP 是 `default-src 'self'`，界面发不出外部请求，零遥测由此保证。原型里的 Google Fonts 不搬进来。
 7. **类型从内核单向流到界面。** `pnpm bindings` 把 Rust 类型导出到 `apps/desktop/src/ipc/bindings/`，不手改、不在前端另写一份。
@@ -66,9 +66,11 @@ model  paths  error                        纯类型，不做 IO
 | `resolver` | 生效上下文、`why`；写锁 | 前两项已有，写锁 M1 |
 | `global` | 全局页：每项常驻、用到它的项目、状态与建议 | 已有 |
 | `estimator` | token 估算 | 已有 |
-| `journal` | 活动记录 | 已有。M0 只写体检记录；写不进去时留在内存里 |
+| `journal` | 活动记录 | 已有。体检记录和 `apply` 的写入记录；写不进去时留在内存里 |
+| `registry` | 登记表 `~/.fangcun/projects.toml` | 读已有（M1-04），登记 M1-09 |
+| `settings` | 本机设置 `~/.fangcun/settings.toml`：只读模式 | 已有（M1-04） |
 | `library` | 内容寻址的正本、索引、来源 | M1 |
-| `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | M1 |
+| `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | 骨架已有（M1-04）：`PlanBuilder`、`WriteScope`、`apply`、`snapshot`。所有权与按键合并 M1-10，回滚 M1-11 |
 | `watcher` | 监听漂移，向外壳推事件 | M1 |
 | `secrets` | 钥匙串 | M1 |
 
@@ -177,6 +179,9 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 ## 实现要点
 
 实现时容易踩错、又不在代码里一眼看得出的事。原来在 STATUS 的「接手须知」里，2026-11-14 挪到这里（W-04）。
+
+- **写一个写入用例**：`PlanBuilder::new(标题, 记录类型, 快照范围)`，逐个 `write_file`、`symlink`、`remove`，`Kernel::issue` 出计划。每加一个路径就记下它现在的样子，`apply` 前再核对，变了返回 `Error::StalePlan`。缺的上层目录自动补成建目录的动作，进快照，回滚时一起删。一份计划里一个路径只出现一次；删目录树要先逐个删里面的。登记项目的计划用 `registers` 把项目算进写入范围。
+- **快照**按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
 
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
 - **同名优先级按工具真实规则**（D-19，4.3）。工具规则与方寸相反时，物化不自动移动上层同名项，标「同名冲突」由人选。Claude Code 的 skill 全局优先，MCP 个人 > 项目 > 全局、整条取用；Codex 的同名 skill 都加载，MCP 项目层赢、按字段合并，未受信任项目的 `.codex/config.toml` 不读（后两条是实测）。界面上「谁覆盖谁」的小字在规则相反时会改写。

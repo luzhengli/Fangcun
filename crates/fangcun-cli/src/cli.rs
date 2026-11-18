@@ -10,6 +10,10 @@ use clap::{Parser, Subcommand};
     about = "方寸：Agent 上下文的包管理器与环境管理器"
 )]
 pub struct Cli {
+    /// 只读模式：拒绝一切写入，和设置里的「只读模式」一样（7.5）
+    #[arg(long, global = true)]
+    pub read_only: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }

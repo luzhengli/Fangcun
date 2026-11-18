@@ -9,18 +9,16 @@
 mod commands;
 mod state;
 
-use fangcun_core::{Access, Kernel};
+use fangcun_core::Kernel;
 use tauri::Manager;
 
 use crate::state::AppState;
 
-/// M0 只读。M1 起改为 `Access::ReadWrite`。
-const ACCESS: Access = Access::ReadOnly;
-
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            let kernel = Kernel::open(ACCESS)?;
+            // 默认可写；设置里开了只读模式时只读（7.5）。
+            let kernel = Kernel::open_configured(false)?;
             app.manage(AppState::new(kernel));
             Ok(())
         })

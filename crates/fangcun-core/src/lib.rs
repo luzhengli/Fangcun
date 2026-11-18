@@ -25,9 +25,11 @@ pub mod manifest;
 pub mod materializer;
 pub mod model;
 pub mod paths;
+pub mod registry;
 pub mod resolver;
 pub mod scanner;
 pub mod secrets;
+pub mod settings;
 pub mod watcher;
 
 pub use error::{Error, Result};

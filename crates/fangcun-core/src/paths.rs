@@ -69,6 +69,16 @@ impl FangcunHome {
         self.root.join("journal")
     }
 
+    /// 登记表（F3）：已登记的项目，每个一节。
+    pub fn projects_file(&self) -> PathBuf {
+        self.root.join("projects.toml")
+    }
+
+    /// 本机设置，例如只读模式（7.5）。
+    pub fn settings_file(&self) -> PathBuf {
+        self.root.join("settings.toml")
+    }
+
     pub fn snapshots_dir(&self) -> PathBuf {
         self.root.join("snapshots")
     }
