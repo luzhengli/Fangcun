@@ -127,12 +127,12 @@ M1、V1.x、V2、V3 见设计文档第 8 节，开工时再拆。
 
 M1 开工前要先补进设计文档的格式（文档现在没有写）：
 
-- [ ] M1-pre-01 `fangcun.lock` 的文件格式。出处：4.2、7.4
-- [ ] M1-pre-02 套装文件 `~/.fangcun/bundles/<名称>.toml` 的内容。出处：6.5
+- [x] M1-pre-01 `fangcun.lock` 的文件格式。出处：4.2、7.4。2026-11-19 完成：7.4 补锁示例。TOML；哈希与 `skills-lock.json` v2 同算法，v1 先校验再换算；三类都记；物化的文件记在 `~/.fangcun/state/`
+- [x] M1-pre-02 套装文件 `~/.fangcun/bundles/<名称>.toml` 的内容。出处：6.5。2026-11-19 完成：7.4 补套装文件。与清单同结构多一节 `[bundle]`；队友机器按锁还原；项目清单优先
 - [ ] M1-pre-04 适配器还没读的位置：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）、Windsurf/Devin 的 MCP、Trae 对照官方页核实、Claude Code 的 `--add-dir` 与插件带的 MCP、Codex 的 `/etc/codex/skills` 与内置系统 skill。清单在各适配器文件开头
-- [ ] M1-pre-03 `fangcun.toml` 里按项目停用、个人覆盖的写法。出处：F3、F5
+- [x] M1-pre-03 `fangcun.toml` 里按项目停用、个人覆盖的写法。出处：F3、F5。2026-11-19 完成：7.4 补 `[disable]`（通配）与 `fangcun.local.toml`（清单子集）；不支持的工具置灰给「转成套装」。Claude Code 用 `skillOverrides`，适配器已改
 
 M1 已定要做、开工时再拆的：
 
 - [ ] M1-01 MCP「试启动并测量」：显式动作，启动服务读工具定义算常驻，结果缓存。出处：F5、D-20
-- [ ] M1-02 「同名冲突」的处理：物化不自动移动上层同名项；冲突处给「转成套装」「从全局移除」，走变更计划，列出受影响的项目。出处：4.3、6.3、D-19
+- [ ] M1-02 「同名冲突」的处理：物化不自动移动上层同名项；冲突处给「转成套装」「从全局移除」，走变更计划，列出受影响的项目。出处：4.3、6.3、D-19。注意：Claude Code 的 `skillOverrides` 只按名字匹配，在项目里关掉全局同名 skill 可能连项目那份一起关，要实测
