@@ -4,13 +4,14 @@
 
 ---
 
-## 2026-11-19 示例数据跟上原型（M0-22），人过完待人处理
+## 2026-11-19 示例数据跟上原型（M0-22），人过完待人处理，M0-12、M0-23 完成
 
 - `main.ts`：frontend-design 两行互换，Claude Code 下全局 v1.1.0 生效、项目 v1.3.0 被遮蔽；Codex 下项目层单独一份照常生效。`global.ts`：frontend-design 改「同名冲突 2 处」，CLAUDE.md 改「全文加载」。`activity.ts`：g1 记录改文案。
 - 全局页检查器对指令补「用到它：— · 全文加载，没有触发可统计」。Checkup、侧栏第二组不用改，理由见 DECISIONS。
 - `pnpm screens --compare` 四张差异 4.3%–6.7%，裁出 frontend-design 行逐字对过；`pnpm workflow accept` 四张。新发现 M0-23：项目页检查器缺被覆盖项的说明框。合并为 PR #10。
 - 人过了待人处理七件：H-02、H-03、H-04、D-09、D-17 定了，H-01 等人开屏幕录制权限，D-16 先不定。删了旧分支 `claude/zen-dirac-3ba2zc`；加 MIT 与 Apache-2.0 双许可；图标先在 6.10 补规范（D-29）。
 - 人开了屏幕录制权限（H-01）。`pnpm window-shot --launch` 量得窗口按钮与工具栏差 0.25pt，看图在一条线上，M0-12 完成，`window-shot` 第一次真正截到图。
+- M0-23：项目页检查器加被覆盖块，「查看覆盖它的项」能跳，两个全局动作 M0 禁用。Playwright 点过 Claude Code 与 Codex 两种情况。M0 的条目全部完成。
 
 ## 2026-11-14 合并 PR #8，整理工作流并加三个工具（W-01 至 W-07）
 
