@@ -127,12 +127,12 @@
 
 **第一段 · 地基**（内核，界面不动）
 
-- [ ] M1-03 内容哈希改成 `skills-lock.json` v2 算法：路径按字节排序，喂「路径、`\0`、长度、`\0`、内容」，CRLF 换 LF，跳过 `.git`、`__pycache__`、`__pypackages__`、`metadata.json`。用本机 `skills-lock.json` 的哈希做回归样例（v1 的换算放 M1-08）。`scanner/fsutil.rs` 的 `hash_dir`。出处：7.4
+- [x] M1-03 内容哈希改成 `skills-lock.json` v2 算法：路径按字节排序，喂「路径、`\0`、长度、`\0`、内容」，CRLF 换 LF，跳过 `.git`、`__pycache__`、`__pypackages__`、`metadata.json`。用本机 `skills-lock.json` 的哈希做回归样例（v1 的换算放 M1-08）。`scanner/fsutil.rs` 的 `hash_dir`。出处：7.4。2026-11-19 完成：照 `skills` 1.9.0 源码实现，比 7.4 多出的细节已补进 7.4（含 NUL 的不换行尾、`.DS_Store` 与 `node_modules` 计入、软链只跟随到目录以内）。本机没有 v2 的锁，回归样例改成一组边界文件，期望值由照源码写的 Python 参考实现算出。本机体检前后输出逐字一致
 - [ ] M1-04 写入的地基：`Access::ReadWrite`，写入范围检查，`ChangePlan` 与 `Kernel::apply` 的骨架，规则 3 按 M1-pre-05 改写（AGENTS.md、ARCHITECTURE 同步改）。出处：4.6、7.5
-- [ ] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2
+- [ ] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2。注意：v2 哈希把 `.DS_Store` 算进去（为了和 `skills-lock.json` 对得上），两份副本只差 `.DS_Store` 时会被当成已分叉。本机现在不受影响；做归并和收编（M1-12）时要定：归并另用一个跳过 `.DS_Store` 的哈希，或者收编时清掉 `.DS_Store`
 - [ ] M1-06 来源：git 来源拉取并把 pin/track 解析到确切提交和标签；本地开发目录是活链接；市场按 M1-pre-08。出处：F2、4.4
 - [ ] M1-07 清单与锁的读写：`load_project` 读 `fangcun.toml`、`fangcun.local.toml`、引用的套装；`[disable]`；项目清单盖过套装；`resolve_lock` 写锁；`fangcun lock`。出处：F3、7.4
-- [ ] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4
+- [ ] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4。线索：`~/Project/article/skills-lock.json` 是 v1，照 v1 源码算本机 21 个目录只对上 1 个（只有两个文件的 `baoyu-compress-image` 也对不上，不是排序问题），先查锁记的是不是安装前源仓库那份目录
 - [ ] M1-09 项目登记与 `fangcun init --from-existing`：从目录现状反推清单与锁。侧栏按 D-28 分两组。出处：F3、6.1、D-28
 
 **第二段 · 最小闭环**（登记 → 写锁 → 同步 → 回滚，命令行先通，界面跟上）
