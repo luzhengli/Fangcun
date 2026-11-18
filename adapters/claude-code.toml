@@ -18,7 +18,9 @@ support = "full"
 follows-symlinks = true
 # mcp 文档：项目层是项目根目录的 .mcp.json。
 project-mcp = true
-# 按项目停用 skill 的写法还没核实，不写。
+# skills 文档：项目的 .claude/settings.json（个人用 settings.local.json）里 skillOverrides 把某个 skill 设 "off"，
+# 名称与描述都不进上下文。只按名字匹配，同名的项目 skill 会不会一起关掉，文档没说，M1-02 实测。
+per-project-disable = true
 
 # ── Skills ──
 # 只有名称与描述常驻，全文在触发时才加载。

@@ -13,6 +13,7 @@
 - 人开了屏幕录制权限（H-01）。`pnpm window-shot --launch` 量得窗口按钮与工具栏差 0.25pt，看图在一条线上，M0-12 完成，`window-shot` 第一次真正截到图。
 - M0-23：项目页检查器加被覆盖块，「查看覆盖它的项」能跳，两个全局动作 M0 禁用。Playwright 点过 Claude Code 与 Codex 两种情况。M0 的条目全部完成。
 - `pnpm workflow` 只认 `## 标题`，WORKFLOW 的 `### 摩擦记录` 一直没读到，「没复盘的摩擦」总是「没有」。改成任意级别的标题。
+- 进 M1：M1-pre-01 至 03 十问人都选推荐项，写进 7.4、9.3。读 `skills` CLI 源码确认 `skills-lock.json` 现行是 v2 哈希；查官方文档确认 Claude Code 能用 `skillOverrides` 按项目停用 skill。剩 M1-pre-04。
 
 ## 2026-11-14 合并 PR #8，整理工作流并加三个工具（W-01 至 W-07）
 
