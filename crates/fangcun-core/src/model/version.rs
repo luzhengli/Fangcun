@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-/// 内容哈希：SHA-256，小写十六进制。目录按相对路径排序后依次喂入路径与内容，
+/// 内容哈希：SHA-256，小写十六进制。目录用 `skills-lock.json` v2 的算法（7.4），
 /// 见 `scanner::fsutil::hash_dir`。界面显示前 7 位。
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[ts(export)]
