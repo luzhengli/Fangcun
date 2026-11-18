@@ -16,6 +16,7 @@
 - D-29：图标规范四问人都选推荐项，写进 6.1、6.10、9.3。原型待改 P-01（设计系统画板补「应用图标」），出图 D-30 等原型确认后做。
 - 进 M1：M1-pre-01 至 03 十问人都选推荐项，写进 7.4、9.3。读 `skills` CLI 源码确认 `skills-lock.json` 现行是 v2 哈希；查官方文档确认 Claude Code 能用 `skillOverrides` 按项目停用 skill。剩 M1-pre-04。
 - M1-pre-04：Codex 加 `/etc/codex/skills` 与系统 skill（`builtin:codex`），Claude Code 插件加 MCP 计数，`--add-dir` 标为会话级。其余工具挪到 V1-01。M1 开工前的四件都完成。
+- 拆 M1：BACKLOG 新增「M1 MVP 闭环」一节，四段 23 条，按依赖排序。拆的时候发现四件文档没写的设计（写入范围、登记、快照、公开市场），记为 M1-pre-05 至 08，挂进待人处理 H-05。
 
 ## 2026-11-14 合并 PR #8，整理工作流并加三个工具（W-01 至 W-07）
 
