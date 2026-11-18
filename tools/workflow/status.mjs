@@ -34,15 +34,18 @@ function fixtureDrift() {
     .filter((b) => b.now !== b.hash);
 }
 
-// 某个 `## 标题` 下没勾的 `- [ ]` 条目。
+// 某个标题（任意级别，如 `## 待人处理`、`### 摩擦记录`）下没勾的 `- [ ]` 条目，读到同级或更高级的标题为止。
 function openItems(file, heading) {
   if (!existsSync(join(REPO, file))) return [];
   const lines = read(file).split("\n");
-  const start = lines.findIndex((l) => l.trim() === `## ${heading}`);
+  const level = (l) => /^(#+) /.exec(l)?.[1].length ?? 0;
+  const start = lines.findIndex((l) => level(l) > 0 && l.replace(/^#+ /, "").trim() === heading);
   if (start < 0) return [];
+  const depth = level(lines[start]);
   const items = [];
   for (const line of lines.slice(start + 1)) {
-    if (line.startsWith("## ")) break;
+    const d = level(line);
+    if (d > 0 && d <= depth) break;
     const m = /^- \[ \] (.*)$/.exec(line);
     if (m) items.push(m[1]);
   }
