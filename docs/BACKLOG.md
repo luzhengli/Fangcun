@@ -129,7 +129,8 @@ M1 开工前要先补进设计文档的格式（文档现在没有写）：
 
 - [x] M1-pre-01 `fangcun.lock` 的文件格式。出处：4.2、7.4。2026-11-19 完成：7.4 补锁示例。TOML；哈希与 `skills-lock.json` v2 同算法，v1 先校验再换算；三类都记；物化的文件记在 `~/.fangcun/state/`
 - [x] M1-pre-02 套装文件 `~/.fangcun/bundles/<名称>.toml` 的内容。出处：6.5。2026-11-19 完成：7.4 补套装文件。与清单同结构多一节 `[bundle]`；队友机器按锁还原；项目清单优先
-- [ ] M1-pre-04 适配器还没读的位置：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）、Windsurf/Devin 的 MCP、Trae 对照官方页核实、Claude Code 的 `--add-dir` 与插件带的 MCP、Codex 的 `/etc/codex/skills` 与内置系统 skill。清单在各适配器文件开头
+- [x] M1-pre-04 适配器还没读的位置：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）、Windsurf/Devin 的 MCP、Trae 对照官方页核实、Claude Code 的 `--add-dir` 与插件带的 MCP、Codex 的 `/etc/codex/skills` 与内置系统 skill。清单在各适配器文件开头。2026-11-19 完成 Claude Code 与 Codex 两个：Codex 加 `/etc/codex/skills` 和系统 skill 目录 `~/.codex/skills/.system`（来源记 `builtin:codex`）；Claude Code 插件那一行加 MCP 计数（`.mcp.json` 与 `plugin.json` 的 `mcpServers`）；`--add-dir` 是会话级，标为不读。其余工具挪到 V1-01
+- [ ] V1-01 只读扫描的工具补没读的位置（第 8 节 V1.x「更多工具适配器」）：opencode 的 MCP（JSONC、`mcp.servers`、数组 `command`）与 `instructions` 数组、Windsurf/Devin 的 MCP、Trae 对照官方页核实与 `~/.trae/user_rules`、Copilot 的 `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` 与逐层 `.mcp.json`、Cursor 的 Team rules、Gemini 的 `context.fileName` 与 skill 目录；Codex 项目配置的 `[skills.bundled] enabled = false`。清单在各适配器文件开头
 - [x] M1-pre-03 `fangcun.toml` 里按项目停用、个人覆盖的写法。出处：F3、F5。2026-11-19 完成：7.4 补 `[disable]`（通配）与 `fangcun.local.toml`（清单子集）；不支持的工具置灰给「转成套装」。Claude Code 用 `skillOverrides`，适配器已改
 
 M1 已定要做、开工时再拆的：

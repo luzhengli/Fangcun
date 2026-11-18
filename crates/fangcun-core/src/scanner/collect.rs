@@ -209,7 +209,15 @@ pub fn collect(adapter: &Adapter, home: &Path, reach: Reach<'_>, locks: &[LockIn
                 .collect(),
         };
         for dir in dirs {
-            read_skill_dir(&dir, &tool, location.scope, project, locks, &mut out.skills);
+            read_skill_dir(
+                &dir,
+                &tool,
+                location.scope,
+                location.source.as_deref(),
+                project,
+                locks,
+                &mut out.skills,
+            );
         }
     }
 
@@ -407,6 +415,7 @@ fn read_skill_dir(
     dir: &Path,
     tool: &ToolId,
     scope: Scope,
+    fallback_source: Option<&str>,
     project: Option<&Path>,
     locks: &[LockInfo],
     out: &mut Vec<SkillCopy>,
@@ -426,14 +435,18 @@ fn read_skill_dir(
         let name = entry.file_name().to_string_lossy().into_owned();
         let description = frontmatter_value(&text, "description");
         let real_dir = canonical(&path);
-        let source = locks.iter().find_map(|lock| {
-            let in_lock_dir = real_dir.parent() == Some(lock.dir.as_path()) || dir_real == lock.dir;
-            if in_lock_dir {
-                lock.sources.get(&name).cloned()
-            } else {
-                None
-            }
-        });
+        let source = locks
+            .iter()
+            .find_map(|lock| {
+                let in_lock_dir =
+                    real_dir.parent() == Some(lock.dir.as_path()) || dir_real == lock.dir;
+                if in_lock_dir {
+                    lock.sources.get(&name).cloned()
+                } else {
+                    None
+                }
+            })
+            .or_else(|| fallback_source.map(str::to_owned));
         out.push(SkillCopy {
             tool: tool.clone(),
             scope,
@@ -704,8 +717,8 @@ fn read_mcp(
     }
 }
 
-/// 插件带了几个 skill：在安装清单里找到它的安装目录，数 `skills/` 下的 SKILL.md。
-fn plugin_skill_note(
+/// 插件带了什么：在安装清单里找到它的安装目录，数 `skills/` 下的 SKILL.md 和它声明的 MCP 服务。
+fn plugin_note(
     index: &crate::adapter::InstallIndex,
     plugin: &str,
     home: &Path,
@@ -717,11 +730,82 @@ fn plugin_skill_note(
     let entry = entry.as_array().and_then(|a| a.first()).unwrap_or(entry);
     let install = PathBuf::from(entry.get(&index.path_field)?.as_str()?);
     let skills = fs::read_dir(install.join(&index.skills_dir))
-        .ok()?
-        .flatten()
-        .filter(|e| e.path().join("SKILL.md").is_file())
-        .count();
-    (skills > 0).then(|| format!("含 {skills} 个 skill"))
+        .map(|dir| {
+            dir.flatten()
+                .filter(|e| e.path().join("SKILL.md").is_file())
+                .count()
+        })
+        .unwrap_or(0);
+    let mcp = plugin_mcp_servers(index, &install).len();
+    let mut parts = Vec::new();
+    if skills > 0 {
+        parts.push(format!("{skills} 个 skill"));
+    }
+    if mcp > 0 {
+        parts.push(format!("{mcp} 个 MCP"));
+    }
+    (!parts.is_empty()).then(|| format!("含 {}", parts.join("、")))
+}
+
+/// 插件声明的 MCP 服务名。先读 `.mcp.json`，再读清单的 `mcpServers`，同名的后者替换前者，所以按名字去重。
+/// `.mcpb` 包和网址读不到服务名，按路径各算一个。
+fn plugin_mcp_servers(
+    index: &crate::adapter::InstallIndex,
+    install: &Path,
+) -> std::collections::BTreeSet<String> {
+    let mut names = std::collections::BTreeSet::new();
+    let add_file = |path: &Path, names: &mut std::collections::BTreeSet<String>| {
+        if let Some(value) = read_config(path, false) {
+            add_server_map(&value, names);
+        }
+    };
+    if let Some(mcp_file) = &index.mcp_file {
+        add_file(&install.join(mcp_file), &mut names);
+    }
+    let Some(manifest) = index
+        .manifest
+        .as_ref()
+        .and_then(|m| read_config(&install.join(m), false))
+    else {
+        return names;
+    };
+    let Some(declared) = manifest.get("mcpServers") else {
+        return names;
+    };
+    let shapes: Vec<&serde_json::Value> = match declared {
+        serde_json::Value::Array(items) => items.iter().collect(),
+        other => vec![other],
+    };
+    for shape in shapes {
+        match shape {
+            serde_json::Value::Object(map) => {
+                names.extend(map.keys().cloned());
+            }
+            serde_json::Value::String(path) if path.ends_with(".json") => {
+                add_file(&install.join(path.trim_start_matches("./")), &mut names);
+            }
+            serde_json::Value::String(path) => {
+                names.insert(path.clone());
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+/// MCP 配置里的服务名：包在 `mcpServers` 里，或直接放在顶层。
+fn add_server_map(value: &serde_json::Value, names: &mut std::collections::BTreeSet<String>) {
+    let map = value
+        .get("mcpServers")
+        .and_then(serde_json::Value::as_object)
+        .or_else(|| value.as_object());
+    if let Some(map) = map {
+        names.extend(
+            map.iter()
+                .filter(|(_, v)| v.is_object())
+                .map(|(k, _)| k.clone()),
+        );
+    }
 }
 
 /// 另一份配置里某个键是否等于要求的值。
@@ -833,7 +917,7 @@ fn read_observed(
                 note: location
                     .install_index
                     .as_ref()
-                    .and_then(|index| plugin_skill_note(index, key, home, project)),
+                    .and_then(|index| plugin_note(index, key, home, project)),
                 location: file.clone(),
             }),
         }

@@ -8,6 +8,18 @@
 
 ---
 
+## 2026-11-19 适配器补读（M1-pre-04）
+
+- **Agent 定，可逆**：
+  - M1-pre-04 只做 M1 要完整支持的 Claude Code、Codex；其余只读扫描的工具挪到 V1-01，第 8 节本来把「更多工具适配器」排在 V1.x。
+  - Codex 的系统 skill 放在 `~/.codex/skills/.system`（文档没写位置，对照本机），来源记 `builtin:codex`，免得 5 个自带 skill 都显示「来源未知」。4.2 的来源只列了 git、本地、市场三种，这是第四种写法，只用于显示，M1 不收编、不管理它们。适配器格式加可选字段 `source`。
+  - `/etc/codex/skills` 是整台机器共享的 ADMIN 层，按全局层算。
+  - Claude Code 插件的 MCP 和插件的 skill 一样只计数（F5「插件只看不管」）：`.mcp.json` 两种写法（服务放顶层、包在 `mcpServers` 里）都认，再加 `plugin.json` 的 `mcpServers`，按名字去重；`.mcpb` 包和网址按路径各算一个。
+  - `--add-dir` 不读：它是会话参数，静态扫描不知道某次会话加了什么。
+- 影响：`adapters/claude-code.toml`、`adapters/codex.toml`、`adapters/README.md`、内核 `adapter/schema.rs`、`scanner/collect.rs`。
+
+---
+
 ## 2026-11-19 M1 开工前的三种格式（M1-pre-01 至 03）
 
 - **人定**：人说「本地先进M1」。Agent 把锁、套装、停用与个人覆盖拆成十问，人全部选了推荐项：
