@@ -5,10 +5,13 @@
 //! - **只读用例**：M0 的全部内容。任何访问方式下都能调。
 //! - **写入用例**：一律先返回 [`ChangePlan`]，由 [`Kernel::apply`] 落盘。
 //!   内核以 [`Access::ReadOnly`] 打开时，这一组直接返回 [`Error::ReadOnly`]。
+//!   计划的动作留在内核里，界面和命令行拿回来的只是编号、标题和每一行（M1-04）。
 //!
 //! 内核是同步的，不依赖异步运行时。桌面外壳在阻塞线程里调它。
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -19,7 +22,7 @@ use crate::global::GlobalOverview;
 use crate::journal::{
     FileOp, Journal, Record, RecordFile, RecordFilter, RecordKind, RecordStatus, Trigger,
 };
-use crate::materializer::{Applied, ChangePlan};
+use crate::materializer::{Applied, ApplyContext, ChangePlan, PlanBuilder, WriteScope};
 use crate::model::{AssetState, ProjectId, SnapshotId, Timestamp, ToolId};
 use crate::paths::FangcunHome;
 use crate::resolver::{EffectiveContext, Explanation};
@@ -27,11 +30,12 @@ use crate::scanner::fsutil::display_path;
 use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
-/// 内核的访问方式。M0 的桌面应用和命令行都用只读。
+/// 内核的访问方式。默认可写；设置里开了只读模式或命令行加了 `--read-only` 时只读（7.5）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Access {
     /// 不写方寸目录以外的任何文件。`~/.fangcun/journal` 照写，记体检（D-15）。
     ReadOnly,
+    /// 写入范围见 [`WriteScope`]。
     ReadWrite,
 }
 
@@ -88,12 +92,28 @@ pub struct Kernel {
     /// 最近一次扫描，以及它记没记过体检记录。
     scan: Mutex<Option<(Arc<Scan>, bool)>>,
     journal: Journal,
+    /// 出了还没应用的计划，按编号。
+    pending: Mutex<BTreeMap<u32, ChangePlan>>,
+    next_plan: AtomicU32,
 }
 
 impl Kernel {
     /// 按默认位置打开。只算路径、读适配器，不创建任何目录，也不扫描。
     pub fn open(access: Access) -> Result<Self> {
         Self::with_home(FangcunHome::locate()?, access)
+    }
+
+    /// 按设置打开：`~/.fangcun/settings.toml` 里开了只读模式，或 `force_read_only`
+    /// （命令行的 `--read-only`）时只读，否则可写（7.5）。只读文件，不创建目录。
+    pub fn open_configured(force_read_only: bool) -> Result<Self> {
+        let home = FangcunHome::locate()?;
+        let read_only = force_read_only || crate::settings::Settings::load(&home)?.read_only;
+        let access = if read_only {
+            Access::ReadOnly
+        } else {
+            Access::ReadWrite
+        };
+        Self::with_home(home, access)
     }
 
     pub fn with_home(home: FangcunHome, access: Access) -> Result<Self> {
@@ -109,6 +129,8 @@ impl Kernel {
             extra_projects: Vec::new(),
             scan: Mutex::new(None),
             journal,
+            pending: Mutex::new(BTreeMap::new()),
+            next_plan: AtomicU32::new(1),
         })
     }
 
@@ -146,6 +168,29 @@ impl Kernel {
             Access::ReadWrite => Ok(()),
             Access::ReadOnly => Err(Error::ReadOnly(use_case)),
         }
+    }
+
+    /// 出一份计划：编号、留在内核里等 [`Kernel::apply`]。
+    // 写入用例从 M1-09（登记）起调它，现在只有测试用。
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn issue(&self, builder: PlanBuilder) -> ChangePlan {
+        let id = self.next_plan.fetch_add(1, Ordering::Relaxed);
+        let plan = builder.build(id);
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.insert(id, plan.clone());
+        }
+        plan
+    }
+
+    /// 现在的写入范围：方寸目录、已登记的项目、完整支持的工具在主目录下的全局位置。
+    fn write_scope(&self) -> Result<WriteScope> {
+        let registered = crate::registry::load(&self.home)?;
+        Ok(WriteScope::new(
+            self.home.root(),
+            &self.user_home,
+            &self.adapters,
+            registered.into_iter().map(|p| p.path),
+        ))
     }
 
     fn adapter(&self, tool: &ToolId) -> Result<&Adapter> {
@@ -465,9 +510,30 @@ impl Kernel {
     }
 
     /// 应用一份计划。写入只发生在这里。
-    pub fn apply(&self, _plan: &ChangePlan) -> Result<Applied> {
+    ///
+    /// 只认这个内核出过、还没应用的计划，按编号找回动作；传进来的标题和每一行不参与执行。
+    /// 应用失败时计划作废，要重新预览。
+    pub fn apply(&self, plan: &ChangePlan) -> Result<Applied> {
         self.require_write("apply")?;
-        Err(Error::NotImplemented("Kernel::apply"))
+        let issued = self
+            .pending
+            .lock()
+            .ok()
+            .and_then(|mut pending| pending.remove(&plan.id))
+            .ok_or(Error::PlanNotFound(plan.id))?;
+        let scope = self.write_scope()?;
+        let applied = crate::materializer::apply(
+            &issued,
+            &ApplyContext {
+                home: &self.home,
+                scope: &scope,
+                journal: &self.journal,
+                trigger: self.origin,
+            },
+        )?;
+        // 扫描缓存不在这里清：清了下一次查询会全盘重扫，桌面端还会多记一条体检。
+        // 应用后要不要重扫由用例决定（M1-13 的同步面板）。
+        Ok(applied)
     }
 }
 
@@ -503,8 +569,10 @@ mod tests {
         let kernel = kernel(Access::ReadOnly);
         let root = Path::new("/nonexistent/project");
         let plan = ChangePlan {
+            id: 0,
             title: String::new(),
             changes: Vec::new(),
+            body: None,
         };
 
         let refusals = [

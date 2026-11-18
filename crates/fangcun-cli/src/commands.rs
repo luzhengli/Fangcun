@@ -8,16 +8,14 @@ use fangcun_core::journal::{FileOp, Record, RecordFilter, RecordStatus, Trigger}
 use fangcun_core::model::{AssetKind, ProjectId, Scope, SnapshotId, TokenEstimate};
 use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
-use fangcun_core::{Access, Error, Kernel, Result};
+use fangcun_core::{Error, Kernel, Result};
 
 use crate::cli::{Cli, Command};
 
-/// M0 只读。M1 起，会写入的命令改用 `Access::ReadWrite` 打开内核。
-const ACCESS: Access = Access::ReadOnly;
-
 pub fn run(cli: Cli) -> Result<()> {
     let cwd = current_project()?;
-    let kernel = Kernel::open(ACCESS)?
+    // 默认可写；`--read-only` 或设置里的只读模式打开时只读（7.5）。
+    let kernel = Kernel::open_configured(cli.read_only)?
         .with_origin(Trigger::Cli)
         .with_project(&cwd);
 

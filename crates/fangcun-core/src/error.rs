@@ -13,9 +13,21 @@ pub enum Error {
     #[error("尚未实现：{0}")]
     NotImplemented(&'static str),
 
-    /// 内核以只读方式打开时调用了会写入的用例。M0 全程只读。
+    /// 内核以只读方式打开时调用了会写入的用例：设置里开了只读模式，或命令行加了 `--read-only`（7.5）。
     #[error("当前是只读模式，不能执行：{0}")]
     ReadOnly(&'static str),
+
+    /// 要写的路径不在写入范围里（7.5）：方寸目录、已登记项目、工具全局目录以外。
+    #[error("不在写入范围里：{}", .0.display())]
+    OutOfScope(PathBuf),
+
+    /// 出计划之后磁盘上的文件变了。重新出计划再应用。
+    #[error("出计划之后 {} 变了，请重新预览", .0.display())]
+    StalePlan(PathBuf),
+
+    /// 要应用的计划不是这个内核出的，或者已经应用过。
+    #[error("找不到计划 #{0}，请重新预览")]
+    PlanNotFound(u32),
 
     #[error("不认识的工具：{0}")]
     UnknownTool(String),
@@ -43,6 +55,9 @@ impl Error {
         match self {
             Error::NotImplemented(_) => "not-implemented",
             Error::ReadOnly(_) => "read-only",
+            Error::OutOfScope(_) => "out-of-scope",
+            Error::StalePlan(_) => "stale-plan",
+            Error::PlanNotFound(_) => "plan-not-found",
             Error::UnknownTool(_) => "unknown-tool",
             Error::NotFound(_) => "not-found",
             Error::NoHomeDir => "no-home-dir",
