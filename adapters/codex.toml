@@ -5,7 +5,7 @@
 #   https://learn.chatgpt.com/docs/build-skills
 #   https://learn.chatgpt.com/docs/extend/mcp?surface=cli
 # 会话记录的格式对照本机 ~/.codex/sessions 下的实际文件核实。
-# 还没读的：/etc/codex/skills、内置的系统 skill。
+# 还没读的：项目 .codex/config.toml 的 [skills.bundled] enabled = false（整体关掉系统 skill）。
 schema = 1
 
 [tool]
@@ -32,6 +32,18 @@ per-project-disable = true
 scope = "global"
 path = "~/.agents/skills"
 lock = { path = "~/.agents/.skill-lock.json", format = "skills-cli" }
+
+# skills 文档：ADMIN 层，整台机器或容器共享，对每个项目都生效，按全局算。
+[[skills]]
+scope = "global"
+path = "/etc/codex/skills"
+
+# skills 文档：SYSTEM 层是 Codex 自带的 skill（文档点名 skill-creator、skill-installer），默认启用。
+# 文档没写位置，对照本机核实在 ~/.codex/skills/.system（本机 5 个）。
+[[skills]]
+scope = "global"
+path = "~/.codex/skills/.system"
+source = "builtin:codex"
 
 [[skills]]
 scope = "project"

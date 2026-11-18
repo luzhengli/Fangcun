@@ -33,6 +33,7 @@ scope = "global"               # global | project | personal
 path = "~/.claude/skills"
 walk = "root"                  # 项目层从哪些目录找：root | ancestors | git-root-down
 lock = { path = "~/.agents/.skill-lock.json", format = "skills-cli" }  # 可选，配套的锁文件
+source = "builtin:codex"       # 可选，目录里的 skill 一律算这个来源（工具自带的系统 skill），锁里查得到时以锁为准
 
 [[instructions]]               # 指令文件
 scope = "project"
@@ -91,8 +92,9 @@ file = ".claude/settings.json" # 配置文件：键路径下的对象，每个�
 format = "json"
 key = ["hooks"]
 # 或者 dir = ".claude/commands"：目录里每个 .md 一项
-# 插件可以再给安装清单，界面上写「含 N 个 skill」：
-# install-index = { file = "~/.claude/plugins/installed_plugins.json", format = "json", key = ["plugins"], path-field = "installPath", skills-dir = "skills" }
+# 插件可以再给安装清单，界面上写「含 N 个 skill、M 个 MCP」。mcp-file、manifest 可选，
+# 用来数插件声明的 MCP：安装目录下的 MCP 配置文件，和插件清单里的 mcpServers。
+# install-index = { file = "~/.claude/plugins/installed_plugins.json", format = "json", key = ["plugins"], path-field = "installPath", skills-dir = "skills", mcp-file = ".mcp.json", manifest = ".claude-plugin/plugin.json" }
 
 [sessions]                     # 会话记录，用来统计触发次数、发现项目
 dir = "~/.claude/projects"
@@ -101,12 +103,12 @@ format = "claude-code-jsonl"   # claude-code-jsonl | codex-rollout-jsonl，解�
 
 ## 现状
 
-2026-11-14 对照各工具的当期文档核实，出处和没读的位置写在各自文件开头。
+2026-11-14 对照各工具的当期文档核实，Claude Code、Codex 在 2026-11-19 补核一次（M1-pre-04）。出处和没读的位置写在各自文件开头。
 
 | 工具 | 支持 | 来源 | 备注 |
 | --- | --- | --- | --- |
-| Claude Code | 完整 | 官方文档；会话记录、插件安装清单对照本机文件 | skill 同名时全局优先于项目；MCP 个人 > 项目 > 全局，整条取用。按项目停用没核实 |
-| Codex | 完整 | 官方文档；MCP 合并与受信任规则用隔离的 `CODEX_HOME` 实测 | 同名 skill 都加载；MCP 项目层赢、按字段合并；项目配置只对受信任项目生效 |
+| Claude Code | 完整 | 官方文档；会话记录、插件安装清单对照本机文件 | skill 同名时全局优先于项目；MCP 个人 > 项目 > 全局，整条取用。按项目停用用 `skillOverrides`；插件的 skill、MCP 只计数；`--add-dir` 是会话级，不读 |
+| Codex | 完整 | 官方文档；MCP 合并与受信任规则用隔离的 `CODEX_HOME` 实测 | 同名 skill 都加载；MCP 项目层赢、按字段合并；项目配置只对受信任项目生效。读 `/etc/codex/skills`；自带的系统 skill 在 `~/.codex/skills/.system`，来源记 `builtin:codex` |
 | Cursor | 只读扫描 | 官方文档 | 规则是 `.mdc`；界面里设的 User rules 不在文件里 |
 | Copilot CLI | 只读扫描 | 官方文档 | `COPILOT_HOME` 可换目录 |
 | Gemini CLI | 只读扫描 | 官方文档 | 文档写明已在 2026-06-18 被 Antigravity CLI 取代；skill 目录文档没写 |

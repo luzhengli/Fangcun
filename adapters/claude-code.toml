@@ -5,7 +5,11 @@
 #   https://code.claude.com/docs/en/memory
 #   https://code.claude.com/docs/en/mcp
 # 会话记录的格式对照本机 ~/.claude/projects 下的实际文件核实。
-# 还没读的：--add-dir 加进来的目录、插件自带的 MCP。插件自带的 skill 只计数，写在「其他加载项」里。
+#   https://code.claude.com/docs/en/plugins-reference
+# 插件自带的 skill 与 MCP 只计数，写在「其他加载项」里。
+# 不读的：--add-dir 加进来的目录。它是启动会话时的参数，各次会话不同，静态扫描读不到（settings 里的
+# permissions.additionalDirectories 只给文件权限，不加载 skill）。
+# 项目 skill 会从启动目录往上找到仓库根。方寸的项目就是 git 根目录，往上找等于不找；monorepo 的子项目再补。
 schema = 1
 
 [tool]
@@ -110,7 +114,9 @@ format = "json"
 key = ["enabledPlugins"]
 # 插件的安装目录记在 installed_plugins.json（对照本机文件核实，文档没有写这个文件）。
 # skills 文档：插件的 skill 在 <插件>/skills/<名称>/SKILL.md。
-install-index = { file = "~/.claude/plugins/installed_plugins.json", format = "json", key = ["plugins"], path-field = "installPath", skills-dir = "skills" }
+# plugins-reference：插件根目录的 .mcp.json（服务放顶层或包在 mcpServers 里，本机插件两种都有），
+# 再加 .claude-plugin/plugin.json 的 mcpServers（内联、JSON 路径、.mcpb 包或数组），同名后者替换前者。
+install-index = { file = "~/.claude/plugins/installed_plugins.json", format = "json", key = ["plugins"], path-field = "installPath", skills-dir = "skills", mcp-file = ".mcp.json", manifest = ".claude-plugin/plugin.json" }
 
 [[observed]]
 kind = "hook"

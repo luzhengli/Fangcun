@@ -111,6 +111,18 @@ fn claude_code_reads_what_the_docs_say() {
         )
         .expect("写插件 skill");
     }
+    // 插件的 MCP：.mcp.json 把服务放在顶层，plugin.json 再内联两个，其中 docs 与 .mcp.json 同名，按名字去重。
+    fs::write(
+        plugin_dir.join(".mcp.json"),
+        r#"{ "docs": { "command": "npx", "args": ["docs-mcp"] } }"#,
+    )
+    .expect("写插件 .mcp.json");
+    fs::create_dir_all(plugin_dir.join(".claude-plugin")).expect("建插件清单目录");
+    fs::write(
+        plugin_dir.join(".claude-plugin/plugin.json"),
+        r#"{ "name": "code-review-kit", "mcpServers": { "docs": { "command": "node" }, "review-api": { "command": "node" } } }"#,
+    )
+    .expect("写插件清单");
     let installed = serde_json::json!({ "version": 2, "plugins": {
         "code-review-kit@market": [{ "scope": "user", "installPath": plugin_dir.display().to_string() }]
     } });
@@ -230,7 +242,7 @@ fn claude_code_reads_what_the_docs_say() {
         .iter()
         .find(|o| o.name == "code-review-kit@market")
         .expect("插件");
-    assert_eq!(plugin.note.as_deref(), Some("含 2 个 skill"));
+    assert_eq!(plugin.note.as_deref(), Some("含 2 个 skill、2 个 MCP"));
     assert!(!observed.iter().any(|(_, n)| n.starts_with("disabled-kit")));
     assert!(observed.contains(&(ObservedKind::Hook, "PostToolUse · Edit|Write")));
     assert!(observed.contains(&(ObservedKind::SlashCommand, "/release")));
@@ -296,6 +308,10 @@ fn codex_reads_what_the_docs_say() {
     assert_eq!(row.status, GlobalStatus::SameNameConflict);
     assert!(row.advice.contains("两份都加载"), "{}", row.advice);
     assert_eq!(global_tdd.source.as_deref(), Some("obra/superpowers"));
+    // 系统 skill：~/.codex/skills/.system 里的算全局层，来源是 Codex 自带，不是「来源未知」。
+    let creator = find(&context, "skill-creator", Scope::Global);
+    assert_eq!(creator.source.as_deref(), Some("builtin:codex"));
+    assert!(creator.counted);
     // [[skills.config]] 按名称停用了 grill-me。
     let grill = find(&context, "grill-me", Scope::Global);
     assert_eq!(grill.label, "已停用");

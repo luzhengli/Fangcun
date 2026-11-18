@@ -84,6 +84,10 @@ pub struct InstallIndex {
     pub path_field: String,
     /// 安装目录下放 skill 的子目录。
     pub skills_dir: String,
+    /// 安装目录下的 MCP 配置文件，服务可以直接放在顶层，也可以包在 `mcpServers` 里。
+    pub mcp_file: Option<String>,
+    /// 安装目录下的插件清单，读它的 `mcpServers`：内联的服务表、指向 JSON 文件的路径，或两者的数组。
+    pub manifest: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -138,6 +142,8 @@ pub struct SkillLocation {
     pub walk: Walk,
     /// 这个目录配套的锁文件，用来查来源、发现「脱节」。
     pub lock: Option<LockRef>,
+    /// 目录里的 skill 一律算这个来源，例如工具自带的系统 skill 写 `builtin:codex`。锁里查得到时以锁为准。
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
