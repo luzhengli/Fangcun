@@ -45,10 +45,12 @@ scope = "global"
 path = "~/.codex/skills/.system"
 source = "builtin:codex"
 
+# skills 命令行装进项目时，锁写在项目根目录的 skills-lock.json（对照本机 ~/Project/article）。
 [[skills]]
 scope = "project"
 path = ".agents/skills"
 walk = "git-root-down"
+lock = { path = "skills-lock.json", format = "skills-cli" }
 
 # ── 指令文件 ──
 # 全局层取 ~/.codex 下第一个非空的 AGENTS.override.md 或 AGENTS.md。

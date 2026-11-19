@@ -41,7 +41,8 @@
 设计确认后，要改原型的地方一条一处写在这里：画板、位置、改成什么、出处。云端会话按这里改画布，同步时勾掉。见 `docs/WORKFLOW.md` 第 ② 步。
 
 - [ ] P-01 设计系统画板（DesignSystem）加一节「应用图标」：「方中之方」在黛蓝圆角方形底板上的应用图标，浅色、深色、着色三种外观各一个；旁边是菜单栏模板图（描边版），无待处理与有小圆点两种状态；标出线宽、内外方比例、圆角。出处：6.10「应用图标」、6.1「菜单栏常驻图标」、D-29
-- [ ] P-02 项目页画板（Main）的侧栏：「近 30 天的项目」一组下面加「添加项目…」；选中 luyao-skills（未登记）时，检查器里有「登记」按钮。出处：6.1、F3、M1-pre-06
+- [ ] P-02 项目页画板（Main）的侧栏：「近 30 天的项目」一组下面加「添加项目…」；选中 luyao-skills（未登记）时，检查器里有「登记」按钮；点「登记」后先问一次物化方式（链接 / 入库，按提交者人数给建议），再出变更计划。出处：6.1、F3、9.2「默认物化方式」、M1-pre-06
+- [ ] P-03 新画板「设置」（Settings）：应用菜单「设置…」/ `⌘,` 打开的单独小窗，macOS 标准样式，只有「通用」一页：「只读模式」开关（说明一句：打开后拒绝一切写入，只记体检）、「快照保留期」两项（保留天数，默认 30；每个项目至少保留，默认 20）。深浅两套。出处：6.1「设置窗口」、6.7、7.5、M1-24
 
 ## 设计与原型
 
@@ -132,8 +133,10 @@
 - [x] M1-05 资产库：`~/.fangcun/library` 内容寻址存储，多版本并存，索引（来源、版本、哈希、被谁用），`Library::open/entries/locate/ingest`。出处：F2、4.2。注意：v2 哈希把 `.DS_Store` 算进去（为了和 `skills-lock.json` 对得上），两份副本只差 `.DS_Store` 时会被当成已分叉。本机现在不受影响；做归并和收编（M1-12）时要定：归并另用一个跳过 `.DS_Store` 的哈希，或者收编时清掉 `.DS_Store`。2026-11-19 完成：`library::content`（哈希挪过来，`fsutil` 转出）、`objects/<哈希>` 正本、索引、`open/entries/locate/ingest`。skill 与指令能存，MCP 等 M1-17。「被谁用」不进索引，M1-07 从锁算。本机 47 个 skill 存进临时库，0 出错，去重后 31 份正本。`.DS_Store` 的取舍仍留给 M1-12。2026-11-19 人定索引照 7.2 用 SQLite，M1-05 先做的 TOML 已改回 `~/.fangcun/index.sqlite`
 - [x] M1-06 来源：git 来源拉取并把 pin/track 解析到确切提交和标签；本地开发目录是活链接；市场按 M1-pre-08。出处：F2、4.4。2026-11-19 人定三件（9.3「来源」）：`local:` 名字记在 `~/.fangcun/sources.toml`；仓库里按 `SKILL.md` 的 `name` 找，锁记 `path`；开发模式写在 `fangcun.local.toml` 的 `[dev]`。skills.sh 有搜索接口 `GET https://skills.sh/api/search?q=`，`skills` CLI 就用它。2026-11-19 完成：`library::source`（`github:`、`local:`、本机来源表、pin/track 解析、按名字找、导出存库）与 `library::market`（skills.sh 搜索）。实测从 GitHub 解析 obra/superpowers 的 brainstorming 到 v7.0.2，skills.sh 搜到 96 条。还没接到 `Kernel`：写锁在 M1-07，搜索的界面在 M1-22
 - [x] M1-07 清单与锁的读写：`load_project` 读 `fangcun.toml`、`fangcun.local.toml`、引用的套装；`[disable]`；项目清单盖过套装；`resolve_lock` 写锁；`fangcun lock`。出处：F3、7.4。2026-11-19 完成：`load_project`（三种文件各自能写的节有校验，本机没有套装文件不报错）、`Declarations`（套装 < 清单 < 个人覆盖）、`Lock` 读写（7.4 的格式，字节稳定）、`resolve_lock`（约束没变的沿用，不联网）、`Kernel::plan_lock`、命令行 `fangcun lock` 的打印—确认—应用。命令行确认方式人定（9.3）。只对已登记的项目出计划，登记在 M1-09
-- [ ] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4。线索：`~/Project/article/skills-lock.json` 是 v1，照 v1 源码算本机 21 个目录只对上 1 个（只有两个文件的 `baoyu-compress-image` 也对不上，不是排序问题），先查锁记的是不是安装前源仓库那份目录
-- [ ] M1-09 项目登记与 `fangcun init --from-existing`：从目录现状反推清单与锁。侧栏按 D-28 分两组。出处：F3、6.1、D-28
+- [x] M1-08 `skills-lock.json` 导入导出，v1 先按旧算法校验再换算。出处：F3、7.4。2026-11-19 完成：之前对不上是排序问题，v1 按 JS `localeCompare`（ICU 根排序）排路径，照它实现 `legacy_hash_dir` 后本机 21 个全对上。导入接在 `init --from-existing`（v1 校验后换算，v2 直接用 `commit`、`ref`、`skillPath`）；导出是新命令 `fangcun export skills-lock`（人定，第 5 节已加），只导 GitHub 来源，原文件里方寸不管的项原样留下
+- [x] M1-09 项目登记与 `fangcun init --from-existing`：从目录现状反推清单与锁。侧栏按 D-28 分两组。出处：F3、6.1、D-28。2026-11-19 内核与命令行完成：`Kernel::plan_init`（清单、锁、登记表一份计划，查不出来源的写在计划提示 `ChangePlan.notes` 里），反推四条规则人定（F3、9.3），GitHub 来源沿历史找内容一样的提交锁定；带清单的仓库扫描时自动登记；已登记的项目一起扫描；`ProjectSummary.registered`。登记时问一次物化方式（9.2），`Kernel::suggest_mode` 按提交者人数建议。本机 `~/Project/article` 的副本试过：21 个 skill 全部纳入，release 约 8 秒。界面部分拆成 M1-25
+
+- [ ] M1-25 登记的界面：侧栏按 `registered` 分「已登记项目」「近 30 天的项目」两组（D-28），检查器「登记」、侧栏「添加项目…」调 `plan_init`，登记前按 `suggest_mode` 问一次物化方式（9.2，原型里怎么问要进 P-02），计划面板显示 `notes`（说明灰、留意橙、风险红）。等 P-02。出处：6.1、F3、D-28
 
 **第二段 · 最小闭环**（登记 → 写锁 → 同步 → 回滚，命令行先通，界面跟上）
 
@@ -158,7 +161,7 @@
 - [ ] M1-20 界面：资产库页，照原型 Library。来源未知的项在底部给「收编到资产库」。出处：6.4
 - [ ] M1-21 界面：套装页，照原型 Bundles。出处：6.5
 - [ ] M1-22 界面：项目页检查器的来源未知块「在资产库中收编」，以及命令面板 `⌘K`（搜索、回车加入、弹变更计划）。`fangcun add`。出处：6.3、6.9
-- [ ] M1-24 设置页：只读模式（7.5）、快照保留期（6.7）都写「在设置里」，文档没写设置页放在哪、长什么样，原型也没有。做之前问人，先给选项。现在能手改 `~/.fangcun/settings.toml`。出处：6.7、7.5
+- [ ] M1-24 设置页：只读模式（7.5）、快照保留期（6.7）都写「在设置里」。现在能手改 `~/.fangcun/settings.toml`。出处：6.1、6.7、7.5。2026-11-19 人定：macOS 标准的「设置…」小窗（`⌘,`），先只有「通用」一页，写进 6.1、9.3。等原型 P-03
 - [ ] M1-23 命令行对齐：第 5 节「配套：命令行」的每条命令都能用，`why`、`log` 覆盖 M1 的新记录类型；界面每个写入动作在活动页附命令。出处：第 5 节、6.7
 
 不在 M1：菜单栏常驻图标（6.1，等 D-30 出图后排）、V1.x 起的事。
@@ -179,7 +182,7 @@
 - [ ] W-10 CI 跑 `pnpm screens --compare`，把拼图作为构建产物传上去，PR 里直接看。CI 的 Linux 上原型和应用同一台机器渲染，差异可信
 - [ ] W-11 收工清单用 Claude Code 的 Stop hook 提醒：改了代码却没改 STATUS、LOG 时提示一句
 - [x] W-12 查「定没定过」：`pnpm workflow find <关键词…>` 查设计文档第 7 节与 9.2、9.3、DECISIONS、BACKLOG；WORKFLOW 交接规则第 5 条、质量关加一行，AGENTS.md「文档没写到的设计」加指针。2026-11-19 完成，拿「快照 保留」「索引 SQLite」两次失误试过，第一条命中就是当时的结论
-- [ ] W-13 和外部工具逐字节对齐的样例在 CI 里生成：CI 装 `skills` 命令行，对 `content.rs` 测试里那组边界文件跑一次，比对 Rust 的哈希。本机运行下载的 JS 会被权限拦下，CI 不受这个限制。M1-08（`skills-lock.json` 互通）之前做
+- [ ] W-13 和外部工具逐字节对齐的样例在 CI 里生成：CI 装 `skills` 命令行，对 `content.rs` 测试里那组边界文件跑一次，比对 Rust 的哈希。本机运行下载的 JS 会被权限拦下，CI 不受这个限制。M1-08（`skills-lock.json` 互通）之前做。2026-11-19 已实现，等 CI 首跑：边界样例挪到 `library::hash_samples`，`examples/hash_crosscheck.rs` 造一个带 v1 锁的项目，`tools/hash-crosscheck/check.mjs` 调 `skills@1.9.0` 的 `readLocalLock` 换算，新旧两种算法一起比
 - [ ] W-14 `pnpm screens` 能截非默认状态：按场景脚本点选（例如「选中 frontend-design」「切到 Codex」）后再截，拼图里给检查器区域单独一张放大图。做 M1 的界面条目（M1-13 起）之前做
 - [x] W-15 依赖的 PR 都以 main 为基，后一个合进前一个分支，按顺序合。2026-11-19 写进 WORKFLOW 交接规则第 6 条；#19 至 #23 都这样合过，没有被关的 PR
 

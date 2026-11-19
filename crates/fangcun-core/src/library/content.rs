@@ -142,6 +142,72 @@ fn normalize_line_endings(content: &[u8]) -> std::borrow::Cow<'_, [u8]> {
     std::borrow::Cow::Owned(out)
 }
 
+/// 旧版（v1）`skills-lock.json` 的目录哈希，只用来校验导入的旧锁（7.4），照 `skills` 1.9.0 的
+/// `computeLegacySkillFolderHash`：
+///
+/// - 取目录下的普通文件，跳过 `.git`、`node_modules` 目录；软链（文件和目录）一律不算。
+/// - 相对路径用 `/` 连接，按 JS 的 `localeCompare` 排序（见 [`locale_order`]）。
+/// - 依次喂入「路径、内容」，不加分隔，不换行尾。SHA-256，小写十六进制。
+pub fn legacy_hash_dir(dir: &Path) -> ContentHash {
+    fn collect(dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let rel = format!("{prefix}{name}");
+            if file_type.is_dir() {
+                if name != ".git" && name != "node_modules" {
+                    collect(&entry.path(), &format!("{rel}/"), out);
+                }
+            } else if file_type.is_file() {
+                out.push((rel, entry.path()));
+            }
+        }
+    }
+    let mut files = Vec::new();
+    collect(dir, "", &mut files);
+    files.sort_by(|a, b| locale_order(&a.0, &b.0));
+    let mut hasher = Sha256::new();
+    for (rel, path) in &files {
+        hasher.update(rel.as_bytes());
+        if let Ok(bytes) = fs::read(path) {
+            hasher.update(&bytes);
+        }
+    }
+    ContentHash(hex(&hasher.finalize()))
+}
+
+/// JS `localeCompare` 的近似：ICU 根排序（CLDR root）对 ASCII 的规则。
+///
+/// 先比主权重：标点和空白按 ICU 的顺序排在最前，其次数字，再其次字母（不分大小写）；
+/// 主权重相同再比大小写，小写在前。非 ASCII 字符排在最后，按码位。路径里常见的字符都覆盖了，
+/// 本机 21 个 v1 锁的哈希全部对上（M1-08）。
+pub fn locale_order(a: &str, b: &str) -> std::cmp::Ordering {
+    /// ICU 根排序里 ASCII 标点与空白的先后。
+    const PUNCT: &str = "\t\n\r _-,;:!?.'\"()[]{}@*/\\&#%`^+<=>|~$";
+    fn primary(c: char) -> (u8, u32) {
+        if let Some(i) = PUNCT.find(c) {
+            (0, u32::try_from(i).unwrap_or(u32::MAX))
+        } else if c.is_ascii_digit() {
+            (1, u32::from(c))
+        } else if c.is_ascii_alphabetic() {
+            (2, u32::from(c.to_ascii_lowercase()))
+        } else {
+            (3, u32::from(c))
+        }
+    }
+    let primaries = a.chars().map(primary).cmp(b.chars().map(primary));
+    primaries.then_with(|| {
+        a.chars()
+            .map(|c| c.is_ascii_uppercase())
+            .cmp(b.chars().map(|c| c.is_ascii_uppercase()))
+    })
+}
+
 /// 一个文件的内容哈希。
 pub fn hash_file(path: &Path) -> Option<ContentHash> {
     let bytes = fs::read(path).ok()?;
@@ -222,50 +288,65 @@ mod tests {
     use super::*;
 
     /// 期望值由照 `skills` 1.9.0 `computeSkillFolderHash` 写的独立参考实现（Python）对同一组文件
-    /// 算出。样例覆盖：CRLF 换 LF、含 NUL 的不换、三种跳过的目录与任意层级的 `metadata.json`、
-    /// 不跳过的 `.DS_Store` 和 `node_modules`、`a-b` `a.b` `a/b` 的字节序、非 ASCII 文件名、
-    /// 目录内的文件与目录软链、指向目录外、断掉和指向自身的软链、空目录。
+    /// 算出，样例见 [`super::super::hash_samples::write_v2_sample`]。CI 另外拿真正的 `skills`
+    /// 命令行对同一组文件比对一次（W-13）。
     #[cfg(unix)]
     #[test]
     fn hash_dir_matches_skills_lock_v2() {
-        use std::os::unix::fs::symlink;
-
         let base = std::env::temp_dir().join(format!("fangcun-hash-v2-{}", std::process::id()));
         let _ = fs::remove_dir_all(&base);
         let skill = base.join("outer/skill");
-        let write = |rel: &str, bytes: &[u8]| {
-            let path = skill.join(rel);
-            fs::create_dir_all(path.parent().unwrap()).unwrap();
-            fs::write(path, bytes).unwrap();
-        };
-        write("SKILL.md", b"---\r\nname: demo\r\n---\r\nbody\r\n");
-        write("a-b.md", b"dash\n");
-        write("a.b.md", b"dot\n");
-        write("a/b.md", b"slash\n");
-        write("中文.md", "unicode\n".as_bytes());
-        write("bin.dat", b"\0\r\n\x01");
-        write("metadata.json", b"{}");
-        write("sub/metadata.json", b"{}");
-        write("sub/note.md", b"nested\r\n");
-        write("sub/__pycache__/x.pyc", b"pyc");
-        write(".git/HEAD", b"ref");
-        write("__pypackages__/y", b"y");
-        write(".DS_Store", b"ds");
-        write("node_modules/m.js", b"m");
-        write("scripts/run.sh", b"echo hi\n");
-        fs::create_dir_all(skill.join("empty")).unwrap();
-        fs::write(base.join("outer/outside.txt"), b"out").unwrap();
-        symlink("SKILL.md", skill.join("inner-link.md")).unwrap();
-        symlink("sub", skill.join("linkdir")).unwrap();
-        symlink("../outside.txt", skill.join("outside.md")).unwrap();
-        symlink(".", skill.join("self")).unwrap();
-        symlink("missing", skill.join("dangling")).unwrap();
-        symlink("outer/skill", base.join("alias")).unwrap();
+        crate::library::hash_samples::write_v2_sample(&skill).unwrap();
+        std::os::unix::fs::symlink("outer/skill", base.join("alias")).unwrap();
 
         let expected = "b0704d40f9bcdc3f31b9b44dacfe1dc99e8e5483df353631ab831329c154b7cf";
         assert_eq!(hash_dir(&skill).0, expected);
         assert_eq!(hash_dir(&base.join("alias")).0, expected);
         let _ = fs::remove_dir_all(&base);
+    }
+
+    /// v1 的期望值由同一套排序规则的 Python 参考实现算出，样例见
+    /// [`super::super::hash_samples::write_v1_sample`]。这套规则对上了本机
+    /// `~/Project/article/skills-lock.json` 的全部 21 个 v1 哈希（M1-08）。
+    #[cfg(unix)]
+    #[test]
+    fn legacy_hash_dir_matches_skills_lock_v1() {
+        let dir = std::env::temp_dir().join(format!("fangcun-hash-v1-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        crate::library::hash_samples::write_v1_sample(&dir).unwrap();
+        assert_eq!(
+            legacy_hash_dir(&dir).0,
+            "fe76ef5c8b19a373e0c107918cbeee7ccac65f30f2affd1462451bab0dc197bc"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn locale_order_follows_icu_root() {
+        let mut names = vec![
+            "SKILL.md",
+            "scripts/main.ts",
+            "Z.md",
+            "a-b",
+            "a_b",
+            "a.b",
+            "a1",
+            "ab",
+        ];
+        names.sort_by(|a, b| locale_order(a, b));
+        assert_eq!(
+            names,
+            [
+                "a_b",
+                "a-b",
+                "a.b",
+                "a1",
+                "ab",
+                "scripts/main.ts",
+                "SKILL.md",
+                "Z.md"
+            ]
+        );
     }
 
     #[test]

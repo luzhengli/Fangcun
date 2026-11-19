@@ -4,11 +4,13 @@
 //! 改了这里的类型后运行 `pnpm bindings`。
 
 mod asset;
+mod note;
 mod scope;
 mod status;
 mod version;
 
 pub use asset::{AssetKind, ObservedKind, ProjectId, SnapshotId, SourceRef, ToolId};
+pub use note::{NoteTone, PlanNote};
 pub use scope::Scope;
 pub use status::{AssetState, Timestamp, TokenEstimate};
 pub use version::{ContentHash, SyncMode, Version, VersionPolicy};

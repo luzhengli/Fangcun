@@ -52,6 +52,12 @@ pub enum Command {
     /// 重新解析清单，更新锁
     Lock,
 
+    /// 导出成别的工具的格式
+    Export {
+        #[command(subcommand)]
+        format: ExportFormat,
+    },
+
     /// 按清单与锁物化
     Sync {
         /// CI 用：锁与清单不一致就失败
@@ -93,6 +99,13 @@ pub enum Command {
     },
 }
 
+/// `fangcun export` 能导出的格式。
+#[derive(Debug, Subcommand)]
+pub enum ExportFormat {
+    /// 把锁导出成 skills-lock.json，与 skills 命令行互通
+    SkillsLock,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,7 +116,7 @@ mod tests {
         Cli::command().debug_assert();
     }
 
-    /// 设计文档第 5 节列出的十一个命令，顺序一致。
+    /// 设计文档第 5 节列出的十二个命令，顺序一致。
     #[test]
     fn subcommands_match_the_design_doc() {
         let names: Vec<String> = Cli::command()
@@ -113,8 +126,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                "doctor", "init", "status", "add", "adopt", "lock", "sync", "update", "rollback",
-                "log", "why"
+                "doctor", "init", "status", "add", "adopt", "lock", "export", "sync", "update",
+                "rollback", "log", "why"
             ]
         );
     }
@@ -128,6 +141,7 @@ mod tests {
             "fangcun add tdd",
             "fangcun adopt project-harness",
             "fangcun lock",
+            "fangcun export skills-lock",
             "fangcun sync",
             "fangcun sync --frozen",
             "fangcun update",

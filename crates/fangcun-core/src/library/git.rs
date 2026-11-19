@@ -2,6 +2,7 @@
 //!
 //! 一律关掉交互式提示（`GIT_TERMINAL_PROMPT=0`），要密码时直接失败，不会卡住界面。
 
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -96,4 +97,58 @@ pub(super) fn export(repo: &Path, commit: &str, dir: &str, to: &Path) -> Result<
         )));
     }
     Ok(())
+}
+
+/// 一次读出多个对象的内容（`git cat-file --batch`），比逐个 `git show` 快得多。
+/// `specs` 是 `<提交>:<路径>`；不存在的对象是 `None`。
+pub(super) fn cat_batch(repo: &Path, specs: &[String]) -> Result<Vec<Option<Vec<u8>>>> {
+    if specs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut child = command(Some(repo))
+        .args(["cat-file", "--batch"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| Error::Source(format!("运行 git 失败：{e}")))?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| Error::Source("git cat-file 没有输入".to_owned()))?;
+    let input: String = specs.iter().map(|s| format!("{s}\n")).collect();
+    // 另起一个线程写，免得输出塞满管道时两边互等。
+    let writer = std::thread::spawn(move || {
+        let _ = stdin.write_all(input.as_bytes());
+    });
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| Error::Source("git cat-file 没有输出".to_owned()))?;
+    let mut reader = BufReader::new(stdout);
+    let mut out = Vec::with_capacity(specs.len());
+    let broken = || Error::Source("git cat-file 的输出不完整".to_owned());
+    for _ in specs {
+        let mut header = String::new();
+        if reader.read_line(&mut header).map_err(|_| broken())? == 0 {
+            return Err(broken());
+        }
+        let header = header.trim_end();
+        if header.ends_with(" missing") || header.ends_with(" ambiguous") {
+            out.push(None);
+            continue;
+        }
+        let size: usize = header
+            .rsplit(' ')
+            .next()
+            .and_then(|n| n.parse().ok())
+            .ok_or_else(broken)?;
+        let mut content = vec![0; size + 1];
+        reader.read_exact(&mut content).map_err(|_| broken())?;
+        content.pop();
+        out.push(Some(content));
+    }
+    let _ = writer.join();
+    let _ = child.wait();
+    Ok(out)
 }

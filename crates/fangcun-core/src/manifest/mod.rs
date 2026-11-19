@@ -12,10 +12,14 @@
 
 mod interop;
 mod lock;
+mod render;
 mod schema;
 
-pub use interop::{export_skills_lock, import_skills_lock};
+pub use interop::{
+    ExportedSkillsLock, SkillsLock, SkillsLockEntry, export_skills_lock, read_skills_lock,
+};
 pub use lock::{LOCK_VERSION, Lock, LockedInstruction, LockedMcp, LockedSkill};
+pub use render::render_manifest;
 pub use schema::{
     Bundle, BundleSection, DevSection, DisableSection, InstructionsDecl, Manifest, McpDecl,
     ProjectSection, SkillDecl,
@@ -253,11 +257,6 @@ fn extend_unique(into: &mut Vec<String>, from: &[String]) {
             into.push(item.clone());
         }
     }
-}
-
-/// 从目录现状反推清单（`fangcun init --from-existing`）。
-pub fn infer_from_existing(_project_root: &Path) -> Result<Manifest> {
-    Err(Error::NotImplemented("manifest::infer_from_existing"))
 }
 
 #[cfg(test)]

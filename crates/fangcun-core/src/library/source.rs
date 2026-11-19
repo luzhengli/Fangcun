@@ -9,15 +9,16 @@
 //! - 开发模式（`fangcun.local.toml` 的 `[dev]`）直接链到 [`Sources::local_dir`]，不经这里解析。
 //! - 市场（skills.sh）只用来搜索，见 [`super::market`]，搜到的项落成 `github:` 来源。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
-use super::content::frontmatter_value;
+use super::content::{frontmatter_value, hash_dir};
 use super::{Library, Origin, git};
-use crate::model::{AssetKind, SourceRef, Version, VersionPolicy};
+use crate::model::{AssetKind, ContentHash, SourceRef, Version, VersionPolicy};
 use crate::paths::FangcunHome;
 use crate::{Error, Result};
 
@@ -86,14 +87,55 @@ struct SourcesFile {
 pub struct Sources {
     home: FangcunHome,
     github_base: String,
+    /// 打开 [`Sources::fetching_once`] 后，这一轮已经拉过的裸仓库。
+    fetched: Option<Arc<Mutex<BTreeSet<PathBuf>>>>,
 }
+
+/// 本机已经装着的一份 skill，要找它对应上游的哪个提交（`fangcun init --from-existing`）。
+#[derive(Debug, Clone)]
+pub struct Installed<'a> {
+    pub name: &'a str,
+    pub source: &'a SourceRef,
+    /// 装的时候指定的分支或标签。
+    pub git_ref: Option<&'a str>,
+    /// 锁里记过的提交，先试它。
+    pub commit: Option<&'a str>,
+    /// 仓库里的目录。不知道时按名字找。
+    pub path: Option<&'a str>,
+    /// 本机那一份的内容哈希。
+    pub hash: &'a ContentHash,
+}
+
+/// [`Sources::match_installed`] 的结果。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Matched {
+    /// 写进清单的约束：装的时候指定了分支就跟随它，指定了标签或提交就固定；都没有时为空（默认分支）。
+    pub policy: Option<VersionPolicy>,
+    pub resolved: Resolved,
+    /// 找到了内容一样的提交。为假时 `resolved` 是约束下最新的那一版。
+    pub exact: bool,
+    /// 约束下最新的那一版里已经没有这个 skill（改名或删掉了），是在历史里找到的。
+    pub upstream_missing: bool,
+}
+
+/// 往回找多少个改过这个目录的提交。
+const HISTORY_DEPTH: &str = "200";
 
 impl Sources {
     pub fn open(home: &FangcunHome) -> Self {
         Self {
             home: home.clone(),
             github_base: "https://github.com".to_owned(),
+            fetched: None,
         }
+    }
+
+    /// 同一个仓库只拉一次。一份清单里同一个仓库常有几十项，写锁、登记这样一轮解析一批时用；
+    /// 默认每次解析都拉。
+    #[must_use]
+    pub fn fetching_once(mut self) -> Self {
+        self.fetched = Some(Arc::default());
+        self
     }
 
     /// 换掉 GitHub 的地址。测试用本地的裸仓库。
@@ -196,7 +238,119 @@ impl Sources {
         })
     }
 
-    /// 裸仓库缓存：没有就克隆，有就拉一次。
+    /// 本机装着的一份 GitHub skill 对应上游的哪个提交：先试锁里记的提交，再沿着改过这个目录的
+    /// 提交往回找，取内容哈希和本机一样的那一个，存进资产库。都对不上时取约束下最新的一版，
+    /// `exact` 为假。
+    pub fn match_installed(&self, library: &Library, installed: &Installed<'_>) -> Result<Matched> {
+        let Source::Github { owner, repo } = Source::parse(installed.source)? else {
+            return Err(Error::Source(format!(
+                "{} 不是 GitHub 来源",
+                installed.source.0
+            )));
+        };
+        let repo = self.fetch_github(&owner, &repo)?;
+        let policy = match installed.git_ref {
+            None => None,
+            Some(r) if git::commit_of(&repo, &format!("refs/heads/{r}")).is_some() => {
+                Some(VersionPolicy::Track(r.to_owned()))
+            }
+            Some(r) => Some(VersionPolicy::Pin(r.to_owned())),
+        };
+        let (head, _) = resolve_policy(&repo, policy.as_ref())?;
+        let mut upstream_missing = false;
+        let dir = match installed.path {
+            Some(path) => checked_path(path)?,
+            None => match find_in_commit(&repo, &head, installed.name) {
+                Ok(dir) => dir,
+                Err(e) => {
+                    upstream_missing = true;
+                    find_in_history(&repo, &head, installed.name).ok_or(e)?
+                }
+            },
+        };
+
+        let mut candidates: Vec<String> = installed
+            .commit
+            .and_then(|c| git::commit_of(&repo, c))
+            .into_iter()
+            .collect();
+        let log = git::run_text(
+            Some(&repo),
+            &["log", "--format=%H", "-n", HISTORY_DEPTH, &head, "--", &dir],
+        )?;
+        candidates.extend(log.lines().map(str::to_owned));
+        let mut seen = BTreeSet::new();
+        for commit in candidates {
+            if !seen.insert(commit.clone()) {
+                continue;
+            }
+            if let Some(resolved) = self.ingest_if_same(library, installed, &repo, &commit, &dir)? {
+                return Ok(Matched {
+                    policy,
+                    resolved,
+                    exact: true,
+                    upstream_missing,
+                });
+            }
+        }
+        let resolved = self.resolve_skill(
+            library,
+            installed.name,
+            installed.source,
+            policy.as_ref(),
+            Some(&dir),
+        )?;
+        Ok(Matched {
+            policy,
+            resolved,
+            exact: false,
+            upstream_missing,
+        })
+    }
+
+    /// 导出某个提交里的目录，内容哈希和本机一样时存进资产库。
+    fn ingest_if_same(
+        &self,
+        library: &Library,
+        installed: &Installed<'_>,
+        repo: &Path,
+        commit: &str,
+        dir: &str,
+    ) -> Result<Option<Resolved>> {
+        let staging = library.staging()?;
+        let result = (|| {
+            // 这个提交里没有这个目录（改名前、删掉后）时 git archive 会失败，跳过。
+            if git::export(repo, commit, dir, &staging).is_err()
+                || hash_dir(&staging) != *installed.hash
+            {
+                return Ok(None);
+            }
+            let tag = git::run_text(Some(repo), &["tag", "--points-at", commit])?
+                .lines()
+                .next()
+                .map(str::to_owned);
+            let version = library.ingest(
+                installed.name,
+                AssetKind::Skill,
+                &staging,
+                &Origin {
+                    source: Some(installed.source.clone()),
+                    commit: Some(commit.to_owned()),
+                    tag: tag.clone(),
+                },
+            )?;
+            Ok(Some(Resolved {
+                commit: Some(commit.to_owned()),
+                tag,
+                path: dir.to_owned(),
+                version,
+            }))
+        })();
+        let _ = fs::remove_dir_all(&staging);
+        result
+    }
+
+    /// 裸仓库缓存：没有就克隆，有就拉一次（[`Sources::fetching_once`] 时一轮只拉一次）。
     fn fetch_github(&self, owner: &str, repo: &str) -> Result<PathBuf> {
         let dir = self
             .home
@@ -204,9 +358,30 @@ impl Sources {
             .join("github.com")
             .join(owner)
             .join(format!("{repo}.git"));
+        let mut fetched = self
+            .fetched
+            .as_ref()
+            .map(|f| f.lock().unwrap_or_else(std::sync::PoisonError::into_inner));
+        if fetched.as_ref().is_some_and(|f| f.contains(&dir)) {
+            return Ok(dir);
+        }
+        // 网络偶尔抖一下（例如 TLS 握手断开），重试一次。
+        let result = self.fetch_or_clone(owner, repo, &dir);
+        let result = match result {
+            Err(_) => self.fetch_or_clone(owner, repo, &dir),
+            ok => ok,
+        };
+        result?;
+        if let Some(fetched) = fetched.as_mut() {
+            fetched.insert(dir.clone());
+        }
+        Ok(dir)
+    }
+
+    fn fetch_or_clone(&self, owner: &str, repo: &str, dir: &Path) -> Result<()> {
         if dir.join("HEAD").exists() {
             git::run(
-                Some(&dir),
+                Some(dir),
                 &[
                     "fetch",
                     "--quiet",
@@ -225,7 +400,7 @@ impl Sources {
             let target = dir.to_string_lossy().into_owned();
             git::run(None, &["clone", "--bare", "--quiet", "--", &url, &target])?;
         }
-        Ok(dir)
+        Ok(())
     }
 }
 
@@ -268,18 +443,44 @@ fn resolve_policy(repo: &Path, policy: Option<&VersionPolicy>) -> Result<(String
 /// 在某个提交里按名字找 skill 目录。
 fn find_in_commit(repo: &Path, commit: &str, name: &str) -> Result<String> {
     let listing = git::run(Some(repo), &["ls-tree", "-r", "-z", "--name-only", commit])?;
+    let paths: Vec<String> = listing
+        .split(|b| *b == 0)
+        .filter(|p| !p.is_empty())
+        .map(|p| String::from_utf8_lossy(p).into_owned())
+        .filter(|p| skill_dir_of(p).is_some())
+        .collect();
+    let specs: Vec<String> = paths.iter().map(|p| format!("{commit}:{p}")).collect();
+    let texts = git::cat_batch(repo, &specs)?;
     let mut found = Vec::new();
-    for path in listing.split(|b| *b == 0).filter(|p| !p.is_empty()) {
-        let path = String::from_utf8_lossy(path);
-        let Some(dir) = skill_dir_of(&path) else {
+    for (path, text) in paths.iter().zip(texts) {
+        let (Some(dir), Some(text)) = (skill_dir_of(path), text) else {
             continue;
         };
-        let text = git::run(Some(repo), &["show", &format!("{commit}:{path}")])?;
         if declared_name(&String::from_utf8_lossy(&text), dir) == name {
             found.push(dir.to_owned());
         }
     }
     pick(found, name)
+}
+
+/// 最新版里没有这个名字时，到历史里找最近一次出现过的、目录名就是这个名字的 skill 目录。
+fn find_in_history(repo: &Path, head: &str, name: &str) -> Option<String> {
+    let pattern = format!(":(glob)**/{name}/SKILL.md");
+    let listing = git::run_text(
+        Some(repo),
+        &[
+            "log",
+            "-n",
+            "1",
+            "--format=",
+            "--name-only",
+            head,
+            "--",
+            &pattern,
+        ],
+    )
+    .ok()?;
+    listing.lines().find_map(skill_dir_of).map(str::to_owned)
 }
 
 /// 本地来源没写版本：在工作目录里按名字找，取现在的样子。

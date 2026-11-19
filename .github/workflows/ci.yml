@@ -42,6 +42,17 @@ jobs:
       - name: 类型绑定与内核一致
         run: git diff --exit-code -- apps/desktop/src/ipc/bindings
 
+      # 内容哈希要和 skills-lock.json 逐字节对得上（7.4、W-13）：真正的 skills 命令行读方寸造的
+      # 锁，新旧两种算法的结果都要和方寸一样。skills 版本固定，升级时核对 check.mjs 的注释。
+      - name: 内容哈希和 skills 命令行一致
+        env:
+          DO_NOT_TRACK: "1"
+          DISABLE_TELEMETRY: "1"
+        run: |
+          npm install --prefix "$RUNNER_TEMP/skills-cli" --no-save --no-audit --no-fund skills@1.9.0
+          cargo run -q -p fangcun-core --example hash_crosscheck -- "$RUNNER_TEMP/hash-crosscheck"
+          node tools/hash-crosscheck/check.mjs "$RUNNER_TEMP/skills-cli/node_modules/skills" "$RUNNER_TEMP/hash-crosscheck"
+
   prototype:
     name: 原型能渲染
     runs-on: ubuntu-latest

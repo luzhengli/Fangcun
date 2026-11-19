@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::journal::{FileOp, Journal, Record, RecordFile, RecordKind, RecordStatus, Trigger};
-use crate::model::{ContentHash, ProjectId, SnapshotId, Timestamp};
+use crate::model::{ContentHash, PlanNote, ProjectId, SnapshotId, Timestamp};
 use crate::paths::FangcunHome;
 use crate::{Error, Result};
 
@@ -65,6 +65,8 @@ pub struct ChangePlan {
     /// 标题，例如「即将对 evals_studio 做 4 处变更」。
     pub title: String,
     pub changes: Vec<Change>,
+    /// 计划上方的提示：没纳入的项、要人留意的事。
+    pub notes: Vec<PlanNote>,
     #[serde(skip)]
     #[ts(skip)]
     pub(crate) body: Option<PlanBody>,
@@ -141,6 +143,7 @@ pub struct PlanBuilder {
     title: String,
     body: PlanBody,
     changes: Vec<Change>,
+    notes: Vec<PlanNote>,
 }
 
 impl PlanBuilder {
@@ -155,7 +158,13 @@ impl PlanBuilder {
                 actions: Vec::new(),
             },
             changes: Vec::new(),
+            notes: Vec::new(),
         }
+    }
+
+    /// 加一条计划上方的提示。
+    pub fn note(&mut self, note: PlanNote) {
+        self.notes.push(note);
     }
 
     #[must_use]
@@ -239,6 +248,7 @@ impl PlanBuilder {
             id,
             title: self.title,
             changes: self.changes,
+            notes: self.notes,
             body: Some(self.body),
         }
     }
