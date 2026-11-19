@@ -14,6 +14,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub read_only: bool,
 
+    /// 不问，直接应用变更计划（第 5 节）
+    #[arg(long, global = true)]
+    pub yes: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }

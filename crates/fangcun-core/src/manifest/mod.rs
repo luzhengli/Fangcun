@@ -15,11 +15,16 @@ mod lock;
 mod schema;
 
 pub use interop::{export_skills_lock, import_skills_lock};
-pub use lock::Lock;
-pub use schema::{Bundle, InstructionsDecl, Manifest, McpDecl, ProjectSection, SkillDecl};
+pub use lock::{LOCK_VERSION, Lock, LockedInstruction, LockedMcp, LockedSkill};
+pub use schema::{
+    Bundle, BundleSection, DevSection, DisableSection, InstructionsDecl, Manifest, McpDecl,
+    ProjectSection, SkillDecl,
+};
 
-use std::path::Path;
+use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
+use crate::paths::FangcunHome;
 use crate::{Error, Result};
 
 /// 解析一份清单文本。`origin` 只用于报错。
@@ -57,9 +62,197 @@ pub fn project_budget(project_root: &Path) -> Result<Option<u32>> {
     Ok(partial.project.budget)
 }
 
-/// 读项目的清单与个人覆盖。项目没有清单时返回 `None`。
-pub fn load_project(_project_root: &Path) -> Result<Option<(Manifest, Option<Manifest>)>> {
-    Err(Error::NotImplemented("manifest::load_project"))
+/// 一个项目的全部声明文件。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Project {
+    pub root: PathBuf,
+    pub manifest: Manifest,
+    /// `fangcun.local.toml`，没有时为空。
+    pub local: Option<Manifest>,
+    /// 清单引用的套装，按清单里的顺序。本机没有这个套装文件时 `bundle` 为空（7.4：按锁还原）。
+    pub bundles: Vec<LoadedBundle>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoadedBundle {
+    pub name: String,
+    pub bundle: Option<Bundle>,
+}
+
+/// 读项目的清单、个人覆盖、引用的套装。项目没有清单时返回 `None`。
+///
+/// 每份文件只能写自己的节（7.4），写错了报错：清单不能写 `[dev]`、`[bundle]`；个人覆盖不能改
+/// `targets`、`mode`、`budget`，不能写 `[bundle]`；套装文件不能写 `[project]`、`[dev]`。
+pub fn load_project(project_root: &Path, home: &FangcunHome) -> Result<Option<Project>> {
+    let Some(manifest) = read_manifest(&project_root.join(crate::paths::MANIFEST_FILE))? else {
+        return Ok(None);
+    };
+    let origin = crate::paths::MANIFEST_FILE;
+    if !manifest.dev.is_empty() {
+        return Err(misplaced(origin, "[dev] 只能写在 fangcun.local.toml 里"));
+    }
+    if manifest.bundle.is_some() {
+        return Err(misplaced(origin, "[bundle] 只能写在套装文件里"));
+    }
+
+    let local = read_manifest(&project_root.join(crate::paths::LOCAL_MANIFEST_FILE))?;
+    if let Some(local) = &local {
+        let origin = crate::paths::LOCAL_MANIFEST_FILE;
+        let project = &local.project;
+        if !project.targets.is_empty() || project.mode.is_some() || project.budget.is_some() {
+            return Err(misplaced(
+                origin,
+                "个人覆盖不能改 targets、mode、budget，这些是全队共享的设置",
+            ));
+        }
+        if local.bundle.is_some() {
+            return Err(misplaced(origin, "[bundle] 只能写在套装文件里"));
+        }
+    }
+
+    let mut bundles = Vec::new();
+    let names = manifest
+        .project
+        .bundles
+        .iter()
+        .chain(local.iter().flat_map(|l| l.project.bundles.iter()));
+    for name in names {
+        if bundles.iter().any(|b: &LoadedBundle| &b.name == name) {
+            continue;
+        }
+        let file = home.bundle_file(name);
+        let bundle = read_manifest(&file)?;
+        if let Some(bundle) = &bundle {
+            let origin = file.display().to_string();
+            if bundle.project != ProjectSection::default() || !bundle.dev.is_empty() {
+                return Err(misplaced(&origin, "套装文件不能写 [project]、[dev]"));
+            }
+        }
+        bundles.push(LoadedBundle {
+            name: name.clone(),
+            bundle,
+        });
+    }
+
+    Ok(Some(Project {
+        root: project_root.to_path_buf(),
+        manifest,
+        local,
+        bundles,
+    }))
+}
+
+fn read_manifest(path: &Path) -> Result<Option<Manifest>> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => parse_manifest(&path.display().to_string(), &text).map(Some),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(Error::Io {
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
+fn misplaced(origin: &str, message: &str) -> Error {
+    Error::Parse {
+        origin: origin.to_owned(),
+        message: message.to_owned(),
+    }
+}
+
+/// 一项声明来自哪一层（4.3）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Layer {
+    Bundle(String),
+    Project,
+    Personal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Declared<T> {
+    pub decl: T,
+    pub layer: Layer,
+}
+
+/// 合并后的声明：下层覆盖上层，项目清单盖过套装，个人覆盖盖过项目清单（4.3、7.4）。
+/// 同一项出现在两个套装里时，清单里排在后面的套装盖过前面的。
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Declarations {
+    pub skills: BTreeMap<String, Declared<SkillDecl>>,
+    pub mcp: BTreeMap<String, Declared<McpDecl>>,
+    pub instructions: Option<Declared<InstructionsDecl>>,
+    /// 清单与个人覆盖的 `[disable]` 合在一起。
+    pub disable: DisableSection,
+    pub dev: Vec<String>,
+}
+
+impl Project {
+    /// 全队共享的声明：套装与项目清单，不含个人覆盖。写锁用它，个人加的项不进锁（7.4）。
+    pub fn team_declarations(&self) -> Declarations {
+        self.declarations(false)
+    }
+
+    /// 本机生效的声明：再叠上个人覆盖。同步（M1-10）用它。
+    pub fn local_declarations(&self) -> Declarations {
+        self.declarations(true)
+    }
+
+    fn declarations(&self, personal: bool) -> Declarations {
+        let mut out = Declarations::default();
+        let mut layers: Vec<(&Manifest, Layer)> = self
+            .bundles
+            .iter()
+            .filter_map(|b| {
+                b.bundle
+                    .as_ref()
+                    .map(|m| (m, Layer::Bundle(b.name.clone())))
+            })
+            .collect();
+        layers.push((&self.manifest, Layer::Project));
+        if personal && let Some(local) = &self.local {
+            layers.push((local, Layer::Personal));
+        }
+        for (manifest, layer) in layers {
+            for (name, decl) in &manifest.skills {
+                out.skills.insert(
+                    name.clone(),
+                    Declared {
+                        decl: decl.clone(),
+                        layer: layer.clone(),
+                    },
+                );
+            }
+            for (name, decl) in &manifest.mcp {
+                out.mcp.insert(
+                    name.clone(),
+                    Declared {
+                        decl: decl.clone(),
+                        layer: layer.clone(),
+                    },
+                );
+            }
+            if let Some(decl) = &manifest.instructions {
+                out.instructions = Some(Declared {
+                    decl: decl.clone(),
+                    layer: layer.clone(),
+                });
+            }
+            if layer != Layer::Personal || personal {
+                extend_unique(&mut out.disable.skills, &manifest.disable.skills);
+                extend_unique(&mut out.disable.mcp, &manifest.disable.mcp);
+            }
+            extend_unique(&mut out.dev, &manifest.dev.skills);
+        }
+        out
+    }
+}
+
+fn extend_unique(into: &mut Vec<String>, from: &[String]) {
+    for item in from {
+        if !into.contains(item) {
+            into.push(item.clone());
+        }
+    }
 }
 
 /// 从目录现状反推清单（`fangcun init --from-existing`）。

@@ -61,9 +61,9 @@ model  paths  error                        纯类型，不做 IO
 | `model` | 领域类型：资产类型、四层作用域、版本、六种状态语义 | 已有，随用随补 |
 | `paths` | `~/.fangcun` 的布局和清单文件名。`FANGCUN_HOME` 可覆盖 | 已有 |
 | `adapter` | 适配器的结构与加载，路径展开 | 已有。格式见 `adapters/README.md` |
-| `manifest` | `fangcun.toml`、锁、套装文件、`skills-lock.json` 互通 | 清单解析已有，其余 M1 |
+| `manifest` | `fangcun.toml`、锁、套装文件、`skills-lock.json` 互通 | 清单、个人覆盖、套装、锁的读写已有（M1-07），互通 M1-08 |
 | `scanner` | 按适配器收集（`collect`）、全盘扫描（`scan`）、体检发现（`checkup`）、会话记录（`usage`） | 已有 |
-| `resolver` | 生效上下文、`why`；写锁 | 前两项已有，写锁 M1 |
+| `resolver` | 生效上下文、`why`；写锁 | 都已有，写锁在 `resolver/lock.rs`（M1-07） |
 | `global` | 全局页：每项常驻、用到它的项目、状态与建议 | 已有 |
 | `estimator` | token 估算 | 已有 |
 | `journal` | 活动记录 | 已有。体检记录和 `apply` 的写入记录；写不进去时留在内存里 |
@@ -184,6 +184,8 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **资产库**：正本在 `~/.fangcun/library/objects/<哈希>`，skill 存的是参与哈希的那些文件（`.git`、`__pycache__`、`metadata.json` 不存，软链存成普通文件，保留权限），所以正本的哈希就是源目录的哈希。索引是 SQLite `~/.fangcun/index.sqlite`（7.2），写入用 `BEGIN IMMEDIATE`、`busy_timeout` 5 秒；表结构版本在 `PRAGMA user_version`，改表时在 `library/index.rs` 的 `migrate` 里补升级。来源未知存空字符串。资产库写的是方寸自己的目录，不经变更计划，由写入用例在 `apply` 时调用。「被哪些项目使用」不进索引，从锁算。
 - **来源**（`library::source`）：`Sources::resolve_skill` 把一项 skill 解析到提交、标签、仓库内路径并存进资产库。git 和 `curl` 都调本机的（私有仓库走用户自己的凭据），git 关了交互提示。GitHub 裸仓库缓存在 `~/.fangcun/git/github.com/<owner>/<repo>.git`，每次解析先 `fetch`。`pin` 先当标签再当提交（至少 4 位十六进制）；`track` 取 `refs/heads/<分支>`；都没写取 `HEAD`。本地来源没写版本时取工作目录现在的样子，`commit` 为空。测试用 `with_github_base("file://…")` 冒充 GitHub。
 - **市场**（`library::market`）：`search` 调 `https://skills.sh/api/search?q=`，只留 `owner/repo` 形式的来源，落成 `github:`。
+- **清单与锁**：`manifest::load_project` 读清单、个人覆盖、引用的套装，并校验每份文件只写自己的节。`Project::team_declarations` 是写锁用的（套装 + 清单），`local_declarations` 再叠个人覆盖（同步用）。`resolver::resolve_lock` 对约束没变的项沿用锁里的版本、不联网；新增或换了约束的经 `Sources` 解析，解析时就把那一份存进资产库（资产库是方寸自己的缓存，不算写用户文件）。锁的文本按键排序，同样的锁总是同样的字节，所以「锁已是最新」就是计划里没有变更。
+- **命令行应用计划**：`commands.rs` 的 `confirm_and_apply` 先打印计划再问，`--yes` 不问，不在终端里又没加 `--yes` 只打印。新的写入命令都走它。
 - **快照**按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
 
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
