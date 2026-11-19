@@ -4,10 +4,11 @@
 
 ---
 
-## 2026-11-19 来源的三件设计定了，资产库索引改回 SQLite
+## 2026-11-19 来源的三件设计定了，资产库索引改回 SQLite，M1-06 完成
 
 - 合并 PR #19、#20、#21。开工 M1-06 前发现 M1-05 的索引（TOML）违背 7.2，问人后改回 SQLite：`rusqlite`（bundled），`~/.fangcun/index.sqlite`，新增 `Error::Database`。本机 47 个 skill 重跑通过。
-- M1-06 文档没写的三件问人，都选推荐项：本机来源表、按名字找并在锁里记 `path`、开发模式写在 `[dev]`。写进 F2、7.4、9.3。查到 skills.sh 的搜索接口。
+- M1-06 文档没写的三件问人，都选推荐项：本机来源表、按名字找并在锁里记 `path`、开发模式写在 `[dev]`。写进 F2、7.4、9.3。查到 skills.sh 的搜索接口。PR #22。
+- M1-06：`library::source` 与 `library::market`。测试在临时目录造 git 仓库冒充 GitHub；实测从 GitHub 解析 brainstorming 到 v7.0.2，skills.sh 搜到 96 条。
 
 ---
 

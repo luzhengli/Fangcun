@@ -69,7 +69,7 @@ model  paths  error                        纯类型，不做 IO
 | `journal` | 活动记录 | 已有。体检记录和 `apply` 的写入记录；写不进去时留在内存里 |
 | `registry` | 登记表 `~/.fangcun/projects.toml` | 读已有（M1-04），登记 M1-09 |
 | `settings` | 本机设置 `~/.fangcun/settings.toml`：只读模式 | 已有（M1-04） |
-| `library` | 内容寻址的正本、索引、来源；`content` 是内容哈希（扫描也用它） | 正本与索引已有（M1-05），来源 M1-06，上游检查 M1-16 |
+| `library` | 内容寻址的正本、索引、来源；`content` 是内容哈希（扫描也用它） | 正本与索引（M1-05）、来源与市场搜索（M1-06）已有，上游检查 M1-16 |
 | `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | 骨架已有（M1-04）：`PlanBuilder`、`WriteScope`、`apply`、`snapshot`。所有权与按键合并 M1-10，回滚 M1-11 |
 | `watcher` | 监听漂移，向外壳推事件 | M1 |
 | `secrets` | 钥匙串 | M1 |
@@ -182,6 +182,8 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 
 - **写一个写入用例**：`PlanBuilder::new(标题, 记录类型, 快照范围)`，逐个 `write_file`、`symlink`、`remove`，`Kernel::issue` 出计划。每加一个路径就记下它现在的样子，`apply` 前再核对，变了返回 `Error::StalePlan`。缺的上层目录自动补成建目录的动作，进快照，回滚时一起删。一份计划里一个路径只出现一次；删目录树要先逐个删里面的。登记项目的计划用 `registers` 把项目算进写入范围。
 - **资产库**：正本在 `~/.fangcun/library/objects/<哈希>`，skill 存的是参与哈希的那些文件（`.git`、`__pycache__`、`metadata.json` 不存，软链存成普通文件，保留权限），所以正本的哈希就是源目录的哈希。索引是 SQLite `~/.fangcun/index.sqlite`（7.2），写入用 `BEGIN IMMEDIATE`、`busy_timeout` 5 秒；表结构版本在 `PRAGMA user_version`，改表时在 `library/index.rs` 的 `migrate` 里补升级。来源未知存空字符串。资产库写的是方寸自己的目录，不经变更计划，由写入用例在 `apply` 时调用。「被哪些项目使用」不进索引，从锁算。
+- **来源**（`library::source`）：`Sources::resolve_skill` 把一项 skill 解析到提交、标签、仓库内路径并存进资产库。git 和 `curl` 都调本机的（私有仓库走用户自己的凭据），git 关了交互提示。GitHub 裸仓库缓存在 `~/.fangcun/git/github.com/<owner>/<repo>.git`，每次解析先 `fetch`。`pin` 先当标签再当提交（至少 4 位十六进制）；`track` 取 `refs/heads/<分支>`；都没写取 `HEAD`。本地来源没写版本时取工作目录现在的样子，`commit` 为空。测试用 `with_github_base("file://…")` 冒充 GitHub。
+- **市场**（`library::market`）：`search` 调 `https://skills.sh/api/search?q=`，只留 `owner/repo` 形式的来源，落成 `github:`。
 - **快照**按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
 
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。

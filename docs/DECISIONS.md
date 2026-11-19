@@ -8,6 +8,20 @@
 
 ---
 
+## 2026-11-19 来源的实现（M1-06）
+
+- **Agent 定，可逆**：
+  - git 和 skills.sh 的请求都调本机的 `git`、`curl`，不引入 git 库和 HTTP 库。理由：私有仓库直接用用户已有的凭据；依赖少。git 关掉交互提示，要密码时直接失败。
+  - GitHub 缓存是裸仓库，每次解析都 `fetch` 一次；解析只在写锁、升级时发生，不在只读查询里联网。
+  - `pin` 先当标签找，找不到再当提交（至少 4 位十六进制，挡住 `--upload-pack=` 这类参数注入）；清单没写 `pin`/`track` 时取默认分支。
+  - 本地来源没写版本时取工作目录现在的样子，锁里没有提交。
+  - skill 目录按 frontmatter 的 `name` 找，没写 `name` 时用目录名。
+  - skills.sh 返回的来源不是 `owner/repo` 的丢掉，只落 `github:`。
+  - `frontmatter` 也从 `scanner::fsutil` 挪进 `library::content`（同 M1-05 的分层理由）。
+- 影响：`library/source.rs`、`library/git.rs`、`library/market.rs`、`error.rs`（`Error::Source`）、`paths.rs`（`sources_file`）。
+
+---
+
 ## 2026-11-19 来源的三件设计，索引改回 SQLite
 
 - **人定**：人说「先合并，然后再做M1-06」。Agent 开工前发现 M1-05 的索引用了 TOML，和 7.2「索引用 SQLite」不一致，先问人，再把 M1-06 文档没写的三件逐件问：

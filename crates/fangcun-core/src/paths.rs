@@ -74,6 +74,11 @@ impl FangcunHome {
         self.root.join("projects.toml")
     }
 
+    /// 本地来源表（F2）：`local:<名字>` 对应的目录。
+    pub fn sources_file(&self) -> PathBuf {
+        self.root.join("sources.toml")
+    }
+
     /// 本机设置，例如只读模式（7.5）。
     pub fn settings_file(&self) -> PathBuf {
         self.root.join("settings.toml")

@@ -3,14 +3,17 @@
 //! - 正本在 `~/.fangcun/library/objects/<哈希>`：skill 是一个目录，指令是一个文件。
 //!   同样的内容只存一份；正本只增不删，回滚也不删（6.7 回滚规则第 5 条）。
 //! - 索引是 `~/.fangcun/index.sqlite`（7.2），见 `index`。
-//! - git 来源走 `~/.fangcun/git/` 下的本地裸仓库缓存，本地开发目录是活链接，不复制进库，
-//!   两者在 M1-06。
+//! - 来源见 [`source`]：git 来源走 `~/.fangcun/git/` 下的本地裸仓库缓存；本地来源的名字记在
+//!   `~/.fangcun/sources.toml`。市场搜索见 [`market`]。
 //! - 「被哪些项目使用」不存在索引里，从各项目的锁算（M1-07）。
 //!
 //! 写的都是方寸自己的目录，不经变更计划；由收编、同步这些写入用例在 `apply` 时调用。
 
 pub mod content;
+mod git;
 mod index;
+pub mod market;
+pub mod source;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -184,7 +187,7 @@ impl Library {
     }
 
     /// 暂存目录：存一半的东西不会出现在 `objects/` 里。
-    fn staging(&self) -> Result<PathBuf> {
+    pub(crate) fn staging(&self) -> Result<PathBuf> {
         let dir = self.root.join("tmp");
         fs::create_dir_all(&dir).map_err(io(&dir))?;
         fs::create_dir_all(self.objects()).map_err(io(&self.objects()))?;
