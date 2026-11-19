@@ -16,9 +16,13 @@ M0（透视版，只读）完成，M1 进行中。第一段（地基）与第二
 
 ## 下一步
 
-1. **先做原型（人定，2026-11-20）**：下一次会话先在 claude.ai 云端会话里按 BACKLOG「原型待改」改画布 P-01（应用图标）、P-02（登记入口与问物化方式）、P-03（设置窗口），同步到 `prototype/`、逐条对照文档、开 PR（WORKFLOW「同步原型」）。改完再开批 3。
-2. 批 3：先做 W-14（截图能截非默认状态），再做 M1-13 同步面板（显示 `notes`、`blocked` 置灰）、M1-14 历史与回滚（`plan_rollback_record`）、M1-25 登记界面（等 P-02）、M1-26 体检一键动作。界面照原型，开工前 `pnpm workflow find`。
-3. P-01 确认后 D-30 出图。
+1. **先把本地设计原型的配置搞定（人定，2026-11-20）**。目标：原型仍用 Claude Design 画布，但改画布、同步回 `prototype/`、实现都在本地做，不再两地操作。
+   - 已查明（2026-11-20）：本地会话里没有 Artifact 工具，读不到画布 `WAK5PGWGuUmNNAYS8hFcXq`（VS Code 插件、`-p`、交互式终端都试过）。最可能的原因是 `~/.claude/settings.json` 的 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`，官方文档写明它关掉 artifact；单次运行用 `--settings` 覆盖成 `0` 不起作用。VS Code 插件本身也不在 artifact 支持的界面里（只支持终端 CLI 和 Claude 桌面应用）。
+   - 要做：人决定是否从全局设置里去掉这个变量（`DISABLE_TELEMETRY` 可以留）→ 在终端里开 `claude`，运行 `/artifacts` 看列表里有没有这张画布，挂到会话后能否列出、读写它的文件 → 能的话改 AGENTS.md「原型怎么读」、WORKFLOW「同步原型」、`prototype/README.md`，把同步改成本地做；原型类会话在终端或桌面应用里开。
+   - 走不通时退回原做法：在 claude.ai web 端说「同步原型」，按 BACKLOG「原型待改」改 P-01、P-02、P-03。
+   - 顺带确认这张画布不在独立的 claude.ai/design（2026-12-14 关闭），在的话先迁移。
+2. **原型 P-01、P-02、P-03**：用上一步定下的方式改，同步到 `prototype/`、逐条对照文档。
+3. **批 3**：W-14（截图能截非默认状态）→ M1-13 同步面板（显示 `notes`、`blocked` 置灰）、M1-14 历史与回滚（`plan_rollback_record`）、M1-26 体检一键动作，再加等原型的 M1-25 登记界面、M1-24 设置窗口。界面照原型，开工前 `pnpm workflow find`。P-01 确认后 D-30 出图。
 
 ## 卡在哪
 
