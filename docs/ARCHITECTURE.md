@@ -187,8 +187,11 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **清单与锁**：`manifest::load_project` 读清单、个人覆盖、引用的套装，并校验每份文件只写自己的节。`Project::team_declarations` 是写锁用的（套装 + 清单），`local_declarations` 再叠个人覆盖（同步用）。`resolver::resolve_lock` 对约束没变的项沿用锁里的版本、不联网；新增或换了约束的经 `Sources` 解析，解析时就把那一份存进资产库（资产库是方寸自己的缓存，不算写用户文件）。锁的文本按键排序，同样的锁总是同样的字节，所以「锁已是最新」就是计划里没有变更。
 - **登记与反推**（`Kernel::plan_init`、`resolver::infer`）：一份计划写清单、锁、登记表三个文件；已有清单的只登记、缺锁补锁。反推出的 skill 先解析好，作为「上一份锁」交给 `resolve_lock`，约束没变就原样沿用，所以登记后 `fangcun lock` 是「已是最新」。查不出来源、做不到的写进 `ChangePlan.notes`，不报错。`skills-lock.json` 的位置从适配器查（项目层 skill 目录的 `lock`）。扫描时把登记表里的项目也扫进来；可写时带 `fangcun.toml` 的项目直接登记（`registry::register_found`）。
 - **`skills-lock.json` 互通**（`manifest::interop`）：v1 哈希是旧算法（`content::legacy_hash_dir`，路径按 `localeCompare` 排），读的时候对已安装的目录校验，对得上才换算成 v2，和 CLI 一样。导出照 CLI 写项目锁的字段顺序。边界样例在 `library::hash_samples`，`content.rs` 的测试和 CI 的比对（W-13）共用，改了两边一起变。
+- **同步**（`materializer::sync`）：先查锁与清单一致（`resolver::lock_mismatches`），再按台账（`materializer::ledger`，`~/.fangcun/state/projects/<键>.toml`）判断哪些是自己的。整棵目录的增删用 `PlanBuilder::set_quiet` 只列一行。目录由软链换成实体目录时，下面的路径是「推出来的」（`Action::implied`）：不核对、不进快照，回滚和失败还原时由上级目录的快照整棵还原。MCP 只比较 command、args、env 三个字段，别的字段保留。
+- **回滚**（`materializer::rollback`）：快照的每个路径记着写入前（`state`）和写入后（`after`）。回滚把每个范围的快照倒着还原；现状和 `after` 不同就挡住计划。记录只追加，`Journal::read` 从新到旧扫一遍，被未撤销的回滚记录 `reverts` 指着的算「已回滚」。时间只精确到秒，同一秒的按写入先后排。
+- **收编**（`materializer::adopt`）：同名副本按 `real_dir` 去重，只换 `link_target` 为空、在写入范围里的；台账 `state/adopted.toml`。
 - **命令行应用计划**：`commands.rs` 的 `confirm_and_apply` 先打印计划再问，`--yes` 不问，不在终端里又没加 `--yes` 只打印。新的写入命令都走它。
-- **快照**按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
+- **快照**保留期在 `settings.toml` 的 `snapshot-days`、`snapshot-keep`，`Kernel::apply` 之后清理。按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
 
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
 - **同名优先级按工具真实规则**（D-19，4.3）。工具规则与方寸相反时，物化不自动移动上层同名项，标「同名冲突」由人选。Claude Code 的 skill 全局优先，MCP 个人 > 项目 > 全局、整条取用；Codex 的同名 skill 都加载，MCP 项目层赢、按字段合并，未受信任项目的 `.codex/config.toml` 不读（后两条是实测）。界面上「谁覆盖谁」的小字在规则相反时会改写。

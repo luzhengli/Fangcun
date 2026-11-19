@@ -24,7 +24,7 @@ use crate::scanner::{
 mod infer;
 mod lock;
 pub use infer::{InferInput, Inferred, ModeSuggestion, infer_project, infer_targets, suggest_mode};
-pub use lock::resolve_lock;
+pub use lock::{lock_mismatches, resolve_lock};
 
 /// 项目预算的默认值。清单里怎么写预算还没定，先用这个数。
 pub const DEFAULT_BUDGET: TokenEstimate = TokenEstimate(20_000);

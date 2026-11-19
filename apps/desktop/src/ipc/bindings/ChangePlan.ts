@@ -20,4 +20,9 @@ title: string, changes: Array<Change>,
 /**
  * 计划上方的提示：没纳入的项、要人留意的事。
  */
-notes: Array<PlanNote>, };
+notes: Array<PlanNote>, 
+/**
+ * 不能应用：例如回滚时有文件被后来的变更改过（6.7 回滚规则第 6 条）。原因在 `notes` 里，
+ * 界面把「应用」置灰。
+ */
+blocked: boolean, };

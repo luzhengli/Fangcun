@@ -116,7 +116,14 @@ pub struct Record {
     /// 列表第二行的项目写法：项目名、「evals_studio 等 5 个项目」或「全局层」。
     pub project_label: String,
     pub trigger: Trigger,
+    /// 列表里显示的快照编号：跨范围的记录取第一个（6.7「快照」）。
     pub snapshot: Option<SnapshotId>,
+    /// 这条记录留的全部快照，每个范围一个。检查器里写全，回滚按它找。
+    #[serde(default)]
+    pub snapshots: Vec<RecordSnapshot>,
+    /// 回滚记录：撤销的是哪一条。被撤销的那条读出来时状态是「已回滚」。
+    #[serde(default)]
+    pub reverts: Option<String>,
     pub status: RecordStatus,
     /// 检查器里的一句说明。
     pub summary: String,
@@ -126,6 +133,31 @@ pub struct Record {
     pub command: Option<String>,
     /// 命令的输出。
     pub output: Option<String>,
+}
+
+/// 记录留的一个快照：哪个范围、几号。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RecordSnapshot {
+    /// 项目根目录；全局层为空。
+    pub project: Option<ProjectId>,
+    pub id: SnapshotId,
+}
+
+/// 从新到旧走一遍：一条回滚记录自己没被撤销时，它撤销的那条算「已回滚」。
+/// 撤销一次回滚（回滚那条回滚记录），原来那条就回到「已应用」。
+fn mark_rolled_back(newest_first: &mut [Record]) {
+    let mut reverted = std::collections::BTreeSet::new();
+    for record in newest_first.iter_mut() {
+        let undone = reverted.contains(&record.id);
+        if undone && record.status == RecordStatus::Applied {
+            record.status = RecordStatus::RolledBack;
+        }
+        if !undone && let Some(target) = &record.reverts {
+            reverted.insert(target.clone());
+        }
+    }
 }
 
 /// 活动页的筛选：类型与项目可以叠加。
@@ -174,15 +206,26 @@ impl Journal {
         }
     }
 
-    /// 新的在前。
+    /// 新的在前。被回滚过的写入状态是「已回滚」：记录只追加，状态从后来的回滚记录算出来。
     pub fn read(&self, filter: &RecordFilter) -> Result<Vec<Record>> {
         let mut records = self.persisted()?;
         if let Ok(memory) = self.memory.lock() {
             records.extend(memory.iter().cloned());
         }
+        // 时间只精确到秒：同一秒里的按写入的先后，后写的在前。
+        records.reverse();
+        records.sort_by(|a, b| b.at.cmp(&a.at));
+        mark_rolled_back(&mut records);
         records.retain(|r| filter.matches(r));
-        records.sort_by(|a, b| b.at.cmp(&a.at).then(b.id.cmp(&a.id)));
         Ok(records)
+    }
+
+    /// 按编号找一条，状态已经算好。
+    pub fn find(&self, id: &str) -> Result<Option<Record>> {
+        Ok(self
+            .read(&RecordFilter::default())?
+            .into_iter()
+            .find(|r| r.id == id))
     }
 
     /// 待处理总数。侧栏「活动」旁的数字和菜单栏角标用它，不受筛选影响。
@@ -290,12 +333,38 @@ mod tests {
             project_label: "全局层".to_owned(),
             trigger: Trigger::Cli,
             snapshot: None,
+            snapshots: Vec::new(),
+            reverts: None,
             status: RecordStatus::ReadOnly,
             summary: String::new(),
             files: Vec::new(),
             command: None,
             output: None,
         }
+    }
+
+    #[test]
+    fn a_rollback_marks_its_target_until_it_is_undone_itself() {
+        let home = FangcunHome::at("/nonexistent/fangcun-journal-rollback");
+        let journal = Journal::open(&home);
+        let mut sync = record("sync", "2026-11-19T10:00:00Z", RecordKind::Sync);
+        sync.status = RecordStatus::Applied;
+        let mut undo = record("undo", "2026-11-19T11:00:00Z", RecordKind::Rollback);
+        undo.status = RecordStatus::Applied;
+        undo.reverts = Some("sync".to_owned());
+        journal.remember(sync);
+        journal.remember(undo);
+        let status = |id: &str| journal.find(id).unwrap().unwrap().status;
+        assert_eq!(status("sync"), RecordStatus::RolledBack);
+        assert_eq!(status("undo"), RecordStatus::Applied);
+
+        // 撤销这次回滚：回滚记录本身成了「已回滚」，原来那条回到「已应用」。
+        let mut redo = record("redo", "2026-11-19T12:00:00Z", RecordKind::Rollback);
+        redo.status = RecordStatus::Applied;
+        redo.reverts = Some("undo".to_owned());
+        journal.remember(redo);
+        assert_eq!(status("undo"), RecordStatus::RolledBack);
+        assert_eq!(status("sync"), RecordStatus::Applied);
     }
 
     #[test]

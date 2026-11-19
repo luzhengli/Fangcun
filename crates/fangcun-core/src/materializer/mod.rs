@@ -12,8 +12,12 @@
 //! 具体的用例（同步、收编、回滚……）往计划里填动作，见 [`PlanBuilder`]。
 //! 所有权台账（`~/.fangcun/state/`）和按键合并随 M1-10 补上。
 
+pub mod adopt;
+pub mod ledger;
+pub mod rollback;
 mod scope;
 pub mod snapshot;
+pub mod sync;
 
 pub use scope::{Target, WriteScope};
 pub use snapshot::SnapshotScope;
@@ -25,7 +29,9 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::journal::{FileOp, Journal, Record, RecordFile, RecordKind, RecordStatus, Trigger};
+use crate::journal::{
+    FileOp, Journal, Record, RecordFile, RecordKind, RecordSnapshot, RecordStatus, Trigger,
+};
 use crate::model::{ContentHash, PlanNote, ProjectId, SnapshotId, Timestamp};
 use crate::paths::FangcunHome;
 use crate::{Error, Result};
@@ -67,6 +73,9 @@ pub struct ChangePlan {
     pub changes: Vec<Change>,
     /// 计划上方的提示：没纳入的项、要人留意的事。
     pub notes: Vec<PlanNote>,
+    /// 不能应用：例如回滚时有文件被后来的变更改过（6.7 回滚规则第 6 条）。原因在 `notes` 里，
+    /// 界面把「应用」置灰。
+    pub blocked: bool,
     #[serde(skip)]
     #[ts(skip)]
     pub(crate) body: Option<PlanBody>,
@@ -81,6 +90,8 @@ pub(crate) struct PlanBody {
     /// 这份计划登记的项目：应用时算在写入范围里。
     pub registers: Vec<PathBuf>,
     pub command: Option<String>,
+    /// 回滚计划撤销的是哪条记录。
+    pub reverts: Option<String>,
     pub actions: Vec<Action>,
 }
 
@@ -91,6 +102,9 @@ pub(crate) struct Action {
     /// 出计划时磁盘上的样子。应用前再看一遍，不一样就拒绝。
     pub before: State,
     pub after: After,
+    /// 上级目录在这份计划里由软链或文件换成目录：这个路径原来「不存在」是推出来的
+    /// （磁盘上读会顺着旧软链读到别处），不核对、不另进快照，回滚时由上级目录的快照还原。
+    pub implied: bool,
 }
 
 /// 一个路径现在的样子。文件只记哈希。
@@ -130,7 +144,11 @@ impl State {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum After {
     Absent,
-    File(Vec<u8>),
+    /// `mode` 为空时：改已有文件保留原权限，新文件用默认权限。
+    File {
+        bytes: Vec<u8>,
+        mode: Option<u32>,
+    },
     Symlink(PathBuf),
     Dir,
 }
@@ -144,6 +162,10 @@ pub struct PlanBuilder {
     body: PlanBody,
     changes: Vec<Change>,
     notes: Vec<PlanNote>,
+    blocked: bool,
+    /// 打开时加的动作不单独列一行：例如替换整个目录时里面的每个文件，由目录那一行概括。
+    /// 动作照样进快照、照样核对。
+    quiet: bool,
 }
 
 impl PlanBuilder {
@@ -155,16 +177,54 @@ impl PlanBuilder {
                 primary,
                 registers: Vec::new(),
                 command: None,
+                reverts: None,
                 actions: Vec::new(),
             },
             changes: Vec::new(),
             notes: Vec::new(),
+            blocked: false,
+            quiet: false,
         }
     }
 
     /// 加一条计划上方的提示。
     pub fn note(&mut self, note: PlanNote) {
         self.notes.push(note);
+    }
+
+    /// 改标题，例如数完变更再写「同步 3 处变更」。
+    pub fn set_title(&mut self, title: impl Into<String>) {
+        self.title = title.into();
+    }
+
+    /// 列出来的行数。
+    pub fn change_count(&self) -> usize {
+        self.changes.len()
+    }
+
+    /// 之后加的动作不列行（见 `quiet` 字段），直到再调一次 `set_quiet(false)`。
+    pub fn set_quiet(&mut self, quiet: bool) {
+        self.quiet = quiet;
+    }
+
+    /// 这份计划不能应用，原因写在提示里。
+    pub fn block(&mut self) {
+        self.blocked = true;
+    }
+
+    /// 这是一次回滚，撤销的是 `record` 那条记录。
+    pub fn reverts(&mut self, record: impl Into<String>) {
+        self.body.reverts = Some(record.into());
+    }
+
+    /// 计划里已经有动作的路径。
+    pub fn touches(&self, path: &Path) -> bool {
+        self.body.actions.iter().any(|a| a.path == path)
+    }
+
+    /// 计划里有没有要写的东西。
+    pub fn is_empty(&self) -> bool {
+        self.body.actions.is_empty()
     }
 
     #[must_use]
@@ -184,7 +244,27 @@ impl PlanBuilder {
         bytes: Vec<u8>,
         detail: impl Into<String>,
     ) -> Result<()> {
-        self.push(path, After::File(bytes), detail.into())
+        self.push(path, After::File { bytes, mode: None }, detail.into())
+    }
+
+    /// 写文件并指定权限，例如入库模式复制 skill 里的脚本。
+    pub fn write_file_mode(
+        &mut self,
+        path: &Path,
+        bytes: Vec<u8>,
+        mode: u32,
+        detail: impl Into<String>,
+    ) -> Result<()> {
+        let after = After::File {
+            bytes,
+            mode: Some(mode),
+        };
+        self.push(path, after, detail.into())
+    }
+
+    /// 建一个目录（原来是软链或文件时先删掉）。
+    pub fn dir(&mut self, path: &Path, detail: impl Into<String>) -> Result<()> {
+        self.push(path, After::Dir, detail.into())
     }
 
     pub fn symlink(&mut self, path: &Path, target: &Path, detail: impl Into<String>) -> Result<()> {
@@ -200,23 +280,42 @@ impl PlanBuilder {
         if !matches!(after, After::Absent) {
             self.ensure_parents(path)?;
         }
-        let before = State::read(path)?;
+        let implied = self.under_replaced(path);
+        let before = if implied {
+            State::Absent
+        } else {
+            State::read(path)?
+        };
         let op = match (&before, &after) {
             (State::Absent, _) => ChangeOp::Add,
             (_, After::Absent) => ChangeOp::Remove,
             _ => ChangeOp::Modify,
         };
-        self.changes.push(Change {
-            op,
-            path: path.to_path_buf(),
-            detail,
-        });
+        if !self.quiet {
+            self.changes.push(Change {
+                op,
+                path: path.to_path_buf(),
+                detail,
+            });
+        }
         self.body.actions.push(Action {
             path: path.to_path_buf(),
             before,
             after,
+            implied,
         });
         Ok(())
+    }
+
+    /// 某个上级目录在这份计划里由软链或文件换成了目录。
+    pub(crate) fn under_replaced(&self, path: &Path) -> bool {
+        path.ancestors().skip(1).any(|dir| {
+            self.body.actions.iter().any(|a| {
+                a.path == dir
+                    && a.after == After::Dir
+                    && matches!(a.before, State::Symlink(_) | State::File(_))
+            })
+        })
     }
 
     /// 缺的上层目录也写成动作，这样它们进快照，回滚时一起删掉。
@@ -228,16 +327,21 @@ impl PlanBuilder {
                 .actions
                 .iter()
                 .any(|a| a.path == dir && a.after == After::Dir);
-            if planned || !matches!(State::read(dir)?, State::Absent) {
+            if planned {
                 break;
             }
-            missing.push(dir.to_path_buf());
+            let replaced = self.under_replaced(dir);
+            if !replaced && !matches!(State::read(dir)?, State::Absent) {
+                break;
+            }
+            missing.push((dir.to_path_buf(), replaced));
         }
-        for dir in missing.into_iter().rev() {
+        for (dir, implied) in missing.into_iter().rev() {
             self.body.actions.push(Action {
                 path: dir,
                 before: State::Absent,
                 after: After::Dir,
+                implied,
             });
         }
         Ok(())
@@ -249,6 +353,7 @@ impl PlanBuilder {
             title: self.title,
             changes: self.changes,
             notes: self.notes,
+            blocked: self.blocked,
             body: Some(self.body),
         }
     }
@@ -271,22 +376,21 @@ pub(crate) struct ApplyContext<'a> {
     pub trigger: Trigger,
 }
 
-/// 按清单与锁算出要对项目做的变更。只算不写。M1-10。
-pub fn plan_sync(_project_root: &Path) -> Result<ChangePlan> {
-    Err(Error::NotImplemented("materializer::plan_sync"))
-}
-
-/// 算出回滚到某个快照要做的变更。后来的变更动过同一批文件时，计划里标出来，
-/// 并要求先回滚后面的记录，不做自动合并（9.3）。M1-11。
-pub fn plan_rollback(_snapshot: SnapshotId) -> Result<ChangePlan> {
-    Err(Error::NotImplemented("materializer::plan_rollback"))
-}
-
 /// 应用计划：查范围、核对磁盘、留快照、写入、记活动。
 ///
 /// 任何一步不通过，一个文件都不写。写到一半出错时，按快照把已经写过的还原。
 pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied> {
     let body = plan.body.as_ref().ok_or(Error::PlanNotFound(plan.id))?;
+    if plan.blocked {
+        let why = plan
+            .notes
+            .iter()
+            .find(|n| n.tone != crate::model::NoteTone::Info)
+            .or(plan.notes.first());
+        return Err(Error::Blocked(
+            why.map_or_else(|| plan.title.clone(), |n| n.text.clone()),
+        ));
+    }
 
     // 1. 范围：计划登记的项目也算。
     let mut scope = ctx.scope.clone();
@@ -294,6 +398,13 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
     let mut groups: BTreeMap<SnapshotScope, Vec<&Action>> = BTreeMap::new();
     for action in &body.actions {
         let creates_dir = action.before == State::Absent && action.after == After::Dir;
+        // 推出来的路径照样查范围，但不进快照（见 `Action::implied`）。
+        if action.implied {
+            scope
+                .check_create_dir(&action.path)
+                .or_else(|_| scope.check(&action.path))?;
+            continue;
+        }
         let target = if creates_dir {
             scope.check_create_dir(&action.path)?
         } else {
@@ -308,7 +419,7 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
     }
 
     // 2. 核对：出计划之后磁盘变了，让调用方重新出计划。
-    for action in &body.actions {
+    for action in body.actions.iter().filter(|a| !a.implied) {
         if State::read(&action.path)? != action.before {
             return Err(Error::StalePlan(action.path.clone()));
         }
@@ -336,7 +447,12 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
         }
     }
 
-    // 5. 活动记录。写不进去时留在内存里，文件已经写了，不算失败。
+    // 5. 把写入后的样子补进快照：回滚时据此判断后来有没有别的变更动过（6.7 回滚规则第 6 条）。
+    for (group, id) in &snapshots {
+        let _ = snapshot::record_after(ctx.home, group, *id);
+    }
+
+    // 6. 活动记录。写不进去时留在内存里，文件已经写了，不算失败。
     let _ = ctx
         .journal
         .record(record(plan, body, &snapshots, ctx.trigger));
@@ -349,14 +465,21 @@ fn execute(action: &Action) -> Result<()> {
     let path = &action.path;
     match &action.after {
         After::Absent => snapshot::remove(path),
-        After::Dir => fs::create_dir_all(path).map_err(io(path)),
+        After::Dir => {
+            if matches!(action.before, State::File(_) | State::Symlink(_)) {
+                snapshot::remove(path)?;
+            }
+            fs::create_dir_all(path).map_err(io(path))
+        }
         After::Symlink(target) => {
             snapshot::remove(path)?;
             snapshot::symlink(target, path)
         }
-        After::File(bytes) => {
-            // 改已有的文件时保留原来的权限。
-            let mode = matches!(action.before, State::File(_)).then(|| snapshot::file_mode(path));
+        After::File { bytes, mode } => {
+            // 没指定权限时，改已有的文件保留原来的权限。
+            let mode = mode.or_else(|| {
+                matches!(action.before, State::File(_)).then(|| snapshot::file_mode(path))
+            });
             if matches!(action.before, State::Symlink(_) | State::Dir) {
                 snapshot::remove(path)?;
             }
@@ -427,6 +550,19 @@ fn record(
         trigger,
         // 跨范围的记录列表里显示第一个编号（6.7「快照」）。
         snapshot: snapshots.first().map(|(_, id)| *id),
+        snapshots: snapshots
+            .iter()
+            .map(|(scope, id)| RecordSnapshot {
+                project: match scope {
+                    SnapshotScope::Project(root) => {
+                        Some(ProjectId(root.to_string_lossy().into_owned()))
+                    }
+                    SnapshotScope::Global => None,
+                },
+                id: *id,
+            })
+            .collect(),
+        reverts: body.reverts.clone(),
         status: RecordStatus::Applied,
         summary: format!("{} 处变更 · 已留快照", plan.changes.len()),
         files: plan

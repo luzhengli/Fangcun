@@ -25,6 +25,14 @@ pub enum Error {
     #[error("出计划之后 {} 变了，请重新预览", .0.display())]
     StalePlan(PathBuf),
 
+    /// 计划不能应用，例如回滚时有文件被后来的变更改过（6.7 回滚规则第 6 条）。
+    #[error("{0}")]
+    Blocked(String),
+
+    /// `fangcun sync --frozen`：锁与清单不一致。
+    #[error("锁与清单不一致：{0}")]
+    Frozen(String),
+
     /// 要应用的计划不是这个内核出的，或者已经应用过。
     #[error("找不到计划 #{0}，请重新预览")]
     PlanNotFound(u32),
@@ -66,6 +74,8 @@ impl Error {
             Error::OutOfScope(_) => "out-of-scope",
             Error::StalePlan(_) => "stale-plan",
             Error::PlanNotFound(_) => "plan-not-found",
+            Error::Blocked(_) => "blocked",
+            Error::Frozen(_) => "frozen",
             Error::Database { .. } => "database",
             Error::Source(_) => "source",
             Error::UnknownTool(_) => "unknown-tool",

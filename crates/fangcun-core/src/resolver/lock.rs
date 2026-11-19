@@ -67,6 +67,50 @@ pub fn resolve_lock(
     Ok(lock)
 }
 
+/// 锁和全队共享的声明哪里对不上（`fangcun sync --frozen`、同步前的检查）。不联网，空表示一致。
+pub fn lock_mismatches(project: &Project, lock: &Lock) -> Vec<String> {
+    let declared = project.team_declarations();
+    let mut out = Vec::new();
+    for (name, item) in &declared.skills {
+        match lock.skills.get(name) {
+            None => out.push(format!("{name} 在清单里，锁里没有")),
+            Some(old) if !unchanged(&item.decl, old) => {
+                out.push(format!("{name} 的来源或版本约束改了，锁还是旧的"));
+            }
+            Some(_) => {}
+        }
+    }
+    out.extend(
+        lock.skills
+            .keys()
+            .filter(|name| !declared.skills.contains_key(*name))
+            .map(|name| format!("{name} 在锁里，清单里已经没有")),
+    );
+    for (name, item) in &declared.mcp {
+        match lock.mcp.get(name) {
+            None => out.push(format!("MCP {name} 在清单里，锁里没有")),
+            Some(old) if old.hash != mcp_hash(&item.decl) => {
+                out.push(format!("MCP {name} 的启动配置改了，锁还是旧的"));
+            }
+            Some(_) => {}
+        }
+    }
+    out.extend(
+        lock.mcp
+            .keys()
+            .filter(|name| !declared.mcp.contains_key(*name))
+            .map(|name| format!("MCP {name} 在锁里，清单里已经没有")),
+    );
+    let canonical = declared.instructions.as_ref().map(|i| &i.decl.canonical);
+    let locked: Vec<&String> = lock.instructions.keys().collect();
+    match canonical {
+        Some(path) if locked != [path] => out.push(format!("指令正本 {path} 和锁里记的不一样")),
+        None if !locked.is_empty() => out.push("清单里没有指令正本，锁里还有".to_owned()),
+        _ => {}
+    }
+    out
+}
+
 fn resolve_skill(
     name: &str,
     item: &Declared<SkillDecl>,

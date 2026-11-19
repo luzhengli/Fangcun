@@ -364,6 +364,8 @@ impl Kernel {
             project_label: "全局层".to_owned(),
             trigger,
             snapshot: None,
+            snapshots: Vec::new(),
+            reverts: None,
             status: RecordStatus::ReadOnly,
             summary: format!(
                 "只读扫描，未改动任何文件。发现 {} 项资产、{} 条待处理，读了近 30 天的 {} 份会话记录。",
@@ -518,8 +520,83 @@ impl Kernel {
     }
 
     /// `fangcun sync --frozen`：锁与清单不一致就失败。本身不改项目文件。
-    pub fn verify_frozen(&self, _project_root: &Path) -> Result<()> {
-        Err(Error::NotImplemented("Kernel::verify_frozen"))
+    ///
+    /// 不联网。结果在本机记一条「校验」（6.7）：一致是「已记录」，不一致是「失败」。
+    pub fn verify_frozen(&self, project_root: &Path) -> Result<()> {
+        let (project, lock) = self.manifest_and_lock(project_root)?;
+        let mismatches = crate::resolver::lock_mismatches(&project, &lock);
+        let name = crate::scanner::project_name(project_root);
+        let ok = mismatches.is_empty();
+        let at = Timestamp::now();
+        let record = Record {
+            id: format!("verify-{}-{}", at.0, self.journal.count()),
+            at,
+            kind: RecordKind::Verify,
+            title: if ok {
+                "校验通过：锁与清单一致".to_owned()
+            } else {
+                "校验失败：锁与清单不一致".to_owned()
+            },
+            project: Some(ProjectId(project_root.display().to_string())),
+            project_label: name,
+            trigger: self.origin,
+            snapshot: None,
+            snapshots: Vec::new(),
+            reverts: None,
+            status: if ok {
+                RecordStatus::Recorded
+            } else {
+                RecordStatus::Failed
+            },
+            summary: if ok {
+                "没有写入文件。".to_owned()
+            } else {
+                format!("没有写入文件。{}", mismatches.join("；"))
+            },
+            files: vec![
+                RecordFile {
+                    op: FileOp::Read,
+                    path: crate::paths::MANIFEST_FILE.to_owned(),
+                    note: None,
+                },
+                RecordFile {
+                    op: FileOp::Read,
+                    path: crate::paths::LOCK_FILE.to_owned(),
+                    note: None,
+                },
+            ],
+            command: Some("fangcun sync --frozen".to_owned()),
+            output: Some(if ok {
+                "一致".to_owned()
+            } else {
+                format!("{} 处不一致", mismatches.len())
+            }),
+        };
+        let _ = self.journal.record(record);
+        if ok {
+            Ok(())
+        } else {
+            Err(Error::Frozen(mismatches.join("；")))
+        }
+    }
+
+    /// 已登记项目的清单与锁，缺了就说下一步该运行什么。
+    fn manifest_and_lock(&self, project_root: &Path) -> Result<(crate::manifest::Project, Lock)> {
+        self.require_registered(project_root)?;
+        let project =
+            crate::manifest::load_project(project_root, &self.home)?.ok_or_else(|| {
+                Error::NotFound(format!(
+                    "{} 没有 fangcun.toml。先运行 fangcun init",
+                    display_path(project_root, &self.user_home)
+                ))
+            })?;
+        let lock = Lock::load(project_root)?.ok_or_else(|| {
+            Error::NotFound(format!(
+                "{} 没有 fangcun.lock。先运行 fangcun lock",
+                display_path(project_root, &self.user_home)
+            ))
+        })?;
+        Ok((project, lock))
     }
 
     // ───────────── 写入用例（M1）：先出计划，再 apply ─────────────
@@ -675,9 +752,37 @@ impl Kernel {
     }
 
     /// `fangcun adopt <资产>`：收编进资产库。
-    pub fn plan_adopt(&self, _asset: &str) -> Result<ChangePlan> {
+    ///
+    /// 扫描到的、叫这个名字的副本（全局层和各项目）存进资产库，工具目录里的实体目录换成
+    /// 指向正本的软链。规则见 `materializer::adopt`。
+    pub fn plan_adopt(&self, asset: &str) -> Result<ChangePlan> {
         self.require_write("adopt")?;
-        Err(Error::NotImplemented("Kernel::plan_adopt"))
+        let scan = self.scan();
+        let mut copies: Vec<&crate::scanner::SkillCopy> = Vec::new();
+        for collected in scan.global.values() {
+            copies.extend(collected.skills.iter().filter(|s| s.name == asset));
+        }
+        for per_tool in scan.project_items.values() {
+            for collected in per_tool.values() {
+                copies.extend(collected.skills.iter().filter(|s| s.name == asset));
+            }
+        }
+        let library = Library::open(&self.home)?;
+        let scope = self.write_scope()?;
+        let mut builder = PlanBuilder::new(String::new(), RecordKind::Adopt, SnapshotScope::Global)
+            .command(format!("fangcun adopt {asset}"));
+        crate::materializer::adopt::plan(
+            &crate::materializer::adopt::AdoptInput {
+                name: asset,
+                copies,
+                home: &self.home,
+                user_home: &self.user_home,
+                scope: &scope,
+                library: &library,
+            },
+            &mut builder,
+        )?;
+        Ok(self.issue(builder))
     }
 
     /// `fangcun lock`：重新解析清单，更新锁。
@@ -786,9 +891,33 @@ impl Kernel {
     }
 
     /// `fangcun sync`：按清单与锁物化。
-    pub fn plan_sync(&self, _project_root: &Path) -> Result<ChangePlan> {
+    ///
+    /// 锁和清单不一致时不出计划，要先 `fangcun lock`。资产库里没有的正本会按锁联网取回。
+    pub fn plan_sync(&self, project_root: &Path) -> Result<ChangePlan> {
         self.require_write("sync")?;
-        Err(Error::NotImplemented("Kernel::plan_sync"))
+        let (project, lock) = self.manifest_and_lock(project_root)?;
+        let library = Library::open(&self.home)?;
+        let sources = self.sources();
+        let mut builder = PlanBuilder::new(
+            String::new(),
+            RecordKind::Sync,
+            SnapshotScope::Project(project_root.to_path_buf()),
+        )
+        .command("fangcun sync");
+        crate::materializer::sync::plan(
+            &crate::materializer::sync::SyncInput {
+                root: project_root,
+                home: &self.home,
+                user_home: &self.user_home,
+                adapters: &self.adapters,
+                project: &project,
+                lock: &lock,
+                library: &library,
+                sources: &sources,
+            },
+            &mut builder,
+        )?;
+        Ok(self.issue(builder))
     }
 
     /// `fangcun update [资产]`。`asset` 为空表示全部；`projects` 为空表示当前项目。
@@ -797,10 +926,93 @@ impl Kernel {
         Err(Error::NotImplemented("Kernel::plan_update"))
     }
 
-    /// `fangcun rollback <快照>`。
-    pub fn plan_rollback(&self, _project_root: &Path, _snapshot: SnapshotId) -> Result<ChangePlan> {
+    /// `fangcun rollback <快照>`：把项目回滚到快照 #N，也就是撤销留下快照 #N+1 的那条记录
+    /// （6.7：「回滚到此之前…」的预览标题就是「回滚到快照 #N」）。
+    pub fn plan_rollback(&self, project_root: &Path, snapshot: SnapshotId) -> Result<ChangePlan> {
         self.require_write("rollback")?;
-        Err(Error::NotImplemented("Kernel::plan_rollback"))
+        let wanted = crate::scanner::fsutil::canonical(project_root);
+        let undo = SnapshotId(snapshot.0 + 1);
+        let record = self
+            .journal
+            .read(&RecordFilter::default())?
+            .into_iter()
+            .find(|r| {
+                crate::materializer::rollback::scopes_of(r)
+                    .iter()
+                    .any(|(scope, id)| {
+                        *id == undo
+                            && matches!(scope, SnapshotScope::Project(p)
+                                if crate::scanner::fsutil::canonical(p) == wanted)
+                    })
+            })
+            .ok_or_else(|| {
+                Error::NotFound(format!(
+                    "快照 #{} 之后的那条记录（{} 现在就在快照 #{} 或更早）",
+                    snapshot.0,
+                    crate::scanner::project_name(project_root),
+                    snapshot.0
+                ))
+            })?;
+        self.plan_rollback_record(&record.id)
+    }
+
+    /// 活动页、历史页签的「回滚到此之前…」：撤销一条记录（6.7）。
+    pub fn plan_rollback_record(&self, record_id: &str) -> Result<ChangePlan> {
+        use crate::materializer::rollback;
+        use crate::materializer::snapshot;
+
+        self.require_write("rollback")?;
+        let record = self
+            .journal
+            .find(record_id)?
+            .ok_or_else(|| Error::NotFound(format!("记录 {record_id}")))?;
+        let snapshots = rollback::check(&self.home, &record)?;
+        let before = |id: u32| match (id.saturating_sub(1), record.kind) {
+            (0, RecordKind::Adopt) => "收编前".to_owned(),
+            (0, _) => "登记前".to_owned(),
+            (n, _) => format!("快照 #{n}"),
+        };
+        let label = |scope: &SnapshotScope| match scope {
+            SnapshotScope::Project(root) => crate::scanner::project_name(root),
+            SnapshotScope::Global => "全局层".to_owned(),
+        };
+        let title = match snapshots.as_slice() {
+            [(scope, snap)] => format!("把 {} 回滚到{}", label(scope), before(snap.id)),
+            many => format!(
+                "把 {} 个范围回滚到{}",
+                many.len(),
+                many.iter()
+                    .map(|(_, snap)| before(snap.id))
+                    .collect::<Vec<_>>()
+                    .join(" · ")
+            ),
+        };
+        let (primary, first) = &snapshots[0];
+        let mut builder = PlanBuilder::new(title, RecordKind::Rollback, primary.clone());
+        if let SnapshotScope::Project(_) = primary {
+            builder = builder.command(format!("fangcun rollback {}", first.id.saturating_sub(1)));
+        }
+        // 后来哪个快照也动过这个路径：报给人先回滚那一条。
+        let records = self.journal.read(&RecordFilter::default())?;
+        let later = |scope: &SnapshotScope, path: &Path, after: u32| -> Option<(String, u32)> {
+            let ids = snapshot::list(&self.home, scope);
+            ids.iter().rev().filter(|id| id.0 > after).find_map(|id| {
+                let snap = snapshot::load(&self.home, scope, *id).ok()?;
+                snap.entries.iter().any(|e| e.path == path).then(|| {
+                    let title = records
+                        .iter()
+                        .find(|r| {
+                            rollback::scopes_of(r)
+                                .iter()
+                                .any(|(s, i)| i == id && s.normalized() == scope.normalized())
+                        })
+                        .map_or_else(|| snap.title.clone(), |r| r.title.clone());
+                    (title, id.0)
+                })
+            })
+        };
+        rollback::plan(&self.home, &record, &snapshots, &later, &mut builder)?;
+        Ok(self.issue(builder))
     }
 
     /// 应用一份计划。写入只发生在这里。
@@ -827,6 +1039,11 @@ impl Kernel {
         )?;
         // 扫描缓存不在这里清：清了下一次查询会全盘重扫，桌面端还会多记一条体检。
         // 应用后要不要重扫由用例决定（M1-13 的同步面板）。
+        // 快照保留期（6.7）：清理失败不影响这次应用。
+        if let Ok(settings) = crate::settings::Settings::load(&self.home) {
+            let keep = usize::try_from(settings.snapshot_keep).unwrap_or(usize::MAX);
+            let _ = crate::materializer::snapshot::prune(&self.home, settings.snapshot_days, keep);
+        }
         Ok(applied)
     }
 }
@@ -956,6 +1173,7 @@ mod tests {
             title: String::new(),
             changes: Vec::new(),
             notes: Vec::new(),
+            blocked: false,
             body: None,
         };
 

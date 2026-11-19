@@ -63,6 +63,11 @@ impl Library {
         })
     }
 
+    /// 正本所在的目录：`objects/<哈希>`。指向这里的软链就是受管链接。
+    pub fn objects_dir(&self) -> PathBuf {
+        self.objects()
+    }
+
     fn objects(&self) -> PathBuf {
         self.root.join("objects")
     }

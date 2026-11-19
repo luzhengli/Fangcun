@@ -35,7 +35,8 @@ pub fn run(cli: Cli) -> Result<()> {
             let _plan = kernel.plan_add(&cwd, &asset)?;
         }
         Command::Adopt { asset } => {
-            let _plan = kernel.plan_adopt(&asset)?;
+            let plan = kernel.plan_adopt(&asset)?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Lock => {
             let plan = kernel.plan_lock(&project_root_of(&cwd))?;
@@ -47,11 +48,15 @@ pub fn run(cli: Cli) -> Result<()> {
             let plan = kernel.plan_export_skills_lock(&project_root_of(&cwd))?;
             confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
-        Command::Sync { frozen: true } => {
-            kernel.verify_frozen(&cwd)?;
-        }
-        Command::Sync { frozen: false } => {
-            let _plan = kernel.plan_sync(&cwd)?;
+        Command::Sync { frozen } => {
+            let root = project_root_of(&cwd);
+            // CI 用：先校验锁与清单一致，不一致就失败，不写任何文件。
+            if frozen {
+                kernel.verify_frozen(&root)?;
+                println!("锁与清单一致。");
+            }
+            let plan = kernel.plan_sync(&root)?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Update {
             asset,
@@ -62,7 +67,8 @@ pub fn run(cli: Cli) -> Result<()> {
             let _plan = kernel.plan_update(asset.as_deref(), &projects)?;
         }
         Command::Rollback { snapshot } => {
-            let _plan = kernel.plan_rollback(&cwd, SnapshotId(snapshot))?;
+            let plan = kernel.plan_rollback(&project_root_of(&cwd), SnapshotId(snapshot))?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Log => print_log(&kernel.log(&RecordFilter::default())?),
         Command::Why { asset, global } => {
@@ -116,7 +122,7 @@ fn confirm_and_apply(kernel: &Kernel, plan: &ChangePlan, yes: bool) -> Result<()
         };
         println!("  {mark} {}", note.text);
     }
-    if plan.changes.is_empty() {
+    if plan.changes.is_empty() && !plan.blocked {
         println!("没有要写的变更。");
         return Ok(());
     }
@@ -127,6 +133,11 @@ fn confirm_and_apply(kernel: &Kernel, plan: &ChangePlan, yes: bool) -> Result<()
             ChangeOp::Remove => "−",
         };
         println!("  {mark} {}  {}", change.path.display(), change.detail);
+    }
+    if plan.blocked {
+        return Err(Error::Blocked(
+            "这份计划不能应用，原因见上面的提示".to_owned(),
+        ));
     }
     if !yes {
         if !std::io::stdin().is_terminal() {
