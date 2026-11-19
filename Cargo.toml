@@ -13,6 +13,8 @@ license = "MIT OR Apache-2.0"
 fangcun-core = { path = "crates/fangcun-core" }
 
 serde = { version = "1", features = ["derive"] }
+# 资产库索引（7.2）。bundled：自带 SQLite，不依赖系统库。
+rusqlite = { version = "0.43", features = ["bundled"] }
 serde_json = "1"
 sha2 = "0.10"
 thiserror = "2"

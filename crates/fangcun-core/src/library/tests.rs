@@ -64,7 +64,7 @@ fn opening_and_listing_an_empty_library_touches_nothing() {
         f.library.locate(&ContentHash("ab".to_owned())).unwrap(),
         None
     );
-    assert!(!f.base.join(".fangcun").exists());
+    assert!(!f.base.join(".fangcun").exists(), "列出空库不建索引");
 }
 
 #[test]

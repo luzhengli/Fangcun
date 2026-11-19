@@ -1,159 +1,194 @@
-//! 资产库的索引 `~/.fangcun/library/index.toml`：每项资产一节，记来源、各个版本、含不含脚本。
+//! 资产库的索引 `~/.fangcun/index.sqlite`（7.2）：每项资产的来源、各个版本、含不含脚本。
 //!
-//! 纯文本，能读能审查（4.6「文件即真相」）。改写时拿 `index.lock`，先写临时文件再改名，
-//! 桌面应用和命令行同时收编也不会互相覆盖。
-//!
-//! ```toml
-//! format = 1
-//!
-//! [[asset]]
-//! name = "tdd"
-//! kind = "skill"
-//! source = "github:obra/superpowers"
-//! has-scripts = false
-//!
-//! [[asset.version]]
-//! hash = "9f2c…"
-//! commit = "b7e9f0c2…"
-//! added = "2026-11-19T08:00:00Z"
-//! ```
+//! 同名、同类、同来源算同一项资产；来源未知时 `source` 存空字符串（SQLite 的唯一约束不把
+//! `NULL` 当作相等）。版本按哈希去重，`seq` 记先后。写入用 `BEGIN IMMEDIATE`，
+//! 桌面应用和命令行同时收编时由 SQLite 排队，`busy_timeout` 5 秒。
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::path::Path;
+use std::time::Duration;
 
-use serde::{Deserialize, Serialize};
+use rusqlite::{Connection, OpenFlags, OptionalExtension, params};
 
-use crate::model::{AssetKind, ContentHash, SourceRef, Timestamp};
+use crate::model::{AssetKind, ContentHash, SourceRef, Timestamp, Version};
 use crate::{Error, Result};
 
-pub(super) const FORMAT: u32 = 1;
+/// 表结构的版本，存在 `PRAGMA user_version`。改表结构时加一，并在 `migrate` 里补升级。
+const SCHEMA: i32 = 1;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub(super) struct Index {
-    pub format: u32,
-    #[serde(default, rename = "asset")]
-    pub assets: Vec<IndexedAsset>,
-}
-
-impl Default for Index {
-    fn default() -> Self {
-        Self {
-            format: FORMAT,
-            assets: Vec::new(),
-        }
-    }
-}
-
-/// 同一个名字、同一类、同一个来源算同一项资产。来源未知的副本 `source` 为空。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
 pub(super) struct IndexedAsset {
     pub name: String,
     pub kind: AssetKind,
     pub source: Option<SourceRef>,
-    #[serde(default)]
     pub has_scripts: bool,
-    #[serde(default, rename = "version")]
-    pub versions: Vec<IndexedVersion>,
+    pub versions: Vec<Version>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub(super) struct IndexedVersion {
-    pub hash: ContentHash,
-    pub commit: Option<String>,
-    pub tag: Option<String>,
-    pub added: Timestamp,
-}
-
-/// 读索引。文件不存在时是空的。
-pub(super) fn read(file: &Path) -> Result<Index> {
-    let text = match fs::read_to_string(file) {
-        Ok(text) => text,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Index::default()),
-        Err(source) => {
-            return Err(Error::Io {
-                path: file.to_path_buf(),
-                source,
-            });
-        }
-    };
-    toml::from_str(&text).map_err(|e| Error::Parse {
-        origin: file.display().to_string(),
-        message: e.to_string(),
-    })
-}
-
-/// 拿着锁读、改、写回。
-pub(super) fn update<T>(file: &Path, change: impl FnOnce(&mut Index) -> T) -> Result<T> {
-    let _lock = Lock::acquire(&file.with_extension("lock"))?;
-    let mut index = read(file)?;
-    let out = change(&mut index);
-    let text = toml::to_string(&index).map_err(|e| Error::Parse {
-        origin: "资产库索引".to_owned(),
-        message: e.to_string(),
-    })?;
-    let tmp = file.with_extension(format!("toml.{}.tmp", std::process::id()));
-    fs::write(&tmp, text).map_err(io(&tmp))?;
-    fs::rename(&tmp, file).map_err(io(file))?;
-    Ok(out)
-}
-
-/// 文件锁：`create_new` 建得出来就是拿到了。超过 30 秒的锁当作上次崩溃留下的，删掉重来。
-struct Lock {
-    path: PathBuf,
-}
-
-impl Lock {
-    fn acquire(path: &Path) -> Result<Self> {
-        const STALE: Duration = Duration::from_secs(30);
-        for _ in 0..200 {
-            match fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(path)
-            {
-                Ok(_) => {
-                    return Ok(Self {
-                        path: path.to_path_buf(),
-                    });
-                }
-                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-                    let stale = fs::metadata(path)
-                        .and_then(|m| m.modified())
-                        .ok()
-                        .and_then(|t| SystemTime::now().duration_since(t).ok())
-                        .is_some_and(|age| age > STALE);
-                    if stale {
-                        let _ = fs::remove_file(path);
-                    } else {
-                        std::thread::sleep(Duration::from_millis(25));
-                    }
-                }
-                Err(source) => {
-                    return Err(Error::Io {
-                        path: path.to_path_buf(),
-                        source,
-                    });
-                }
-            }
-        }
-        Err(Error::Io {
-            path: path.to_path_buf(),
-            source: std::io::Error::new(std::io::ErrorKind::TimedOut, "等资产库索引的锁超时"),
+/// 读全部资产。索引文件不存在时是空的，也不创建它。
+pub(super) fn read(file: &Path) -> Result<Vec<IndexedAsset>> {
+    if !file.exists() {
+        return Ok(Vec::new());
+    }
+    let conn =
+        Connection::open_with_flags(file, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(db(file))?;
+    conn.busy_timeout(Duration::from_secs(5))
+        .map_err(db(file))?;
+    let mut assets = Vec::new();
+    let mut stmt = conn
+        .prepare("SELECT id, name, kind, source, has_scripts FROM assets")
+        .map_err(db(file))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, bool>(4)?,
+            ))
         })
+        .map_err(db(file))?;
+    let mut versions = conn
+        .prepare("SELECT hash, commit_id, tag FROM versions WHERE asset_id = ?1 ORDER BY seq")
+        .map_err(db(file))?;
+    for row in rows {
+        let (id, name, kind, source, has_scripts) = row.map_err(db(file))?;
+        let list = versions
+            .query_map([id], |row| {
+                Ok(Version {
+                    hash: ContentHash(row.get(0)?),
+                    commit: row.get(1)?,
+                    tag: row.get(2)?,
+                })
+            })
+            .map_err(db(file))?
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(db(file))?;
+        assets.push(IndexedAsset {
+            name,
+            kind: parse_kind(&kind, file)?,
+            source: (!source.is_empty()).then_some(SourceRef(source)),
+            has_scripts,
+            versions: list,
+        });
+    }
+    Ok(assets)
+}
+
+/// 记一个版本：资产没有就建，版本已有就不重复记。
+pub(super) fn record(
+    file: &Path,
+    name: &str,
+    kind: AssetKind,
+    source: Option<&SourceRef>,
+    has_scripts: bool,
+    version: &Version,
+) -> Result<()> {
+    let mut conn = open_rw(file)?;
+    let tx = conn
+        .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+        .map_err(db(file))?;
+    let source = source.map_or("", |s| s.0.as_str());
+    tx.execute(
+        "INSERT INTO assets (name, kind, source, has_scripts) VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT (name, kind, source) DO UPDATE SET has_scripts = has_scripts OR excluded.has_scripts",
+        params![name, kind_str(kind), source, has_scripts],
+    )
+    .map_err(db(file))?;
+    let id: i64 = tx
+        .query_row(
+            "SELECT id FROM assets WHERE name = ?1 AND kind = ?2 AND source = ?3",
+            params![name, kind_str(kind), source],
+            |row| row.get(0),
+        )
+        .map_err(db(file))?;
+    let known: Option<i64> = tx
+        .query_row(
+            "SELECT seq FROM versions WHERE asset_id = ?1 AND hash = ?2",
+            params![id, version.hash.0],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(db(file))?;
+    if known.is_none() {
+        tx.execute(
+            "INSERT INTO versions (asset_id, hash, commit_id, tag, added) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, version.hash.0, version.commit, version.tag, Timestamp::now().0],
+        )
+        .map_err(db(file))?;
+    }
+    tx.commit().map_err(db(file))
+}
+
+fn open_rw(file: &Path) -> Result<Connection> {
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent).map_err(|source| Error::Io {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
+    let conn = Connection::open(file).map_err(db(file))?;
+    conn.busy_timeout(Duration::from_secs(5))
+        .map_err(db(file))?;
+    migrate(&conn, file)?;
+    Ok(conn)
+}
+
+fn migrate(conn: &Connection, file: &Path) -> Result<()> {
+    let version: i32 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .map_err(db(file))?;
+    if version >= SCHEMA {
+        return Ok(());
+    }
+    conn.execute_batch(
+        "BEGIN IMMEDIATE;
+         CREATE TABLE IF NOT EXISTS assets (
+             id          INTEGER PRIMARY KEY,
+             name        TEXT NOT NULL,
+             kind        TEXT NOT NULL,
+             source      TEXT NOT NULL DEFAULT '',
+             has_scripts INTEGER NOT NULL DEFAULT 0,
+             UNIQUE (name, kind, source)
+         );
+         CREATE TABLE IF NOT EXISTS versions (
+             seq       INTEGER PRIMARY KEY AUTOINCREMENT,
+             asset_id  INTEGER NOT NULL REFERENCES assets (id),
+             hash      TEXT NOT NULL,
+             commit_id TEXT,
+             tag       TEXT,
+             added     TEXT NOT NULL,
+             UNIQUE (asset_id, hash)
+         );
+         PRAGMA user_version = 1;
+         COMMIT;",
+    )
+    .map_err(db(file))
+}
+
+fn kind_str(kind: AssetKind) -> &'static str {
+    match kind {
+        AssetKind::Skill => "skill",
+        AssetKind::Mcp => "mcp",
+        AssetKind::Instruction => "instruction",
     }
 }
 
-impl Drop for Lock {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
+fn parse_kind(text: &str, file: &Path) -> Result<AssetKind> {
+    match text {
+        "skill" => Ok(AssetKind::Skill),
+        "mcp" => Ok(AssetKind::Mcp),
+        "instruction" => Ok(AssetKind::Instruction),
+        other => Err(Error::Parse {
+            origin: file.display().to_string(),
+            message: format!("不认识的资产类型 {other}"),
+        }),
     }
 }
 
-fn io(path: &Path) -> impl FnOnce(std::io::Error) -> Error {
-    let path = path.to_path_buf();
-    move |source| Error::Io { path, source }
+fn db(file: &Path) -> impl FnOnce(rusqlite::Error) -> Error {
+    let path = file.to_path_buf();
+    move |e| Error::Database {
+        path,
+        message: e.to_string(),
+    }
 }
