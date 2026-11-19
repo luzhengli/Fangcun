@@ -218,3 +218,12 @@ fn concurrent_ingests_all_reach_the_index() {
     });
     assert_eq!(f.library.entries().unwrap().len(), 8);
 }
+
+#[test]
+fn staging_names_are_never_reused() {
+    let f = fixture("staging");
+    let first = f.library.staging().unwrap();
+    fs::remove_dir(&first).unwrap();
+    let second = f.library.staging().unwrap();
+    assert_ne!(first, second, "删掉的暂存目录名不能再发给别人");
+}
