@@ -21,4 +21,8 @@ path: string,
 /**
  * 状态点。M0 没有受管的资产，为空时用灰点。
  */
-state: AssetState | null, lastSeen: Timestamp | null, sessions: number, tools: Array<ToolId>, };
+state: AssetState | null, lastSeen: Timestamp | null, sessions: number, tools: Array<ToolId>, 
+/**
+ * 已登记（F3）。侧栏按它分「已登记项目」「近 30 天的项目」两组（D-28）。
+ */
+registered: boolean, };

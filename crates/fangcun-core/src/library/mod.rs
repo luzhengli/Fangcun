@@ -11,6 +11,8 @@
 
 pub mod content;
 mod git;
+#[doc(hidden)]
+pub mod hash_samples;
 mod index;
 pub mod market;
 pub mod source;

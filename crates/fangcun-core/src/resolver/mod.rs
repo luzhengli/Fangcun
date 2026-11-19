@@ -21,7 +21,9 @@ use crate::scanner::{
     Collected, InstructionFile, McpEntry, Scan, SkillCopy, group_global_skills, short_hash,
 };
 
+mod infer;
 mod lock;
+pub use infer::{InferInput, Inferred, ModeSuggestion, infer_project, infer_targets, suggest_mode};
 pub use lock::resolve_lock;
 
 /// 项目预算的默认值。清单里怎么写预算还没定，先用这个数。

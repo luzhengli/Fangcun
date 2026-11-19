@@ -32,7 +32,7 @@ per-project-disable = true     # 是否支持按项目停用
 scope = "global"               # global | project | personal
 path = "~/.claude/skills"
 walk = "root"                  # 项目层从哪些目录找：root | ancestors | git-root-down
-lock = { path = "~/.agents/.skill-lock.json", format = "skills-cli" }  # 可选，配套的锁文件
+lock = { path = "~/.agents/.skill-lock.json", format = "skills-cli" }  # 可选，配套的锁文件。项目层写相对项目根目录的路径
 source = "builtin:codex"       # 可选，目录里的 skill 一律算这个来源（工具自带的系统 skill），锁里查得到时以锁为准
 
 [[instructions]]               # 指令文件

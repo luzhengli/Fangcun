@@ -74,6 +74,8 @@ pub struct ProjectSummary {
     pub last_seen: Option<Timestamp>,
     pub sessions: u32,
     pub tools: Vec<ToolId>,
+    /// 已登记（F3）。侧栏按它分「已登记项目」「近 30 天的项目」两组（D-28）。
+    pub registered: bool,
 }
 
 /// `fangcun status`：当前项目的同步状态与漂移。
@@ -170,8 +172,9 @@ impl Kernel {
         self
     }
 
+    /// 一个用例一份：同一个仓库在这一轮里只拉一次。
     fn sources(&self) -> Sources {
-        let sources = Sources::open(&self.home);
+        let sources = Sources::open(&self.home).fetching_once();
         match &self.github_base {
             Some(base) => sources.with_github_base(base.clone()),
             None => sources,
@@ -180,11 +183,7 @@ impl Kernel {
 
     /// 写入用例只对已登记的项目出计划，免得解析了半天，应用时才发现不在写入范围里。
     fn require_registered(&self, project_root: &Path) -> Result<()> {
-        let wanted = crate::scanner::fsutil::canonical(project_root);
-        let registered = crate::registry::load(&self.home)?
-            .iter()
-            .any(|p| crate::scanner::fsutil::canonical(&p.path) == wanted);
-        if registered {
+        if crate::registry::contains(&crate::registry::load(&self.home)?, project_root) {
             Ok(())
         } else {
             Err(Error::NotFound(format!(
@@ -275,18 +274,37 @@ impl Kernel {
 
     /// 扫一次全盘，`record` 时记一条体检记录。调用方持有扫描锁。
     fn build_scan(&self, record: bool) -> Arc<Scan> {
-        let options = ScanOptions {
-            project_roots: self.extra_projects.clone(),
-        };
+        // 登记表读不了时照常扫描，只是少了近 30 天没用过的已登记项目。
+        let registered = crate::registry::load(&self.home).unwrap_or_default();
+        let mut project_roots = self.extra_projects.clone();
+        project_roots.extend(registered.iter().map(|p| p.path.clone()));
+        let options = ScanOptions { project_roots };
         let scan = Arc::new(crate::scanner::scan(
             &self.adapters,
             &self.user_home,
             &options,
         ));
+        self.register_found(&scan, &registered);
         if record {
             self.record_checkup(&scan);
         }
         scan
+    }
+
+    /// 带 `fangcun.toml` 的仓库一经发现就自动登记（F3）。只读模式下不登记。
+    fn register_found(&self, scan: &Scan, registered: &[crate::registry::RegisteredProject]) {
+        if self.access != Access::ReadWrite {
+            return;
+        }
+        let found: Vec<PathBuf> = scan
+            .projects
+            .iter()
+            .filter(|p| p.root.join(crate::paths::MANIFEST_FILE).is_file())
+            .filter(|p| !crate::registry::contains(registered, &p.root))
+            .map(|p| p.root.clone())
+            .collect();
+        // 写不进 `~/.fangcun` 时不登记，下次扫描再试。
+        let _ = crate::registry::register_found(&self.home, &found);
     }
 
     fn record_checkup(&self, scan: &Scan) {
@@ -421,6 +439,7 @@ impl Kernel {
 
     pub fn projects(&self) -> Result<Vec<ProjectSummary>> {
         let scan = self.scan();
+        let registered = crate::registry::load(&self.home)?;
         Ok(scan
             .projects
             .iter()
@@ -432,6 +451,7 @@ impl Kernel {
                 last_seen: p.last_seen.clone(),
                 sessions: p.sessions,
                 tools: p.tools.clone(),
+                registered: crate::registry::contains(&registered, &p.root),
             })
             .collect())
     }
@@ -504,10 +524,148 @@ impl Kernel {
 
     // ───────────── 写入用例（M1）：先出计划，再 apply ─────────────
 
-    /// `fangcun init`：登记项目，生成清单与锁。
-    pub fn plan_init(&self, _project_root: &Path, _from_existing: bool) -> Result<ChangePlan> {
+    /// 登记时建议的物化方式（9.2）：个人项目默认链接，git 历史里有两位及以上提交者时建议入库。
+    pub fn suggest_mode(&self, project_root: &Path) -> crate::resolver::ModeSuggestion {
+        crate::resolver::suggest_mode(project_root)
+    }
+
+    /// `fangcun init`、检查器「登记」、侧栏「添加项目…」（F3）：登记项目，生成清单与锁。
+    ///
+    /// - 已有 `fangcun.toml`：按现有清单登记，缺锁时补锁，不再反推。
+    /// - `from_existing`：从目录现状反推清单（规则见 `resolver::infer`），GitHub 来源会联网找提交。
+    /// - 否则只写 `[project]`。
+    ///
+    /// `mode` 是登记时问的物化方式（9.2），为空时取 [`Kernel::suggest_mode`] 的建议，写进新清单。
+    /// 计划写三个文件：清单、锁、登记表。查不出来源的项不进清单，写在计划的提示里。
+    pub fn plan_init(
+        &self,
+        project_root: &Path,
+        from_existing: bool,
+        mode: Option<crate::model::SyncMode>,
+    ) -> Result<ChangePlan> {
         self.require_write("init")?;
-        Err(Error::NotImplemented("Kernel::plan_init"))
+        let root = project_root;
+        if !root.is_dir() {
+            return Err(Error::NotFound(format!(
+                "目录 {}",
+                display_path(root, &self.user_home)
+            )));
+        }
+        let name = crate::scanner::project_name(root);
+        let registered = crate::registry::load(&self.home)?;
+        let already = crate::registry::contains(&registered, root);
+        let manifest_file = root.join(crate::paths::MANIFEST_FILE);
+        let lock_file = root.join(crate::paths::LOCK_FILE);
+        let has_manifest = manifest_file.is_file();
+        let command = if from_existing {
+            "fangcun init --from-existing"
+        } else {
+            "fangcun init"
+        };
+        let scope = SnapshotScope::Project(root.to_path_buf());
+        if already && has_manifest && lock_file.is_file() {
+            let builder = PlanBuilder::new(format!("{name} 已经登记过"), RecordKind::Sync, scope)
+                .command(command);
+            return Ok(self.issue(builder));
+        }
+
+        let library = Library::open(&self.home)?;
+        let sources = self.sources();
+        let mut notes = Vec::new();
+        let (project, seed, new_manifest) = if has_manifest {
+            notes.push(crate::model::PlanNote::info(
+                "已有 fangcun.toml，按现有清单登记，不再反推",
+            ));
+            let project = crate::manifest::load_project(root, &self.home)?
+                .ok_or_else(|| Error::NotFound(crate::paths::MANIFEST_FILE.to_owned()))?;
+            (project, Lock::load(root)?, None)
+        } else {
+            let scan = self.scan();
+            let mut collected = BTreeMap::new();
+            for tool in &scan.tools {
+                collected.insert(tool.clone(), self.project_collected(&scan, root, tool)?);
+            }
+            let used = scan
+                .project(root)
+                .map(|p| p.tools.clone())
+                .unwrap_or_default();
+            let input = crate::resolver::InferInput {
+                root,
+                user_home: &self.user_home,
+                fangcun_root: self.home.root(),
+                adapters: &self.adapters,
+                collected: &collected,
+                used: &used,
+            };
+            let (mut manifest, seed) = if from_existing {
+                let inferred = crate::resolver::infer_project(&input, &sources, &library)?;
+                notes.extend(inferred.notes);
+                (inferred.manifest, Some(inferred.seed))
+            } else {
+                let manifest = crate::manifest::Manifest {
+                    project: crate::manifest::ProjectSection {
+                        targets: crate::resolver::infer_targets(&input),
+                        ..crate::manifest::ProjectSection::default()
+                    },
+                    ..crate::manifest::Manifest::default()
+                };
+                (manifest, None)
+            };
+            manifest.project.mode =
+                Some(mode.unwrap_or_else(|| crate::resolver::suggest_mode(root).mode));
+            let project = crate::manifest::Project {
+                root: root.to_path_buf(),
+                manifest: manifest.clone(),
+                local: None,
+                bundles: Vec::new(),
+            };
+            (project, seed, Some(manifest))
+        };
+        let lock = crate::resolver::resolve_lock(&project, seed.as_ref(), &sources, &library)?;
+
+        let title = if already {
+            format!("为 {name} 补上清单与锁")
+        } else {
+            format!("登记 {name}")
+        };
+        let mut builder = PlanBuilder::new(title, RecordKind::Sync, scope).command(command);
+        builder.registers(root);
+        if let Some(manifest) = &new_manifest {
+            builder.write_file(
+                &manifest_file,
+                crate::manifest::render_manifest(manifest).into_bytes(),
+                manifest_summary(manifest),
+            )?;
+        }
+        let lock_text = lock.to_toml()?;
+        if std::fs::read(&lock_file).ok().as_deref() != Some(lock_text.as_bytes()) {
+            let previous = if new_manifest.is_some() {
+                None
+            } else {
+                Lock::load(root)?
+            };
+            let detail = match &previous {
+                Some(previous) => lock_summary(Some(previous), &lock),
+                None => lock_counts(&lock),
+            };
+            builder.write_file(&lock_file, lock_text.into_bytes(), detail)?;
+        }
+        if !already {
+            let text = crate::registry::with_registered(
+                &self.home,
+                &[root.to_path_buf()],
+                &Timestamp::now(),
+            )?;
+            builder.write_file(
+                &self.home.projects_file(),
+                text.into_bytes(),
+                format!("登记 {}", display_path(root, &self.user_home)),
+            )?;
+        }
+        for note in notes {
+            builder.note(note);
+        }
+        Ok(self.issue(builder))
     }
 
     /// `fangcun add <资产>`：加入清单。
@@ -569,6 +727,64 @@ impl Kernel {
         Ok(self.issue(builder))
     }
 
+    /// `fangcun export skills-lock`（M1-08）：把锁里 GitHub 来源的 skill 导出成项目根目录的
+    /// `skills-lock.json`，和 `skills` 命令行互通。原文件里方寸不管的项原样留下。
+    pub fn plan_export_skills_lock(&self, project_root: &Path) -> Result<ChangePlan> {
+        self.require_write("export")?;
+        self.require_registered(project_root)?;
+        let lock = Lock::load(project_root)?.ok_or_else(|| {
+            Error::NotFound(format!(
+                "{} 没有 fangcun.lock。先运行 fangcun lock",
+                display_path(project_root, &self.user_home)
+            ))
+        })?;
+        // 位置从适配器查：项目层 skill 目录配套的 skills 命令行锁。
+        let (file, installed) = self
+            .adapters
+            .iter()
+            .flat_map(|a| a.skills.iter())
+            .filter(|l| l.scope == crate::model::Scope::Project)
+            .find_map(|l| {
+                let lock = l.lock.as_ref()?;
+                Some((
+                    crate::adapter::expand(&lock.path, &self.user_home, Some(project_root))?,
+                    crate::adapter::expand(&l.path, &self.user_home, Some(project_root))?,
+                ))
+            })
+            .ok_or_else(|| {
+                Error::NotFound("适配器里没有项目层的 skills-lock.json 位置".to_owned())
+            })?;
+        let exported = crate::manifest::export_skills_lock(&lock, &file, &installed)?;
+        let name = crate::scanner::project_name(project_root);
+        let changed = std::fs::read(&file).ok().as_deref() != Some(exported.text.as_bytes());
+        let title = if changed {
+            format!("导出 {name} 的 skills-lock.json")
+        } else {
+            format!("{name} 的 skills-lock.json 已是最新")
+        };
+        let mut builder = PlanBuilder::new(
+            title,
+            RecordKind::Sync,
+            SnapshotScope::Project(project_root.to_path_buf()),
+        )
+        .command("fangcun export skills-lock");
+        if changed {
+            let mut detail = format!("{} 个 skill", exported.exported.len());
+            if !exported.kept.is_empty() {
+                detail.push_str(&format!("，留下原有的 {} 项", exported.kept.len()));
+            }
+            builder.write_file(&file, exported.text.into_bytes(), detail)?;
+        }
+        if !exported.skipped.is_empty() {
+            builder.note(crate::model::PlanNote::info(format!(
+                "{} 项不是 GitHub 来源，skills-lock.json 记不了，没有导出：{}",
+                exported.skipped.len(),
+                exported.skipped.join("、")
+            )));
+        }
+        Ok(self.issue(builder))
+    }
+
     /// `fangcun sync`：按清单与锁物化。
     pub fn plan_sync(&self, _project_root: &Path) -> Result<ChangePlan> {
         self.require_write("sync")?;
@@ -612,6 +828,40 @@ impl Kernel {
         // 扫描缓存不在这里清：清了下一次查询会全盘重扫，桌面端还会多记一条体检。
         // 应用后要不要重扫由用例决定（M1-13 的同步面板）。
         Ok(applied)
+    }
+}
+
+/// 新清单的说明，例如「清单：2 个目标工具、21 个 skill、1 个 MCP、正本 AGENTS.md」。
+fn manifest_summary(manifest: &crate::manifest::Manifest) -> String {
+    let mut parts = vec![format!("{} 个目标工具", manifest.project.targets.len())];
+    if !manifest.skills.is_empty() {
+        parts.push(format!("{} 个 skill", manifest.skills.len()));
+    }
+    if !manifest.mcp.is_empty() {
+        parts.push(format!("{} 个 MCP", manifest.mcp.len()));
+    }
+    if let Some(instructions) = &manifest.instructions {
+        parts.push(format!("正本 {}", instructions.canonical));
+    }
+    format!("清单：{}", parts.join("、"))
+}
+
+/// 新锁的说明，例如「锁：21 个 skill、1 个 MCP、1 份指令」。
+fn lock_counts(lock: &Lock) -> String {
+    let mut parts = Vec::new();
+    for (count, label) in [
+        (lock.skills.len(), "个 skill"),
+        (lock.mcp.len(), "个 MCP"),
+        (lock.instructions.len(), "份指令"),
+    ] {
+        if count > 0 {
+            parts.push(format!("{count} {label}"));
+        }
+    }
+    if parts.is_empty() {
+        "锁：还没有资产".to_owned()
+    } else {
+        format!("锁：{}", parts.join("、"))
     }
 }
 
@@ -705,14 +955,16 @@ mod tests {
             id: 0,
             title: String::new(),
             changes: Vec::new(),
+            notes: Vec::new(),
             body: None,
         };
 
         let refusals = [
-            kernel.plan_init(root, true).err(),
+            kernel.plan_init(root, true, None).err(),
             kernel.plan_add(root, "tdd").err(),
             kernel.plan_adopt("tdd").err(),
             kernel.plan_lock(root).err(),
+            kernel.plan_export_skills_lock(root).err(),
             kernel.plan_sync(root).err(),
             kernel.plan_update(None, &[]).err(),
             kernel.plan_rollback(root, SnapshotId(1)).err(),

@@ -6,12 +6,14 @@ use std::path::{Path, PathBuf};
 
 use fangcun_core::journal::{FileOp, Record, RecordFilter, RecordStatus, Trigger};
 use fangcun_core::materializer::{ChangeOp, ChangePlan};
-use fangcun_core::model::{AssetKind, ProjectId, Scope, SnapshotId, TokenEstimate};
+use fangcun_core::model::{
+    AssetKind, NoteTone, ProjectId, Scope, SnapshotId, SyncMode, TokenEstimate,
+};
 use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
 use fangcun_core::{Error, Kernel, Result};
 
-use crate::cli::{Cli, Command};
+use crate::cli::{Cli, Command, ExportFormat};
 
 pub fn run(cli: Cli) -> Result<()> {
     let cwd = current_project()?;
@@ -23,7 +25,10 @@ pub fn run(cli: Cli) -> Result<()> {
     match cli.command {
         Command::Doctor => print_doctor(&kernel.doctor()?),
         Command::Init { from_existing } => {
-            let _plan = kernel.plan_init(&cwd, from_existing)?;
+            let root = project_root_of(&cwd);
+            let mode = ask_mode(&kernel, &root, cli.yes);
+            let plan = kernel.plan_init(&root, from_existing, mode)?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Status => print_status(&kernel, &cwd)?,
         Command::Add { asset } => {
@@ -34,6 +39,12 @@ pub fn run(cli: Cli) -> Result<()> {
         }
         Command::Lock => {
             let plan = kernel.plan_lock(&project_root_of(&cwd))?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
+        }
+        Command::Export {
+            format: ExportFormat::SkillsLock,
+        } => {
+            let plan = kernel.plan_export_skills_lock(&project_root_of(&cwd))?;
             confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Sync { frozen: true } => {
@@ -64,12 +75,47 @@ pub fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
+/// 登记时问一次物化方式（9.2），回车取建议的那个。已有清单、`--yes`、不在终端里时不问，
+/// 由内核取建议。
+fn ask_mode(kernel: &Kernel, root: &Path, yes: bool) -> Option<SyncMode> {
+    use std::io::{BufRead, IsTerminal, Write};
+
+    if yes || !std::io::stdin().is_terminal() || root.join("fangcun.toml").is_file() {
+        return None;
+    }
+    let suggestion = kernel.suggest_mode(root);
+    let (hint, default) = match suggestion.mode {
+        SyncMode::Vendor => (
+            format!("{} 位提交者，多人协作建议入库", suggestion.committers),
+            "v",
+        ),
+        SyncMode::Link => ("个人项目建议链接".to_owned(), "l"),
+    };
+    print!("物化方式：链接（l，软链到资产库）或入库（v，实体文件提交进仓库）。{hint} [{default}] ");
+    let _ = std::io::stdout().flush();
+    let mut answer = String::new();
+    let _ = std::io::stdin().lock().read_line(&mut answer);
+    match answer.trim() {
+        "l" | "L" | "link" => Some(SyncMode::Link),
+        "v" | "V" | "vendor" => Some(SyncMode::Vendor),
+        _ => Some(suggestion.mode),
+    }
+}
+
 /// 先打印变更计划，再问「应用？[y/N]」（第 5 节）。`--yes` 不问；不在终端里又没加
 /// `--yes` 时只打印不写，免得被脚本或 Agent 调用时卡在提问上。
 fn confirm_and_apply(kernel: &Kernel, plan: &ChangePlan, yes: bool) -> Result<()> {
     use std::io::{BufRead, IsTerminal, Write};
 
     println!("{}", plan.title);
+    for note in &plan.notes {
+        let mark = match note.tone {
+            NoteTone::Info => "·",
+            NoteTone::Warning => "!",
+            NoteTone::Danger => "‼",
+        };
+        println!("  {mark} {}", note.text);
+    }
     if plan.changes.is_empty() {
         println!("没有要写的变更。");
         return Ok(());

@@ -23,6 +23,8 @@ export const projects: ProjectSummary[] = [
   lastSeen: null,
   sessions: 0,
   tools: ["claude-code", "codex"],
+  // 原型侧栏这一组叫「已登记项目」，六个都算已登记。
+  registered: true,
 }));
 
 const SCOPES: Scope[] = ["global", "bundle", "project", "personal"];
