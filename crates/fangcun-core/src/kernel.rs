@@ -22,7 +22,12 @@ use crate::global::GlobalOverview;
 use crate::journal::{
     FileOp, Journal, Record, RecordFile, RecordFilter, RecordKind, RecordStatus, Trigger,
 };
-use crate::materializer::{Applied, ApplyContext, ChangePlan, PlanBuilder, WriteScope};
+use crate::library::Library;
+use crate::library::source::Sources;
+use crate::manifest::Lock;
+use crate::materializer::{
+    Applied, ApplyContext, ChangePlan, PlanBuilder, SnapshotScope, WriteScope,
+};
 use crate::model::{AssetState, ProjectId, SnapshotId, Timestamp, ToolId};
 use crate::paths::FangcunHome;
 use crate::resolver::{EffectiveContext, Explanation};
@@ -92,6 +97,8 @@ pub struct Kernel {
     /// 最近一次扫描，以及它记没记过体检记录。
     scan: Mutex<Option<(Arc<Scan>, bool)>>,
     journal: Journal,
+    /// 换掉 GitHub 的地址，测试用本地裸仓库。
+    github_base: Option<String>,
     /// 出了还没应用的计划，按编号。
     pending: Mutex<BTreeMap<u32, ChangePlan>>,
     next_plan: AtomicU32,
@@ -129,6 +136,7 @@ impl Kernel {
             extra_projects: Vec::new(),
             scan: Mutex::new(None),
             journal,
+            github_base: None,
             pending: Mutex::new(BTreeMap::new()),
             next_plan: AtomicU32::new(1),
         })
@@ -155,6 +163,37 @@ impl Kernel {
         self
     }
 
+    /// 换掉 GitHub 的地址。测试用 `file://` 指向本地的裸仓库。
+    #[must_use]
+    pub fn with_github_base(mut self, base: impl Into<String>) -> Self {
+        self.github_base = Some(base.into());
+        self
+    }
+
+    fn sources(&self) -> Sources {
+        let sources = Sources::open(&self.home);
+        match &self.github_base {
+            Some(base) => sources.with_github_base(base.clone()),
+            None => sources,
+        }
+    }
+
+    /// 写入用例只对已登记的项目出计划，免得解析了半天，应用时才发现不在写入范围里。
+    fn require_registered(&self, project_root: &Path) -> Result<()> {
+        let wanted = crate::scanner::fsutil::canonical(project_root);
+        let registered = crate::registry::load(&self.home)?
+            .iter()
+            .any(|p| crate::scanner::fsutil::canonical(&p.path) == wanted);
+        if registered {
+            Ok(())
+        } else {
+            Err(Error::NotFound(format!(
+                "{} 还没登记。先运行 fangcun init",
+                display_path(project_root, &self.user_home)
+            )))
+        }
+    }
+
     pub fn home(&self) -> &FangcunHome {
         &self.home
     }
@@ -171,8 +210,6 @@ impl Kernel {
     }
 
     /// 出一份计划：编号、留在内核里等 [`Kernel::apply`]。
-    // 写入用例从 M1-09（登记）起调它，现在只有测试用。
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn issue(&self, builder: PlanBuilder) -> ChangePlan {
         let id = self.next_plan.fetch_add(1, Ordering::Relaxed);
         let plan = builder.build(id);
@@ -486,9 +523,50 @@ impl Kernel {
     }
 
     /// `fangcun lock`：重新解析清单，更新锁。
-    pub fn plan_lock(&self, _project_root: &Path) -> Result<ChangePlan> {
+    ///
+    /// 约束没变的项沿用锁里的版本，新增的、换了约束的重新解析（会联网拉 git 来源，
+    /// 拉到的版本存进资产库）。锁的内容没变时，计划里没有变更。
+    pub fn plan_lock(&self, project_root: &Path) -> Result<ChangePlan> {
         self.require_write("lock")?;
-        Err(Error::NotImplemented("Kernel::plan_lock"))
+        self.require_registered(project_root)?;
+        let project =
+            crate::manifest::load_project(project_root, &self.home)?.ok_or_else(|| {
+                Error::NotFound(format!(
+                    "{} 没有 fangcun.toml。先运行 fangcun init",
+                    display_path(project_root, &self.user_home)
+                ))
+            })?;
+        let previous = Lock::load(project_root)?;
+        let library = Library::open(&self.home)?;
+        let lock =
+            crate::resolver::resolve_lock(&project, previous.as_ref(), &self.sources(), &library)?;
+        let text = lock.to_toml()?;
+        let file = project_root.join(crate::paths::LOCK_FILE);
+        let name = project_root.file_name().map_or_else(
+            || project_root.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        let current = std::fs::read(&file).ok();
+        let changed = current.as_deref() != Some(text.as_bytes());
+        let title = if changed {
+            format!("更新 {name} 的锁")
+        } else {
+            format!("{name} 的锁已是最新")
+        };
+        let mut builder = PlanBuilder::new(
+            title,
+            RecordKind::Sync,
+            SnapshotScope::Project(project_root.to_path_buf()),
+        )
+        .command("fangcun lock");
+        if changed {
+            builder.write_file(
+                &file,
+                text.into_bytes(),
+                lock_summary(previous.as_ref(), &lock),
+            )?;
+        }
+        Ok(self.issue(builder))
     }
 
     /// `fangcun sync`：按清单与锁物化。
@@ -534,6 +612,61 @@ impl Kernel {
         // 扫描缓存不在这里清：清了下一次查询会全盘重扫，桌面端还会多记一条体检。
         // 应用后要不要重扫由用例决定（M1-13 的同步面板）。
         Ok(applied)
+    }
+}
+
+/// 锁的变更说明，例如「新增 tdd；更新 skill-b；去掉 old」。
+fn lock_summary(previous: Option<&Lock>, next: &Lock) -> String {
+    fn names<T: PartialEq>(
+        old: Option<&std::collections::BTreeMap<String, T>>,
+        new: &std::collections::BTreeMap<String, T>,
+        added: &mut Vec<String>,
+        updated: &mut Vec<String>,
+        removed: &mut Vec<String>,
+    ) {
+        for (name, item) in new {
+            match old.and_then(|o| o.get(name)) {
+                None => added.push(name.clone()),
+                Some(before) if before != item => updated.push(name.clone()),
+                Some(_) => {}
+            }
+        }
+        if let Some(old) = old {
+            removed.extend(old.keys().filter(|k| !new.contains_key(*k)).cloned());
+        }
+    }
+    let (mut added, mut updated, mut removed) = (Vec::new(), Vec::new(), Vec::new());
+    names(
+        previous.map(|p| &p.skills),
+        &next.skills,
+        &mut added,
+        &mut updated,
+        &mut removed,
+    );
+    names(
+        previous.map(|p| &p.mcp),
+        &next.mcp,
+        &mut added,
+        &mut updated,
+        &mut removed,
+    );
+    names(
+        previous.map(|p| &p.instructions),
+        &next.instructions,
+        &mut added,
+        &mut updated,
+        &mut removed,
+    );
+    let mut parts = Vec::new();
+    for (label, list) in [("新增", added), ("更新", updated), ("去掉", removed)] {
+        if !list.is_empty() {
+            parts.push(format!("{label} {}", list.join("、")));
+        }
+    }
+    if parts.is_empty() {
+        "重写格式".to_owned()
+    } else {
+        parts.join("；")
     }
 }
 

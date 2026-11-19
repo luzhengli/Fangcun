@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use fangcun_core::journal::{FileOp, Record, RecordFilter, RecordStatus, Trigger};
+use fangcun_core::materializer::{ChangeOp, ChangePlan};
 use fangcun_core::model::{AssetKind, ProjectId, Scope, SnapshotId, TokenEstimate};
 use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
@@ -32,7 +33,8 @@ pub fn run(cli: Cli) -> Result<()> {
             let _plan = kernel.plan_adopt(&asset)?;
         }
         Command::Lock => {
-            let _plan = kernel.plan_lock(&cwd)?;
+            let plan = kernel.plan_lock(&project_root_of(&cwd))?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Sync { frozen: true } => {
             kernel.verify_frozen(&cwd)?;
@@ -59,6 +61,48 @@ pub fn run(cli: Cli) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// 先打印变更计划，再问「应用？[y/N]」（第 5 节）。`--yes` 不问；不在终端里又没加
+/// `--yes` 时只打印不写，免得被脚本或 Agent 调用时卡在提问上。
+fn confirm_and_apply(kernel: &Kernel, plan: &ChangePlan, yes: bool) -> Result<()> {
+    use std::io::{BufRead, IsTerminal, Write};
+
+    println!("{}", plan.title);
+    if plan.changes.is_empty() {
+        println!("没有要写的变更。");
+        return Ok(());
+    }
+    for change in &plan.changes {
+        let mark = match change.op {
+            ChangeOp::Add => "+",
+            ChangeOp::Modify => "~",
+            ChangeOp::Remove => "−",
+        };
+        println!("  {mark} {}  {}", change.path.display(), change.detail);
+    }
+    if !yes {
+        if !std::io::stdin().is_terminal() {
+            println!("没有应用：不在终端里运行。确认后加 --yes 再运行一次。");
+            return Ok(());
+        }
+        print!("应用？[y/N] ");
+        let _ = std::io::stdout().flush();
+        let mut answer = String::new();
+        let _ = std::io::stdin().lock().read_line(&mut answer);
+        if !matches!(answer.trim(), "y" | "Y" | "yes") {
+            println!("没有应用。");
+            return Ok(());
+        }
+    }
+    let applied = kernel.apply(plan)?;
+    let snapshots: Vec<String> = applied
+        .snapshots
+        .iter()
+        .map(|s| format!("#{}", s.0))
+        .collect();
+    println!("已应用，已留快照 {}。", snapshots.join("、"));
     Ok(())
 }
 

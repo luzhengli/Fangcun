@@ -2,7 +2,7 @@
 //!
 //! 两个出口：
 //! - [`effective_context`]：某个项目在某个工具下实际加载了什么（F5、6.3）。M0 就要，只读。
-//! - [`resolve_lock`]：按清单解出确切版本，写锁（F3）。M1。
+//! - [`resolve_lock`]：按清单解出确切版本，写锁（F3、7.4），见 `lock.rs`。
 //!
 //! M0 没有清单，生效上下文直接按磁盘现状和适配器的优先级规则解。
 //! 同名时谁生效按工具的真实规则，不按方寸「下层覆盖上层」的设想：
@@ -15,13 +15,14 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::adapter::{Adapter, MergeMode};
-use crate::manifest::{Lock, Manifest};
 use crate::model::{AssetKind, AssetState, ObservedKind, Scope, TokenEstimate, ToolId};
 use crate::scanner::fsutil::display_path;
 use crate::scanner::{
     Collected, InstructionFile, McpEntry, Scan, SkillCopy, group_global_skills, short_hash,
 };
-use crate::{Error, Result};
+
+mod lock;
+pub use lock::resolve_lock;
 
 /// 项目预算的默认值。清单里怎么写预算还没定，先用这个数。
 pub const DEFAULT_BUDGET: TokenEstimate = TokenEstimate(20_000);
@@ -890,9 +891,4 @@ pub fn explain(context: &EffectiveContext, tool_name: &str, asset: &str) -> Opti
         declared: item.declared.clone(),
         reason: item.reason.clone(),
     })
-}
-
-/// 合并四层声明，解出每项资产的确切版本。
-pub fn resolve_lock(_manifest: &Manifest, _local: Option<&Manifest>) -> Result<Lock> {
-    Err(Error::NotImplemented("resolver::resolve_lock"))
 }
