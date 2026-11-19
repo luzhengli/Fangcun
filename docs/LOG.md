@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-11-19 合并 #22、#23，复盘工作流
+
+- 合并 PR #22（索引改回 SQLite）、#23（M1-06）。工作区里 `library/git.rs` 首行多出一个空格，不是 Agent 改的，存进 `git stash`（「会话外的改动」）待人确认。
+- 复盘五条摩擦：W-12 `pnpm workflow find` 查定没定过，写进交接规则第 5 条、质量关、AGENTS.md；W-15 依赖的 PR 都以 main 为基，写进交接规则第 6 条。W-13（CI 里跑 `skills` CLI 对照哈希）、W-14（截图能截非默认状态）进 BACKLOG 待做。
+
+---
+
 ## 2026-11-19 来源的三件设计定了，资产库索引改回 SQLite，M1-06 完成
 
 - 合并 PR #19、#20、#21。开工 M1-06 前发现 M1-05 的索引（TOML）违背 7.2，问人后改回 SQLite：`rusqlite`（bundled），`~/.fangcun/index.sqlite`，新增 `Error::Database`。本机 47 个 skill 重跑通过。

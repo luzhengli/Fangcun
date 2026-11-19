@@ -178,6 +178,10 @@
 - [ ] W-09 示例数据直接从原型生成：用预览器跑画板脚本，导出示例数据 JSON，`fixtures/` 只留一层映射。原型数据和 IPC 类型有几处故意不同，映射层要维护。M1 页面多了再定
 - [ ] W-10 CI 跑 `pnpm screens --compare`，把拼图作为构建产物传上去，PR 里直接看。CI 的 Linux 上原型和应用同一台机器渲染，差异可信
 - [ ] W-11 收工清单用 Claude Code 的 Stop hook 提醒：改了代码却没改 STATUS、LOG 时提示一句
+- [x] W-12 查「定没定过」：`pnpm workflow find <关键词…>` 查设计文档第 7 节与 9.2、9.3、DECISIONS、BACKLOG；WORKFLOW 交接规则第 5 条、质量关加一行，AGENTS.md「文档没写到的设计」加指针。2026-11-19 完成，拿「快照 保留」「索引 SQLite」两次失误试过，第一条命中就是当时的结论
+- [ ] W-13 和外部工具逐字节对齐的样例在 CI 里生成：CI 装 `skills` 命令行，对 `content.rs` 测试里那组边界文件跑一次，比对 Rust 的哈希。本机运行下载的 JS 会被权限拦下，CI 不受这个限制。M1-08（`skills-lock.json` 互通）之前做
+- [ ] W-14 `pnpm screens` 能截非默认状态：按场景脚本点选（例如「选中 frontend-design」「切到 Codex」）后再截，拼图里给检查器区域单独一张放大图。做 M1 的界面条目（M1-13 起）之前做
+- [x] W-15 依赖的 PR 都以 main 为基，后一个合进前一个分支，按顺序合。2026-11-19 写进 WORKFLOW 交接规则第 6 条；#19 至 #23 都这样合过，没有被关的 PR
 
 ## 之后
 
