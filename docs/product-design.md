@@ -189,7 +189,9 @@ MVP 的范围是六项能力。每项都直接对应第 2 节的痛点。
 
 - 按内容寻址存储，多版本并存。
 - 三种来源：git 仓库、本地开发目录、公开 skill 市场。公开市场指 [skills.sh](https://skills.sh)，只用来搜索和发现：选中的 skill 在清单里写成它所在的 `github:owner/repo`，锁照常记提交和哈希，不另设来源类型。skills.sh 没有可用的搜索接口时，M1 只支持粘贴 skills.sh 链接或 `owner/repo`。
-- 本地开发目录是「活链接」：你在自己的 skill 仓库里改，登记为开发模式的项目立即可见。
+- 本地开发目录是「活链接」：你在自己的 skill 仓库里改，登记为开发模式的项目立即可见。开发模式写在个人覆盖 `fangcun.local.toml` 的 `[dev]` 里，这些项在本机直接软链到本地来源目录，不经资产库、不改锁、不报漂移，队友仍按锁里的版本（7.4）。
+- 本地来源在清单里只写名字，例如 `local:luyao-skills`；名字对应的目录记在本机的 `~/.fangcun/sources.toml`，第一次从某个目录加资产时自动记下。别的机器上没有这个名字时提示「本机没有来源 luyao-skills」，让人选目录，或按锁从资产库还原。
+- 一个仓库里有多个 skill 时，按名字找：`SKILL.md` 的 `name` 等于清单里的键的那个目录，和 `skills` 命令行的找法一致。找到多个就报错，让人在清单里加 `path`。找到的路径记进锁。
 - 每项资产显示：来源、版本历史、被哪些项目使用、预估 token 成本、是否含脚本。
 - 按类型与来源筛选，来源按本地开发、GitHub、npm、待收编分组。
 
@@ -779,7 +781,7 @@ fangcun --read-only <命令>     # 只读模式：拒绝一切写入（7.5）
 ```
 
 - **扫描器**：遍历并归并，产出资产清点与体检发现。同时只读本机各工具的会话记录，统计每项资产近 30 天在哪些项目被触发。这些数据不上传。
-- **资产库**：内容寻址存储，git 来源走本地裸仓库缓存，索引用 SQLite。
+- **资产库**：内容寻址存储，git 来源走本地裸仓库缓存，索引用 SQLite（`~/.fangcun/index.sqlite`）。
 - **解析器**：合并四层作用域，解出确定结果，写锁。
 - **物化器**：计划、应用、快照、回滚。记录所有权。共享的 JSON 与 TOML 按键合并。每次写入记一条到 `~/.fangcun/journal`，活动页读的就是它。
 - **监听器**：基于 FSEvents 监听已登记项目与全局目录，发现漂移。
@@ -833,6 +835,7 @@ version = 1
 source = "github:obra/superpowers"
 track  = "main"                  # 照抄清单里的约束，换了约束就重新解析
 commit = "b7e9f0c2…"             # 解析出的确切提交
+path   = "skills/tdd"            # skill 在仓库里的目录，按名字找到的（F2）
 hash   = "9f2c…"                 # 内容哈希，算法见下
 bundle = "工程基线"              # 来自套装时写套装名
 
@@ -865,7 +868,13 @@ mcp    = ["playwright"]
 
 同步时写进各工具自己的开关：Claude Code 是项目 `.claude/settings.json` 的 `skillOverrides` 设 `"off"`，Codex 是 `.codex/config.toml` 的 `[[skills.config]] enabled = false`。适配器标明某个工具不支持按项目停用时，「在本项目停用」置灰，写「<工具> 不支持按项目停用」，旁边给「转成套装」；清单里写了也只对支持的工具生效，生效上下文如实显示。
 
-**个人覆盖** `fangcun.local.toml` 是清单的子集：能加资产、能停用、能改版本约束，不能改 `targets`、`mode`、`budget` 这些全队共享的设置。个人加的项不进锁，记在本机 `~/.fangcun/state/`；停用写进工具的个人层文件，例如 `.claude/settings.local.json`。
+**个人覆盖** `fangcun.local.toml` 是清单的子集：能加资产、能停用、能改版本约束，不能改 `targets`、`mode`、`budget` 这些全队共享的设置。个人加的项不进锁，记在本机 `~/.fangcun/state/`；停用写进工具的个人层文件，例如 `.claude/settings.local.json`。另外只有个人覆盖能写 `[dev]`，列出在本机走开发模式的 skill（F2）：
+
+```toml
+# fangcun.local.toml
+[dev]
+skills = ["project-harness"]     # 本机直接链到 local:luyao-skills 的工作目录，改了立即可见
+```
 
 **套装文件** `~/.fangcun/bundles/<名称>.toml` 与清单同结构，多一节 `[bundle]`：
 
@@ -1035,6 +1044,15 @@ git-commit = { source = "local:luyao-skills", pin = "0d81aa3" }
 | 登记表（M1-pre-06） | `~/.fangcun/projects.toml`（F3） |
 | 快照存什么（M1-pre-07） | 要动的文件的原样，整文件按哈希去重，每个快照一份 TOML 清单（F6）。保留期沿用上面「快照保留多久」 |
 | 公开市场（M1-pre-08） | skills.sh，只用来搜索发现，落到 `github:` 来源（F2） |
+
+**来源（M1-06 开工前）**，2026-11-19 人定。
+
+| 事项 | 结论 |
+|---|---|
+| 资产库索引 | 用 SQLite，照 7.2。M1-05 先做成了 TOML，按此改回 |
+| `local:` 名字对应哪个目录 | 本机来源表 `~/.fangcun/sources.toml`，第一次用到时记下；别的机器上没有就提示选目录（F2） |
+| 仓库里的哪个目录 | 按 `SKILL.md` 的 `name` 自动找，多个就要求清单写 `path`；锁里记 `path`（F2、7.4） |
+| 开发模式 | 个人覆盖 `fangcun.local.toml` 的 `[dev]`；不经资产库、不改锁、不报漂移（F2、7.4） |
 
 ### 9.4 建议的下一步
 

@@ -2,7 +2,7 @@
 //!
 //! - 正本在 `~/.fangcun/library/objects/<哈希>`：skill 是一个目录，指令是一个文件。
 //!   同样的内容只存一份；正本只增不删，回滚也不删（6.7 回滚规则第 5 条）。
-//! - 索引是 `~/.fangcun/library/index.toml`，见 [`index`]。
+//! - 索引是 `~/.fangcun/index.sqlite`（7.2），见 `index`。
 //! - git 来源走 `~/.fangcun/git/` 下的本地裸仓库缓存，本地开发目录是活链接，不复制进库，
 //!   两者在 M1-06。
 //! - 「被哪些项目使用」不存在索引里，从各项目的锁算（M1-07）。
@@ -15,7 +15,7 @@ mod index;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::model::{AssetKind, ContentHash, SourceRef, Timestamp, Version};
+use crate::model::{AssetKind, ContentHash, SourceRef, Version};
 use crate::paths::FangcunHome;
 use crate::{Error, Result};
 
@@ -45,6 +45,7 @@ pub struct Origin {
 #[derive(Debug, Clone)]
 pub struct Library {
     root: PathBuf,
+    index: PathBuf,
 }
 
 impl Library {
@@ -52,6 +53,7 @@ impl Library {
     pub fn open(home: &FangcunHome) -> Result<Self> {
         Ok(Self {
             root: home.library_dir(),
+            index: home.index_db(),
         })
     }
 
@@ -59,28 +61,15 @@ impl Library {
         self.root.join("objects")
     }
 
-    fn index_file(&self) -> PathBuf {
-        self.root.join("index.toml")
-    }
-
     /// 按种类、名字排序。
     pub fn entries(&self) -> Result<Vec<LibraryEntry>> {
-        let mut entries: Vec<LibraryEntry> = index::read(&self.index_file())?
-            .assets
+        let mut entries: Vec<LibraryEntry> = index::read(&self.index)?
             .into_iter()
             .map(|asset| LibraryEntry {
                 name: asset.name,
                 kind: asset.kind,
                 source: asset.source,
-                versions: asset
-                    .versions
-                    .into_iter()
-                    .map(|v| Version {
-                        hash: v.hash,
-                        commit: v.commit,
-                        tag: v.tag,
-                    })
-                    .collect(),
+                versions: asset.versions,
                 has_scripts: asset.has_scripts,
             })
             .collect();
@@ -126,34 +115,14 @@ impl Library {
             commit: origin.commit.clone(),
             tag: origin.tag.clone(),
         };
-        index::update(&self.index_file(), |index| {
-            let position = index
-                .assets
-                .iter()
-                .position(|a| a.name == name && a.kind == kind && a.source == origin.source);
-            let asset = match position {
-                Some(i) => &mut index.assets[i],
-                None => {
-                    index.assets.push(index::IndexedAsset {
-                        name: name.to_owned(),
-                        kind,
-                        source: origin.source.clone(),
-                        has_scripts: false,
-                        versions: Vec::new(),
-                    });
-                    index.assets.last_mut().expect("刚放进去")
-                }
-            };
-            asset.has_scripts |= has_scripts;
-            if !asset.versions.iter().any(|v| v.hash == hash) {
-                asset.versions.push(index::IndexedVersion {
-                    hash: hash.clone(),
-                    commit: origin.commit.clone(),
-                    tag: origin.tag.clone(),
-                    added: Timestamp::now(),
-                });
-            }
-        })?;
+        index::record(
+            &self.index,
+            name,
+            kind,
+            origin.source.as_ref(),
+            has_scripts,
+            &version,
+        )?;
         Ok(version)
     }
 

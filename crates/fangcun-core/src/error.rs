@@ -29,6 +29,10 @@ pub enum Error {
     #[error("找不到计划 #{0}，请重新预览")]
     PlanNotFound(u32),
 
+    /// 资产库索引（SQLite）读写出错。
+    #[error("资产库索引 {} 出错：{message}", path.display())]
+    Database { path: PathBuf, message: String },
+
     #[error("不认识的工具：{0}")]
     UnknownTool(String),
 
@@ -58,6 +62,7 @@ impl Error {
             Error::OutOfScope(_) => "out-of-scope",
             Error::StalePlan(_) => "stale-plan",
             Error::PlanNotFound(_) => "plan-not-found",
+            Error::Database { .. } => "database",
             Error::UnknownTool(_) => "unknown-tool",
             Error::NotFound(_) => "not-found",
             Error::NoHomeDir => "no-home-dir",

@@ -181,7 +181,7 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 实现时容易踩错、又不在代码里一眼看得出的事。原来在 STATUS 的「接手须知」里，2026-11-14 挪到这里（W-04）。
 
 - **写一个写入用例**：`PlanBuilder::new(标题, 记录类型, 快照范围)`，逐个 `write_file`、`symlink`、`remove`，`Kernel::issue` 出计划。每加一个路径就记下它现在的样子，`apply` 前再核对，变了返回 `Error::StalePlan`。缺的上层目录自动补成建目录的动作，进快照，回滚时一起删。一份计划里一个路径只出现一次；删目录树要先逐个删里面的。登记项目的计划用 `registers` 把项目算进写入范围。
-- **资产库**：正本在 `~/.fangcun/library/objects/<哈希>`，skill 存的是参与哈希的那些文件（`.git`、`__pycache__`、`metadata.json` 不存，软链存成普通文件，保留权限），所以正本的哈希就是源目录的哈希。索引是 `library/index.toml`，改写拿 `index.lock`。资产库写的是方寸自己的目录，不经变更计划，由写入用例在 `apply` 时调用。「被哪些项目使用」不进索引，从锁算。
+- **资产库**：正本在 `~/.fangcun/library/objects/<哈希>`，skill 存的是参与哈希的那些文件（`.git`、`__pycache__`、`metadata.json` 不存，软链存成普通文件，保留权限），所以正本的哈希就是源目录的哈希。索引是 SQLite `~/.fangcun/index.sqlite`（7.2），写入用 `BEGIN IMMEDIATE`、`busy_timeout` 5 秒；表结构版本在 `PRAGMA user_version`，改表时在 `library/index.rs` 的 `migrate` 里补升级。来源未知存空字符串。资产库写的是方寸自己的目录，不经变更计划，由写入用例在 `apply` 时调用。「被哪些项目使用」不进索引，从锁算。
 - **快照**按真实路径分范围：同一个项目经软链的不同写法是同一个范围（macOS 的 `/var` 是 `/private/var`）。写到一半失败时按快照倒着还原。应用后扫描缓存不自动清，要重扫由用例决定。
 
 - **适配器**格式和现状在 `adapters/README.md`。改了适配器跑 `cargo test -p fangcun-core --test adapters`。没核实、没读的位置写在各适配器文件开头，不要凭记忆补。Trae 用的是二手来源，待核实。
