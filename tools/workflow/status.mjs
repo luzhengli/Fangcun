@@ -7,6 +7,8 @@
 //   pnpm workflow --fetch         先 git fetch，再看云端推来、还没合并的分支
 //   pnpm workflow accept Main …   示例数据已经跟上这几张画板，记下画板现在的哈希
 //   pnpm workflow --ci            只报示例数据落后，按 GitHub Actions 的 ::warning:: 格式，不失败
+//   pnpm workflow find 快照 保留   查这件事定没定过：设计文档第 7 节与 9.2、9.3，DECISIONS、BACKLOG
+//                                 里同时含这几个词的行，带章节。问人之前、写代码之前跑（W-12）
 //
 // 只读，accept 只改 apps/desktop/src/ipc/fixtures/prototype-sync.json。
 
@@ -84,6 +86,43 @@ if (argv[0] === "accept") {
   for (const b of boards) Object.assign(sync.boards[b], { hash: hashBoard(b), version });
   writeFileSync(SYNC, `${JSON.stringify(sync, null, 2)}\n`);
   console.log(`已记下：${boards.join("、")} 对齐到原型版本 ${version}。`);
+  process.exit(0);
+}
+
+// 查「定没定过」：每行都要含全部关键词（不分大小写）。设计文档只看技术选型和已拍板的章节。
+if (argv[0] === "find") {
+  const words = argv.slice(1).map((w) => w.toLowerCase());
+  if (words.length === 0) {
+    console.error("要写关键词，例如：pnpm workflow find 索引 SQLite");
+    process.exit(2);
+  }
+  const scopes = [
+    { file: "docs/product-design.md", keep: (h) => /^#{2,3} (7\.|9\.2|9\.3)/.test(h) },
+    { file: "docs/DECISIONS.md", keep: () => true },
+    { file: "docs/BACKLOG.md", keep: () => true },
+  ];
+  let hits = 0;
+  for (const { file, keep } of scopes) {
+    let heading = "";
+    read(file)
+      .split("\n")
+      .forEach((line, i) => {
+        if (/^#{2,3} /.test(line)) heading = line;
+        if (!keep(heading) || !words.every((w) => line.toLowerCase().includes(w))) return;
+        hits += 1;
+        if (hits <= 40)
+          console.log(
+            `${file}:${i + 1}  ${heading.replace(/^#+ /, "")}\n    ${short(line.trim(), 160)}`,
+          );
+      });
+  }
+  console.log(
+    hits === 0
+      ? "没找到。换个说法再查一次；确实没有就是没定过，按 AGENTS.md 先问人。"
+      : hits > 40
+        ? `共 ${hits} 处，只列前 40 处，加关键词缩小。`
+        : `共 ${hits} 处。`,
+  );
   process.exit(0);
 }
 
