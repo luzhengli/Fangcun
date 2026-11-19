@@ -42,6 +42,16 @@ function E(
           : `${projects[0]} 等 ${projects.length} 个项目`,
     trigger: x.trigger ?? "desktop",
     snapshot: x.snap ?? null,
+    snapshots:
+      x.snap === undefined
+        ? []
+        : [
+            {
+              project: projects[0] === "global" ? null : `/Users/me/code/${projects[0]}`,
+              id: x.snap,
+            },
+          ],
+    reverts: null,
     status: x.status,
     summary: x.summary,
     files: x.changes.map(([op, path, note]) => ({ op: OP[op] ?? "read", path, note })),

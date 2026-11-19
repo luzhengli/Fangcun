@@ -382,9 +382,9 @@ mod tests {
       "computedHash": "9f2c"
     }},
     "theirs": {{
-      "computedHash": "{theirs_v2}",
       "source": "other/repo",
-      "sourceType": "github"
+      "sourceType": "github",
+      "computedHash": "{theirs_v2}"
     }}
   }}
 }}

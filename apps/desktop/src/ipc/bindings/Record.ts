@@ -2,6 +2,7 @@
 import type { ProjectId } from "./ProjectId";
 import type { RecordFile } from "./RecordFile";
 import type { RecordKind } from "./RecordKind";
+import type { RecordSnapshot } from "./RecordSnapshot";
 import type { RecordStatus } from "./RecordStatus";
 import type { SnapshotId } from "./SnapshotId";
 import type { Timestamp } from "./Timestamp";
@@ -18,7 +19,19 @@ project: ProjectId | null,
 /**
  * 列表第二行的项目写法：项目名、「evals_studio 等 5 个项目」或「全局层」。
  */
-projectLabel: string, trigger: Trigger, snapshot: SnapshotId | null, status: RecordStatus, 
+projectLabel: string, trigger: Trigger, 
+/**
+ * 列表里显示的快照编号：跨范围的记录取第一个（6.7「快照」）。
+ */
+snapshot: SnapshotId | null, 
+/**
+ * 这条记录留的全部快照，每个范围一个。检查器里写全，回滚按它找。
+ */
+snapshots: Array<RecordSnapshot>, 
+/**
+ * 回滚记录：撤销的是哪一条。被撤销的那条读出来时状态是「已回滚」。
+ */
+reverts: string | null, status: RecordStatus, 
 /**
  * 检查器里的一句说明。
  */

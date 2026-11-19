@@ -84,6 +84,11 @@ impl FangcunHome {
         self.root.join("settings.toml")
     }
 
+    /// 本机的物化台账（7.4「不进锁的」）：每个项目物化出了哪些文件、哪些键，收编换过的位置。
+    pub fn state_dir(&self) -> PathBuf {
+        self.root.join("state")
+    }
+
     pub fn snapshots_dir(&self) -> PathBuf {
         self.root.join("snapshots")
     }
