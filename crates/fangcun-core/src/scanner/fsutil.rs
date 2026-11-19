@@ -3,7 +3,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub use crate::library::content::{SCRIPT_EXTENSIONS, hash_bytes, hash_dir, hash_file};
+pub use crate::library::content::{
+    SCRIPT_EXTENSIONS, frontmatter, frontmatter_value, hash_bytes, hash_dir, hash_file,
+};
 
 /// 不计入内容哈希的文件。
 const IGNORED: &[&str] = &[".DS_Store", ".git"];
@@ -44,35 +46,6 @@ pub fn has_scripts(dir: &Path) -> bool {
                 .and_then(|e| e.to_str())
                 .is_some_and(|e| SCRIPT_EXTENSIONS.contains(&e))
     })
-}
-
-/// Markdown 开头 `---` 之间的 frontmatter，按「键: 值」逐行读。只取单行的值。
-pub fn frontmatter(text: &str) -> Vec<(String, String)> {
-    let mut lines = text.lines();
-    if lines.next().map(str::trim) != Some("---") {
-        return Vec::new();
-    }
-    let mut out = Vec::new();
-    for line in lines {
-        if line.trim() == "---" {
-            break;
-        }
-        if line.starts_with([' ', '\t', '-']) {
-            continue;
-        }
-        if let Some((key, value)) = line.split_once(':') {
-            let value = value.trim().trim_matches('"').trim_matches('\'');
-            out.push((key.trim().to_owned(), value.to_owned()));
-        }
-    }
-    out
-}
-
-pub fn frontmatter_value(text: &str, key: &str) -> Option<String> {
-    frontmatter(text)
-        .into_iter()
-        .find(|(k, _)| k == key)
-        .map(|(_, v)| v)
 }
 
 /// 读一份 JSON 或 TOML 配置，统一成 JSON 值。文件不存在或解析失败时为 `None`。

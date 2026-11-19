@@ -157,6 +157,62 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// Markdown 开头 `---` 之间的 frontmatter，按「键: 值」逐行读。只取单行的值。
+pub fn frontmatter(text: &str) -> Vec<(String, String)> {
+    let mut lines = text.lines();
+    if lines.next().map(str::trim) != Some("---") {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    for line in lines {
+        if line.trim() == "---" {
+            break;
+        }
+        if line.starts_with([' ', '\t', '-']) {
+            continue;
+        }
+        if let Some((key, value)) = line.split_once(':') {
+            let value = value.trim().trim_matches('"').trim_matches('\'');
+            out.push((key.trim().to_owned(), value.to_owned()));
+        }
+    }
+    out
+}
+
+pub fn frontmatter_value(text: &str, key: &str) -> Option<String> {
+    frontmatter(text)
+        .into_iter()
+        .find(|(k, _)| k == key)
+        .map(|(_, v)| v)
+}
+
+/// 工作目录里所有 `SKILL.md` 的相对路径（用 `/` 连接）。跳过 `.git`、`node_modules`、
+/// `__pycache__`，不跟随软链，最深 8 层。
+pub fn walk_skill_files(root: &Path, out: &mut Vec<String>) {
+    fn walk(dir: &Path, prefix: &str, depth: u32, out: &mut Vec<String>) {
+        if depth > 8 {
+            return;
+        }
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if kind.is_dir() {
+                if !matches!(name.as_str(), ".git" | "node_modules" | "__pycache__") {
+                    walk(&entry.path(), &format!("{prefix}{name}/"), depth + 1, out);
+                }
+            } else if kind.is_file() && name == "SKILL.md" {
+                out.push(format!("{prefix}{name}"));
+            }
+        }
+    }
+    walk(root, "", 0, out);
+}
+
 fn canonical(path: &Path) -> PathBuf {
     fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }

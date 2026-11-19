@@ -33,6 +33,10 @@ pub enum Error {
     #[error("资产库索引 {} 出错：{message}", path.display())]
     Database { path: PathBuf, message: String },
 
+    /// 来源出错：git 拉取失败、版本解析不到、仓库里找不到或找到多个 skill、市场搜索失败。
+    #[error("{0}")]
+    Source(String),
+
     #[error("不认识的工具：{0}")]
     UnknownTool(String),
 
@@ -63,6 +67,7 @@ impl Error {
             Error::StalePlan(_) => "stale-plan",
             Error::PlanNotFound(_) => "plan-not-found",
             Error::Database { .. } => "database",
+            Error::Source(_) => "source",
             Error::UnknownTool(_) => "unknown-tool",
             Error::NotFound(_) => "not-found",
             Error::NoHomeDir => "no-home-dir",
