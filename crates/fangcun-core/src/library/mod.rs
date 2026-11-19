@@ -17,6 +17,7 @@ pub mod source;
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::model::{AssetKind, ContentHash, SourceRef, Version};
 use crate::paths::FangcunHome;
@@ -187,16 +188,25 @@ impl Library {
     }
 
     /// 暂存目录：存一半的东西不会出现在 `objects/` 里。
+    ///
+    /// 名字在本进程里永不重复。用完的目录改名进 `objects/` 后名字就空了，调用方随后按名字
+    /// 清理；名字要是会被别的线程重新领走，就会删掉别人复制到一半的目录（2026-11-19 CI 上
+    /// `concurrent_ingests_all_reach_the_index` 偶发失败就是这样）。
     pub(crate) fn staging(&self) -> Result<PathBuf> {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
         let dir = self.root.join("tmp");
         fs::create_dir_all(&dir).map_err(io(&dir))?;
         fs::create_dir_all(self.objects()).map_err(io(&self.objects()))?;
-        let mut n = 0u32;
+        let mut attempts = 0;
         loop {
+            let n = NEXT.fetch_add(1, Ordering::Relaxed);
             let tmp = dir.join(format!("{}-{n}", std::process::id()));
             match fs::create_dir(&tmp) {
                 Ok(()) => return Ok(tmp),
-                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && n < 10_000 => n += 1,
+                // 上次崩溃留下的同名目录：跳过这个号。
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && attempts < 10_000 => {
+                    attempts += 1;
+                }
                 Err(source) => return Err(Error::Io { path: tmp, source }),
             }
         }
