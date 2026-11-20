@@ -358,6 +358,10 @@ body{margin:0}
         <sc-if value="{{showItem}}" hint-placeholder-val="{{true}}">
         <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
           <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
+          <!-- 未登记的目录：回到项目卡片 -->
+          <sc-if value="{{showBack}}" hint-placeholder-val="{{false}}">
+            <button type="button" class="fc-h" onClick="{{backToProj}}" title="回到项目" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; height: 22px; margin: -4px 0 2px -6px; padding: 0 6px 0 2px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 11px; color: var(--tx-2);"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"></path></svg>luyao-skills</button>
+          </sc-if>
           <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">{{sel.kind}}</span>
           <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">{{sel.name}}</h2>
           <span style="{{sel.badgeStyle}}"><span aria-hidden="true" style="{{sel.dotStyle}}"></span>{{sel.status}}</span>
@@ -1029,6 +1033,7 @@ class Component extends DCLogic {
       projCount: PROJ.length, isEvals: !isRecent, isRecent, noRecent: RECENT.length === 0, recentNote, recentBadge,
       projName: isRecent ? 'luyao-skills' : 'evals_studio', projPath: isRecent ? '~/code/luyao-skills' : '~/code/evals_studio',
       showProj, showItem: !showProj, projFields, projWhy,
+      showBack: isRecent && !showProj, backToProj: () => set({ sel: 'proj', inspOpen: true }),
       regOpen: !s.registered, regDone: s.registered,
       regDoneText: '生成了 fangcun.toml 与 fangcun.lock，mode = "' + s.regMode + '"。撤销会删掉这两个文件和登记表里的这一节。',
       regAsk: s.regAsk, regSheet: s.regSheet, regOpts, regPlan,

@@ -18,6 +18,8 @@ interface Props {
   status?: { tone: Tone; label: string };
   intro?: ReactNode;
   fields?: Field[];
+  /** 类型小标签上面一行「‹ 名称」，回到上一级。只有项目页未登记的目录用：回到项目卡片（6.3）。 */
+  back?: { label: string; onClick: () => void };
   onClose: () => void;
   children?: ReactNode;
 }
@@ -26,7 +28,7 @@ interface Props {
  * 检查器统一结构（6.1）：类型小标签、名称、状态徽标、一句说明、字段表、若干分区、操作。
  * 右上角 × 关闭。项目页、体检报告、全局、活动共用。
  */
-export function Inspector({ kind, name, status, intro, fields, onClose, children }: Props) {
+export function Inspector({ kind, name, status, intro, fields, back, onClose, children }: Props) {
   return (
     <aside aria-label="检查器" className={styles.inspector}>
       <div className={styles.inspectorHead}>
@@ -50,6 +52,24 @@ export function Inspector({ kind, name, status, intro, fields, onClose, children
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </button>
+        {back && (
+          <button type="button" className={styles.back} onClick={back.onClick} title="回到项目">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 3.5 5.5 8l4.5 4.5" />
+            </svg>
+            {back.label}
+          </button>
+        )}
         <span className={styles.kind}>{kind}</span>
         <h2 className={styles.inspectorName}>{name}</h2>
         {status && <StatusBadge tone={status.tone} label={status.label} />}

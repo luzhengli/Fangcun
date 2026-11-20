@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Navigate, useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation, useParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
@@ -95,6 +95,32 @@ function ProjectView({ root }: { root: string | undefined }) {
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  // 未登记的目录回到项目卡片（6.3）：检查器顶部「‹ 项目名」、点列表空白处、Esc、再点一次侧栏里同一个项目。
+  const toCard = () => {
+    setSelected(null);
+    setInspectorOpen(true);
+  };
+  // 再点一次侧栏里同一个项目：地址不变，但每次导航都有新的 location.key。
+  const navKey = useLocation().key;
+  const [seenNavKey, setSeenNavKey] = useState(navKey);
+  if (navKey !== seenNavKey) {
+    setSeenNavKey(navKey);
+    toCard();
+  }
+  const pickedUnregistered = !registered && selected !== null;
+  useEffect(() => {
+    if (!pickedUnregistered) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // 弹窗开着时 Esc 是关弹窗的。
+      if (document.querySelector('[role="dialog"]')) return;
+      if ((e.target as HTMLElement | null)?.closest("input, textarea, select")) return;
+      setSelected(null);
+      setInspectorOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pickedUnregistered]);
 
   const data = context.data;
   const items = data?.items ?? [];
@@ -174,7 +200,17 @@ function ProjectView({ root }: { root: string | undefined }) {
       )}
 
       <div className={page.split}>
-        <section className={page.list}>
+        {/* 点空白处回到项目卡片只是快捷方式，键盘用 Esc 或检查器里的「‹ 项目名」。 */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: 同上 */}
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
+        <section
+          className={page.list}
+          onClick={(e) => {
+            if (!pickedUnregistered) return;
+            if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+            toCard();
+          }}
+        >
           {context.isError && <p className={page.error}>{context.error.message}</p>}
           {!data && !context.isError && <p className={page.empty}>正在解析生效上下文…</p>}
           {data && !registered && (
@@ -211,6 +247,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           <ItemInspector
             item={current}
             context={data}
+            back={registered ? undefined : { label: data.projectName, onClick: toCard }}
             onPick={setSelected}
             onClose={() => setInspectorOpen(false)}
           />
@@ -319,11 +356,13 @@ function EffectiveList({
 function ItemInspector({
   item,
   context,
+  back,
   onPick,
   onClose,
 }: {
   item: EffectiveItem;
   context: EffectiveContext;
+  back?: { label: string; onClick: () => void };
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -392,6 +431,7 @@ function ItemInspector({
           : KIND_LABEL[item.kind]
       }
       name={item.name}
+      back={back}
       status={{ tone: item.state ? toneOfState(item.state) : "neutral", label: item.label }}
       fields={fields}
       onClose={onClose}
