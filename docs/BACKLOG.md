@@ -35,6 +35,11 @@
   - A（推荐）：先在原型的设计系统画板里补图标规范，再照着出图。
   - B：占位图标直接转正。
   - C：人另外提供图标文件。
+- [ ] H-06 在终端里新开 `claude`（不是 VS Code 插件），说「按原型待改改原型并同步」：Agent 用 Artifact 工具改 P-01、P-02、P-03，同步回 `prototype/`、开 PR。画布已到 1795172034-4599，比 `prototype/` 的 1794656963-e22c 新，同步时先看多出来的改动。第一次本地发布到画布，先确认发布后网页上画板正常。批 3 的 M1-25、M1-24 等这一步
+- [ ] H-07 遥测打开后的隐私加固，要人自己做（DECISIONS 2026-11-20）
+  - 挡掉第三方 Datadog：终端里运行 `! echo "0.0.0.0 http-intake.logs.us5.datadoghq.com" | sudo tee -a /etc/hosts`，再 `! sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`。只挡 Claude Code 的使用日志外发，不影响模型和画布。
+  - 在 https://claude.ai/settings/data-privacy-controls 关掉「用于改进 Claude 模型」：对话只留 30 天、不进训练。
+  - 可选：要藏 IP（推出大致位置），走代理或 VPN。Anthropic 每次请求都能看到 IP，和遥测无关。
 
 ## 原型待改
 

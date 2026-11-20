@@ -86,7 +86,7 @@
 ### 每轮迭代
 
 1. **设计**：改 `docs/product-design.md`，人确认。没确认的不往下走。要改原型的地方逐条写进 BACKLOG「原型待改」。
-2. **原型**：人在网页版画布里改，或者让云端 Agent 按「原型待改」改画布。改完同步到 `prototype/`，逐条对照文档，列出不符合的地方，直到原型符合文档。
+2. **原型**：人在网页版画布里改，或者让 Agent 按「原型待改」改画布（在终端的本地会话里，用 Artifact 工具）。改完同步到 `prototype/`，逐条对照文档，列出不符合的地方，直到原型符合文档。
 3. **实现**：只实现文档已确认、原型也已符合的部分。看样子、文案、示例数据时读 `prototype/`，判断该不该做时读文档。
 
 每一步谁做、人说什么口令、交给下一步什么、靠什么把关，见 `docs/WORKFLOW.md`。交接物只有 PR 和 BACKLOG 条目；要人定、要人看的事一律进 BACKLOG「待人处理」。
@@ -97,7 +97,7 @@
 
 - 画布：https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq 。旧画布 CJ7tjMr5uEiXFFCcVcBEpp 是按 9.3 补改之前的版本，不再更新。
 - 当前同步到哪个版本、哪个文件对应哪一节，看 `prototype/README.md`。
-- `prototype/` 只同步，不手改。要改原型，先问人；人让 Agent 改时，在云端会话里改画布再同步回来。
+- `prototype/` 只同步，不手改。要改原型，先问人；人让 Agent 改时，用 Artifact 工具改画布再同步回来。
 
 ### 文件结构
 
@@ -120,9 +120,9 @@
 
 ### 同步
 
-人说「同步原型」时，在 claude.ai 云端会话里做（要用 Artifact 工具，本地命令行没有），步骤见 `docs/WORKFLOW.md`「同步原型」。最后一步是开 PR，不要只推分支。
+人说「同步原型」时，在终端里开的本地 `claude` 会话里做（或 Claude 桌面应用；VS Code 插件和 `-p` 里没有 Artifact 工具），步骤见 `docs/WORKFLOW.md`「同步原型」。最后一步是开 PR，不要只推分支。claude.ai 云端会话仍可作备用。
 
-本地会话只需 `git pull` 拿到最新的 `prototype/`，包括截图。
+别的会话只需 `git pull` 拿到最新的 `prototype/`，包括截图。
 
 ## 交流
 

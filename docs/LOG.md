@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-20 本地原型配置：能用了，代价是打开遥测
+
+- 查清两层原因：`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 关掉 Artifacts（设成 `0` 也关）；`DISABLE_TELEMETRY` 停掉 feature flag，没有 flag 就认不出 Design 画布。单次实测去掉两者后，本地能列、能读画布文件，按类型说明能发布。
+- 读 Claude Code 代码查遥测发什么：无位置字段，新增第三方 Datadog。看了开源替代，没有能完整复刻的。人定全局打开遥测，其余尽量关。
+- 改了全局设置、AGENTS.md、WORKFLOW「同步原型」、`prototype/README.md`、`pnpm workflow` 提示。没做：P-01 至 P-03（H-06，新开终端会话做）、隐私加固（H-07，要人 sudo）。
+
+---
+
 ## 2026-11-19 合并 #27，批 2：同步、回滚、收编
 
 - W-13 在 #27 的 CI 首跑通过（新旧两种哈希都和 `skills@1.9.0` 一致），合并 #27。
