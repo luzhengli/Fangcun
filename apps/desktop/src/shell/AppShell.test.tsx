@@ -21,13 +21,14 @@ describe("窗口骨架（6.1）", () => {
     useUi.setState({ sidebarCollapsed: false });
   });
 
-  it("侧栏有五个导航项，顺序是项目、资产库、套装、全局、活动", () => {
+  it("侧栏有五个导航项，顺序是项目、资产库、套装、全局、活动；底部是设置和重新体检", () => {
     renderApp();
     const nav = screen.getByRole("navigation", { name: "主导航" });
     const labels = within(nav)
       .getAllByRole("link")
       .map((link) => link.textContent);
-    expect(labels).toEqual(["项目", "资产库", "套装", "全局", "活动"]);
+    expect(labels.slice(0, 5)).toEqual(["项目", "资产库", "套装", "全局", "活动"]);
+    expect(within(nav).getByRole("link", { name: /^设置/ })).toHaveAttribute("href", "/settings");
     expect(within(nav).getByRole("button", { name: "重新体检" })).toBeInTheDocument();
   });
 

@@ -42,6 +42,7 @@ export interface Commands {
   plan_rollback: (args: { projectRoot: string; snapshot: SnapshotId }) => ChangePlan;
   plan_rollback_record: (args: { recordId: string }) => ChangePlan;
   apply_plan: (args: { plan: ChangePlan }) => Applied;
+  pick_directory: () => string | null;
 }
 
 export const kernel = {
@@ -63,4 +64,5 @@ export const kernel = {
     call("plan_rollback", { projectRoot, snapshot }),
   planRollbackRecord: (recordId: string) => call("plan_rollback_record", { recordId }),
   applyPlan: (plan: ChangePlan) => call("apply_plan", { plan }),
+  pickDirectory: () => call("pick_directory"),
 };

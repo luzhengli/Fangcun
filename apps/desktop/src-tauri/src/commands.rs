@@ -161,3 +161,22 @@ pub async fn plan_rollback_record(
 pub async fn apply_plan(state: State<'_, AppState>, plan: ChangePlan) -> CommandResult<Applied> {
     state.run(move |kernel| kernel.apply(&plan)).await
 }
+
+/// 侧栏「添加项目…」：弹系统的选择文件夹面板，返回选中的目录（F3、M1-25）。
+///
+/// 对话框只从外壳这一侧调，界面拿到的只是路径，不给界面文件权限。
+#[tauri::command]
+pub async fn pick_directory(app: tauri::AppHandle) -> CommandResult<Option<String>> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("选择要登记的项目目录")
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|join_error| ErrorPayload::internal(join_error.to_string()))?;
+    Ok(picked
+        .and_then(|path| path.into_path().ok())
+        .map(|path| path.to_string_lossy().into_owned()))
+}

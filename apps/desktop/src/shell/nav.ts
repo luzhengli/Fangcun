@@ -23,6 +23,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
 /** 体检报告不在五个导航项里，入口是侧栏底部的「重新体检」。 */
 export const CHECKUP_PATH = "/checkup";
 
+/** 设置（6.1）：侧栏底部的「设置」、应用菜单「设置…」、⌘, 都到这里。 */
+export const SETTINGS_PATH = "/settings";
+
 /** 项目页的地址。项目标识是根目录的绝对路径，要编码。 */
 export function projectPath(projectId: string): string {
   return `/projects/${encodeURIComponent(projectId)}`;

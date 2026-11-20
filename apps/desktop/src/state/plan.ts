@@ -17,6 +17,8 @@ export interface PlanRequest {
   undoable?: boolean;
   /** 应用成功后页面自己要做的事，例如登记后切到这个项目。 */
   after?: (applied: Applied) => void;
+  /** 有上一步时（登记先选物化方式），弹窗里的「取消」换成「上一步」。 */
+  back?: () => void;
 }
 
 interface PlanState {

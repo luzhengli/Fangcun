@@ -1,9 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
-import { StatusDot } from "@/components/StatusDot";
+import { StatusBadge, StatusDot } from "@/components/StatusDot";
 import { ToolSwitch } from "@/components/ToolSwitch";
 import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
@@ -14,6 +15,7 @@ import { kernel } from "@/ipc/commands";
 import { useEffectiveContext, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
+import { useRegister } from "@/state/register";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
 import styles from "./ProjectPage.module.css";
@@ -96,8 +98,13 @@ function ProjectView({ root }: { root: string | undefined }) {
 
   const data = context.data;
   const items = data?.items ?? [];
+  // 未登记的目录默认看项目本身（检查器里有「登记」）；点了某一行才看那一项。
   const current =
-    items.find((i) => i.id === selected) ?? items.find((i) => i.state === "drifted") ?? items[0];
+    items.find((i) => i.id === selected) ??
+    (registered ? (items.find((i) => i.state === "drifted") ?? items[0]) : undefined);
+  const tools = useTools();
+  const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
+  const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
 
   return (
     <div className={page.page}>
@@ -106,6 +113,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           <h1 className={page.title}>{data?.projectName ?? "…"}</h1>
           <span className={page.path}>{data?.projectPath}</span>
         </div>
+        {summary && !registered && <StatusBadge tone="muted" label="未登记" />}
         <ToolSwitch value={tool} onChange={setTool} />
         <button type="button" className={styles.palette} disabled title="命令面板还没有实现">
           <span>搜索资产与动作</span>
@@ -134,7 +142,8 @@ function ProjectView({ root }: { root: string | undefined }) {
                   {formatK(data.budget.instructions + data.budget.skills + data.budget.mcp)}
                 </span>
                 <span className={styles.budgetLimit}>
-                  / 项目预算 {formatLimit(data.budget.limit)} tokens · 估算值
+                  / {registered ? "项目预算" : "默认预算"} {formatLimit(data.budget.limit)} tokens ·
+                  估算值
                 </span>
               </>
             }
@@ -142,31 +151,42 @@ function ProjectView({ root }: { root: string | undefined }) {
         </div>
       )}
 
-      <div role="tablist" aria-label="项目视图" className={page.tabs}>
-        {(
-          [
-            ["effective", "生效上下文"],
-            ["manifest", "清单"],
-            ["history", "历史"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {registered && (
+        <div role="tablist" aria-label="项目视图" className={page.tabs}>
+          {(
+            [
+              ["effective", "生效上下文"],
+              ["manifest", "清单"],
+              ["history", "历史"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className={page.split}>
         <section className={page.list}>
           {context.isError && <p className={page.error}>{context.error.message}</p>}
           {!data && !context.isError && <p className={page.empty}>正在解析生效上下文…</p>}
-          {data && tab === "effective" && (
+          {data && !registered && (
+            <p className={styles.recentNote}>
+              {items.length === 0
+                ? `未登记：${toolName} 在这个目录没有加载任何 skill、MCP 与指令文件。`
+                : `未登记：下面是 ${toolName} 在这个目录实际加载的内容，只读。${
+                    onlyGlobal ? "项目层没有发现资产，全是全局层带进来的。" : ""
+                  }`}
+            </p>
+          )}
+          {data && (tab === "effective" || !registered) && (
             <EffectiveList
               context={data}
               selectedId={current?.id}
@@ -176,14 +196,22 @@ function ProjectView({ root }: { root: string | undefined }) {
               }}
             />
           )}
-          {data && tab === "manifest" && <ManifestTab context={data} />}
-          {data && tab === "history" && (
+          {data && registered && tab === "manifest" && <ManifestTab context={data} />}
+          {data && registered && tab === "history" && (
             <div className={page.empty}>
               <p>还没有快照。M0 只读，同步与回滚在 M1 开放。</p>
             </div>
           )}
         </section>
-        {tab === "effective" && inspectorOpen && current && data && (
+        {!registered && inspectorOpen && !current && data && root && (
+          <UnregisteredInspector
+            root={root}
+            context={data}
+            onlyGlobal={onlyGlobal}
+            onClose={() => setInspectorOpen(false)}
+          />
+        )}
+        {(tab === "effective" || !registered) && inspectorOpen && current && data && (
           <ItemInspector
             item={current}
             context={data}
@@ -505,5 +533,74 @@ function ManifestTab({ context }: { context: EffectiveContext }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** 未登记的目录：检查器看项目本身，有「登记…」（6.1、F3、M1-25）。 */
+function UnregisteredInspector({
+  root,
+  context,
+  onlyGlobal,
+  onClose,
+}: {
+  root: string;
+  context: EffectiveContext;
+  onlyGlobal: boolean;
+  onClose: () => void;
+}) {
+  const openRegister = useRegister((s) => s.open);
+  const suggestion = useQuery({
+    queryKey: ["suggest-mode", root],
+    queryFn: () => kernel.suggestMode(root),
+  });
+  const total = context.budget.instructions + context.budget.skills + context.budget.mcp;
+  const committers = suggestion.data?.committers;
+  return (
+    <Inspector
+      kind="项目"
+      name={context.projectName}
+      status={{ tone: "muted", label: "未登记" }}
+      fields={[
+        { k: "路径", v: context.projectPath, mono: true },
+        {
+          k: "清单",
+          v: context.hasManifest ? "fangcun.toml" : "没有 fangcun.toml",
+          mono: context.hasManifest,
+        },
+        {
+          k: "提交者",
+          v:
+            committers === undefined
+              ? "…"
+              : committers === 0
+                ? "不是 git 仓库"
+                : `${committers} 位（git 历史，不算 [bot]）`,
+        },
+        {
+          k: "常驻",
+          v: `${formatK(total)} tokens（估算）${onlyGlobal ? "· 全部来自全局层" : ""}`,
+        },
+      ]}
+      onClose={onClose}
+    >
+      <Section title="为什么是这个状态">
+        <p className={page.why}>
+          近 30 天的会话记录里出现过这个目录，但它还没登记。{"\n"}
+          方寸只读显示它实际加载了什么，不写入。登记后才能同步、停用、升级。
+        </p>
+      </Section>
+      <Section title="登记">
+        <p className={styles.sectionNote}>
+          从目录现状反推清单，生成 fangcun.toml 与
+          fangcun.lock。查不出来源的项不进清单，留在原处照常生效。先问一次物化方式，再出变更计划。
+        </p>
+        <div>
+          <button type="button" className={page.buttonPrimary} onClick={() => openRegister(root)}>
+            登记…
+          </button>
+        </div>
+        <CommandHint command="fangcun init --from-existing" />
+      </Section>
+    </Inspector>
   );
 }

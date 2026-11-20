@@ -16,6 +16,8 @@ use crate::state::AppState;
 
 fn main() {
     tauri::Builder::default()
+        // 只给外壳用（`commands::pick_directory`），capabilities 里不开它的权限，界面调不到。
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // 默认可写；设置里开了只读模式时只读（7.5）。
             let kernel = Kernel::open_configured(false)?;
@@ -39,6 +41,7 @@ fn main() {
             commands::plan_rollback,
             commands::plan_rollback_record,
             commands::apply_plan,
+            commands::pick_directory,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");

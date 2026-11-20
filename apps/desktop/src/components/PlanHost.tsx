@@ -106,8 +106,15 @@ export function PlanHost() {
               <span className={styles.footNote}>
                 {plan?.blocked ? "有冲突，不能应用。原因见上方提示。" : "不会触碰其他任何文件。"}
               </span>
-              <button type="button" className={styles.cancel} onClick={close}>
-                取消
+              <button
+                type="button"
+                className={styles.cancel}
+                onClick={() => {
+                  close();
+                  request.back?.();
+                }}
+              >
+                {request.back ? "上一步" : "取消"}
               </button>
               <button
                 type="button"

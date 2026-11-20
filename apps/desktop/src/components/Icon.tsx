@@ -47,6 +47,14 @@ const paths = {
     </>
   ),
   checkup: <path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4" />,
+  settings: (
+    <>
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05" />
+      <circle cx="8" cy="8" r="4.5" />
+    </>
+  ),
+  plus: <path d="M8 3v10M3 8h10" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;
