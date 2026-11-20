@@ -102,7 +102,9 @@ pub async fn plan_sync(
     state: State<'_, AppState>,
     project_root: PathBuf,
 ) -> CommandResult<ChangePlan> {
-    state.run(move |kernel| kernel.plan_sync(&project_root)).await
+    state
+        .run(move |kernel| kernel.plan_sync(&project_root))
+        .await
 }
 
 /// 登记时建议的物化方式（9.2、M1-25）。
