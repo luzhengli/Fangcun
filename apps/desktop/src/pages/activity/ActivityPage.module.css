@@ -233,3 +233,9 @@
   white-space: pre-wrap;
   user-select: text;
 }
+
+.rollbackNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tx-2);
+}

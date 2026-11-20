@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
 use fangcun_core::global::GlobalOverview;
-use fangcun_core::journal::{Record, RecordFilter};
+use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
 use fangcun_core::kernel::{Overview, ProjectSummary};
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
@@ -202,4 +202,13 @@ pub async fn save_settings(
         state.reopen()?;
     }
     Ok(saved)
+}
+
+/// 项目页「历史」页签（6.3、M1-14）。
+#[tauri::command]
+pub async fn history(
+    state: State<'_, AppState>,
+    project_root: PathBuf,
+) -> CommandResult<Vec<HistoryEntry>> {
+    state.run(move |kernel| kernel.history(&project_root)).await
 }

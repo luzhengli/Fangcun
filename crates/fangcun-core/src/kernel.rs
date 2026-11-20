@@ -539,6 +539,17 @@ impl Kernel {
         self.journal.read(filter)
     }
 
+    /// 项目页「历史」页签（6.3、M1-14）：这个项目的快照，从新到旧，标出当前磁盘状态。
+    /// 跨项目的记录也算（它给每个项目各留一个快照）。快照的范围按真实路径比。
+    pub fn history(&self, project_root: &Path) -> Result<Vec<crate::journal::HistoryEntry>> {
+        let records = self.journal.read(&RecordFilter::default())?;
+        let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+        let root = real(project_root);
+        Ok(crate::journal::history_of(&records, |p| {
+            real(Path::new(&p.0)) == root
+        }))
+    }
+
     /// `fangcun sync --frozen`：锁与清单不一致就失败。本身不改项目文件。
     ///
     /// 不联网。结果在本机记一条「校验」（6.7）：一致是「已记录」，不一致是「失败」。

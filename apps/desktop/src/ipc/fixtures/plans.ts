@@ -6,9 +6,16 @@
  */
 import type { Applied } from "../bindings/Applied";
 import type { ChangePlan } from "../bindings/ChangePlan";
+import type { HistoryEntry } from "../bindings/HistoryEntry";
 import type { SyncMode } from "../bindings/SyncMode";
 
-const state = { synced: false, registered: new Set<string>(), next: 1 };
+const state = {
+  synced: false,
+  registered: new Set<string>(),
+  next: 1,
+  /** 回滚到的快照。为空时磁盘在最新一条。 */
+  current: null as number | null,
+};
 
 /** Main.dc.html 的 plan：evals_studio 的四处变更。 */
 export function syncPlan(projectRoot: string): ChangePlan {
@@ -57,8 +64,54 @@ export function rollbackPlan(): ChangePlan {
   };
 }
 
+/** Main.dc.html 的 HIST：evals_studio 的四个快照；同步后多一条 #128。 */
+export function history(): HistoryEntry[] {
+  const rows: [number, string, string][] = [
+    [127, "同步 3 处变更", "2026-11-13T10:42:00"],
+    [126, "升级 frontend-design → v1.3.0", "2026-11-12T18:05:00"],
+    [125, "收编 project-harness", "2026-11-11T09:30:00"],
+    [124, "登记项目，生成清单与锁", "2026-11-10T16:12:00"],
+  ];
+  if (state.synced) rows.unshift([128, "同步 4 处变更", new Date().toISOString()]);
+  const current = state.current ?? rows[0]?.[0];
+  return rows.map(([snapshot, title, at]) => ({
+    snapshot,
+    record: `fixture-${snapshot}`,
+    title,
+    at: new Date(at).toISOString(),
+    kind:
+      snapshot === 124
+        ? "sync"
+        : snapshot === 125
+          ? "adopt"
+          : snapshot === 126
+            ? "upgrade"
+            : "sync",
+    status: "applied",
+    current: snapshot === current,
+  }));
+}
+
+/** 历史页签「回滚到此」。 */
+export function rollbackToPlan(snapshot: number): ChangePlan {
+  return {
+    id: state.next++,
+    title: `回滚到快照 #${snapshot}`,
+    changes: [
+      { op: "modify", path: ".agents/skills/tdd", detail: `还原成快照 #${snapshot} 时的样子` },
+    ],
+    notes: [],
+    blocked: false,
+  };
+}
+
 /** 应用：原型同步后的快照是 #128，登记的也写 #128。 */
 export function applyPlan(plan: ChangePlan): Applied {
+  const rollingTo = /^回滚到快照 #(\d+)$/.exec(plan.title);
+  if (rollingTo?.[1]) {
+    state.current = Number(rollingTo[1]);
+    return { snapshots: [129], record: `fixture-${plan.id}` };
+  }
   if (plan.title.startsWith("即将对")) state.synced = true;
   const registering = /^即将登记 (\S+)，/.exec(plan.title);
   if (registering?.[1]) state.registered.add(registering[1]);

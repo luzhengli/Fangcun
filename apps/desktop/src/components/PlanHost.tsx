@@ -44,8 +44,7 @@ export function PlanHost() {
   const undo = (record: string) =>
     preview({
       load: () => kernel.planRollbackRecord(record),
-      done: (applied) =>
-        `已撤销 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}，磁盘回到写入前`,
+      done: (_, plan) => `已撤销：${plan.title}`,
       undoable: false,
     });
 

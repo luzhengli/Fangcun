@@ -10,6 +10,7 @@ import type { CheckupReport } from "./bindings/CheckupReport";
 import type { EffectiveContext } from "./bindings/EffectiveContext";
 import type { Explanation } from "./bindings/Explanation";
 import type { GlobalOverview } from "./bindings/GlobalOverview";
+import type { HistoryEntry } from "./bindings/HistoryEntry";
 import type { ModeSuggestion } from "./bindings/ModeSuggestion";
 import type { Overview } from "./bindings/Overview";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
@@ -46,6 +47,7 @@ export interface Commands {
   pick_directory: () => string | null;
   settings: () => SettingsForm;
   save_settings: (args: { form: SettingsForm }) => SettingsForm;
+  history: (args: { projectRoot: string }) => HistoryEntry[];
 }
 
 export const kernel = {
@@ -70,4 +72,5 @@ export const kernel = {
   pickDirectory: () => call("pick_directory"),
   settings: () => call("settings"),
   saveSettings: (form: SettingsForm) => call("save_settings", { form }),
+  history: (projectRoot: string) => call("history", { projectRoot }),
 };

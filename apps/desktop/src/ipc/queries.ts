@@ -21,6 +21,7 @@ export const keys = {
   activity: (filter: RecordFilter) => ["activity", filter] as const,
   syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
   settings: ["settings"] as const,
+  history: (projectRoot: string) => ["history", projectRoot] as const,
 };
 
 export function useTools() {
@@ -105,5 +106,14 @@ export function useSaveSettings() {
         predicate: (q) => q.queryKey[0] !== "settings" && q.queryKey[0] !== "tools",
       });
     },
+  });
+}
+
+/** 项目页「历史」页签：这个项目的快照，从新到旧。 */
+export function useHistory(projectRoot: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.history(projectRoot ?? ""),
+    queryFn: () => kernel.history(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && enabled,
   });
 }

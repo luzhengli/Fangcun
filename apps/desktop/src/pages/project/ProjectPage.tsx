@@ -12,7 +12,7 @@ import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
 import { kernel } from "@/ipc/commands";
-import { useEffectiveContext, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
+import { useEffectiveContext, useHistory, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
@@ -197,11 +197,7 @@ function ProjectView({ root }: { root: string | undefined }) {
             />
           )}
           {data && registered && tab === "manifest" && <ManifestTab context={data} />}
-          {data && registered && tab === "history" && (
-            <div className={page.empty}>
-              <p>还没有快照。M0 只读，同步与回滚在 M1 开放。</p>
-            </div>
-          )}
+          {data && registered && tab === "history" && root && <HistoryTab root={root} />}
         </section>
         {!registered && inspectorOpen && !current && data && root && (
           <UnregisteredInspector
@@ -602,5 +598,56 @@ function UnregisteredInspector({
         <CommandHint command="fangcun init --from-existing" />
       </Section>
     </Inspector>
+  );
+}
+
+/** 「刚刚」或「11-13 10:42」，和原型的写法一样。 */
+function when(iso: string): string {
+  const d = new Date(iso);
+  if (Date.now() - d.getTime() < 60_000) return "刚刚";
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+/** 历史页签：这个项目的快照，最新的是当前磁盘状态，别的能「回滚到此」（6.3、M1-14）。 */
+function HistoryTab({ root }: { root: string }) {
+  const history = useHistory(root, true);
+  const preview = usePlan((s) => s.preview);
+  if (history.isError) return <p className={page.error}>{history.error.message}</p>;
+  if (!history.data) return <p className={page.empty}>正在读取历史…</p>;
+  if (history.data.length === 0)
+    return (
+      <div className={page.empty}>
+        <p>还没有快照。同步、收编、升级都会留快照，之后在这里一键回滚。</p>
+      </div>
+    );
+  return (
+    <ol className={styles.history}>
+      {history.data.map((h) => (
+        <li key={h.record} className={styles.historyRow}>
+          <span className={styles.historyId}>#{h.snapshot}</span>
+          <span className={styles.historyTitle}>
+            <span className={styles.historyName}>{h.title}</span>
+            <span className={styles.historyWhen}> · {when(h.at)}</span>
+          </span>
+          {h.current ? (
+            <span className={styles.historyCurrent}>当前磁盘状态</span>
+          ) : (
+            <button
+              type="button"
+              className={styles.historyButton}
+              onClick={() =>
+                preview({
+                  load: () => kernel.planRollback(root, h.snapshot),
+                  done: () => `已回滚到快照 #${h.snapshot}，磁盘状态逐字节一致`,
+                })
+              }
+            >
+              回滚到此
+            </button>
+          )}
+        </li>
+      ))}
+    </ol>
   );
 }

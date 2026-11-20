@@ -18,7 +18,15 @@ import { activity } from "./activity";
 import { checkup } from "./checkup";
 import { globalClaude } from "./global";
 import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProject } from "./main";
-import { applyPlan, initPlan, isRegistered, rollbackPlan, syncPlan } from "./plans";
+import {
+  applyPlan,
+  history,
+  initPlan,
+  isRegistered,
+  rollbackPlan,
+  rollbackToPlan,
+  syncPlan,
+} from "./plans";
 import { snapshotHandlers } from "./snapshot";
 
 const handlers: Partial<Commands> = {
@@ -71,6 +79,9 @@ const handlers: Partial<Commands> = {
   /** Main.dc.html 的 REG_OPTS 依据：git 历史里有 1 位提交者，建议链接。 */
   suggest_mode: () => ({ mode: "link", committers: 1 }),
   plan_rollback_record: () => rollbackPlan(),
+  plan_rollback: ({ snapshot }) => rollbackToPlan(snapshot),
+  /** Main.dc.html 的 HIST。 */
+  history: () => history(),
   apply_plan: ({ plan }) => applyPlan(plan),
   /** 浏览器里没有系统的选文件夹面板，当作选了 luyao-skills。 */
   pick_directory: () => recentProject.id,

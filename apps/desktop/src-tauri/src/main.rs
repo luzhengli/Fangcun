@@ -51,6 +51,7 @@ fn main() {
             commands::pick_directory,
             commands::settings,
             commands::save_settings,
+            commands::history,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");
