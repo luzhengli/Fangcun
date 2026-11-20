@@ -1,4 +1,5 @@
 import { Outlet } from "react-router";
+import { PlanHost } from "@/components/PlanHost";
 import styles from "./AppShell.module.css";
 import { Sidebar } from "./Sidebar";
 import { WindowToolbar } from "./WindowToolbar";
@@ -19,6 +20,7 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      <PlanHost />
     </div>
   );
 }

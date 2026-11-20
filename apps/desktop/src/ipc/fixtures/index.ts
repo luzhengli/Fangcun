@@ -17,6 +17,7 @@ import { activity } from "./activity";
 import { checkup } from "./checkup";
 import { globalClaude } from "./global";
 import { effectiveClaude, effectiveCodex, projects } from "./main";
+import { applyPlan, initPlan, rollbackPlan, syncPlan } from "./plans";
 import { snapshotHandlers } from "./snapshot";
 
 const handlers: Partial<Commands> = {
@@ -51,6 +52,14 @@ const handlers: Partial<Commands> = {
           (filter.kind === "upgrade" && r.kind === "updatable")) &&
         (filter.project === null || r.project === filter.project),
     ),
+
+  /** Main.dc.html 的 plan、regPlan，以及提示条的撤销。 */
+  plan_sync: ({ projectRoot }) => syncPlan(projectRoot),
+  plan_init: ({ projectRoot, mode }) => initPlan(projectRoot, mode),
+  /** Main.dc.html 的 REG_OPTS 依据：git 历史里有 1 位提交者，建议链接。 */
+  suggest_mode: () => ({ mode: "link", committers: 1 }),
+  plan_rollback_record: () => rollbackPlan(),
+  apply_plan: ({ plan }) => applyPlan(plan),
 };
 
 export const fixtureTransport: Transport = async (command, args) => {

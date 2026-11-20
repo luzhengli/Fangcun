@@ -35,6 +35,9 @@ use crate::scanner::fsutil::display_path;
 use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
+/// 内存里最多留多少份没应用的计划。
+const PENDING_LIMIT: usize = 64;
+
 /// 内核的访问方式。默认可写；设置里开了只读模式或命令行加了 `--read-only` 时只读（7.5）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Access {
@@ -214,6 +217,10 @@ impl Kernel {
         let plan = builder.build(id);
         if let Ok(mut pending) = self.pending.lock() {
             pending.insert(id, plan.clone());
+            // 界面每次预览都出一份新计划，只留最近的，旧的应用时会报「计划不存在」，重新预览即可。
+            while pending.len() > PENDING_LIMIT {
+                pending.pop_first();
+            }
         }
         plan
     }

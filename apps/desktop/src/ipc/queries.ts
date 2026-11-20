@@ -19,6 +19,7 @@ export const keys = {
   why: (projectRoot: string | null, asset: string) => ["why", projectRoot, asset] as const,
   globalOverview: (tool: ToolId) => ["global-overview", tool] as const,
   activity: (filter: RecordFilter) => ["activity", filter] as const,
+  syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
 };
 
 export function useTools() {
@@ -71,5 +72,19 @@ export function useRescan() {
         predicate: (q) => q.queryKey[0] !== "checkup" && q.queryKey[0] !== "tools",
       });
     },
+  });
+}
+
+/**
+ * 「同步 · N」里的 N：这个项目现在的同步计划有几处变更。只对已登记的项目取。
+ * 每次取都会在内核里出一份计划（内核只留最近 64 份），所以不自动重取，写入后才失效。
+ */
+export function useSyncPlan(projectRoot: string | undefined, registered: boolean) {
+  return useQuery({
+    queryKey: keys.syncPlan(projectRoot ?? ""),
+    queryFn: () => kernel.planSync(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && registered,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
   });
 }

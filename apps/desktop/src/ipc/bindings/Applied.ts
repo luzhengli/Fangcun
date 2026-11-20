@@ -8,4 +8,8 @@ export type Applied = {
 /**
  * 受影响的每个范围各一个快照。
  */
-snapshots: Array<SnapshotId>, };
+snapshots: Array<SnapshotId>, 
+/**
+ * 这次写入的活动记录编号。界面的「撤销」凭它出回滚计划（`Kernel::plan_rollback_record`）。
+ */
+record: string, };

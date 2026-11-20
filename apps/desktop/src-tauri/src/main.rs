@@ -32,6 +32,13 @@ fn main() {
             commands::why,
             commands::global_overview,
             commands::activity,
+            commands::plan_sync,
+            commands::suggest_mode,
+            commands::plan_init,
+            commands::plan_adopt,
+            commands::plan_rollback,
+            commands::plan_rollback_record,
+            commands::apply_plan,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");

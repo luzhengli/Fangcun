@@ -10,8 +10,10 @@ import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
-import { useEffectiveContext, useProjects, useTools } from "@/ipc/queries";
+import { kernel } from "@/ipc/commands";
+import { useEffectiveContext, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
+import { usePlan } from "@/state/plan";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
 import styles from "./ProjectPage.module.css";
@@ -77,6 +79,17 @@ function ProjectView({ root }: { root: string | undefined }) {
   const tool = useUi((s) => s.tool);
   const setTool = useUi((s) => s.setTool);
   const context = useEffectiveContext(root, tool);
+  const summary = useProjects().data?.find((p) => p.id === root);
+  const registered = summary?.registered ?? false;
+  const syncPlan = useSyncPlan(root, registered);
+  const preview = usePlan((s) => s.preview);
+  const openSync = () =>
+    root &&
+    preview({
+      load: () => kernel.planSync(root),
+      done: (applied, plan) =>
+        `已同步 ${plan.changes.length} 处变更 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
+    });
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -98,14 +111,16 @@ function ProjectView({ root }: { root: string | undefined }) {
           <span>搜索资产与动作</span>
           <span className={styles.kbd}>⌘K</span>
         </button>
-        <button
-          type="button"
-          className={page.buttonPrimary}
-          disabled
-          title="M0 只读，同步在 M1 开放"
-        >
-          同步 <span className={styles.count}>· 0</span>
-        </button>
+        {registered && (
+          <button
+            type="button"
+            className={page.buttonPrimary}
+            onClick={openSync}
+            title="按清单与锁物化，先出变更计划"
+          >
+            同步 <span className={styles.count}>· {syncPlan.data?.changes.length ?? "…"}</span>
+          </button>
+        )}
       </header>
 
       {data && (

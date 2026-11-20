@@ -366,6 +366,8 @@ impl PlanBuilder {
 pub struct Applied {
     /// 受影响的每个范围各一个快照。
     pub snapshots: Vec<SnapshotId>,
+    /// 这次写入的活动记录编号。界面的「撤销」凭它出回滚计划（`Kernel::plan_rollback_record`）。
+    pub record: String,
 }
 
 /// 应用时要用到的内核状态。
@@ -453,11 +455,12 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
     }
 
     // 6. 活动记录。写不进去时留在内存里，文件已经写了，不算失败。
-    let _ = ctx
-        .journal
-        .record(record(plan, body, &snapshots, ctx.trigger));
+    let entry = record(plan, body, &snapshots, ctx.trigger);
+    let record_id = entry.id.clone();
+    let _ = ctx.journal.record(entry);
     Ok(Applied {
         snapshots: snapshots.into_iter().map(|(_, id)| id).collect(),
+        record: record_id,
     })
 }
 
