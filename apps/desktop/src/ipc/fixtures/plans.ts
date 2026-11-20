@@ -125,3 +125,26 @@ export function applyPlan(plan: ChangePlan): Applied {
 export function isRegistered(name: string): boolean {
   return state.registered.has(name);
 }
+
+/** Checkup.dc.html 的 dup：project-harness 的 5 份副本收编进资产库，分叉的另存一版。 */
+export function findingPlan(): ChangePlan {
+  const same = ["agent-lab/.claude", "fangcun/.claude", "blog-site/.agents", "notes-kit/.claude"];
+  return {
+    id: state.next++,
+    title: "收编 project-harness：5 份副本，4 份相同、1 份已分叉",
+    changes: [
+      ...same.map((dir) => ({
+        op: "modify" as const,
+        path: `${dir}/skills/project-harness`,
+        detail: "换成受管链接 → 资产库 4d9b1eb，事前备份",
+      })),
+      {
+        op: "modify" as const,
+        path: "evals_studio/.trae/project-harness",
+        detail: "已分叉，另存为独立版本，换成受管链接",
+      },
+    ],
+    notes: [],
+    blocked: false,
+  };
+}

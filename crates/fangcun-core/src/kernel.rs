@@ -539,6 +539,18 @@ impl Kernel {
         self.journal.read(filter)
     }
 
+    /// 体检报告的一键动作（6.2、M1-26）：按发现的编号分派到对应的写入用例。
+    /// 「重复」收编进资产库；其余几类等各自的条目（M1-19、M1-17 等）接上。
+    pub fn plan_finding(&self, finding_id: &str) -> Result<ChangePlan> {
+        if !crate::scanner::finding_ready(finding_id) {
+            return Err(Error::NotImplemented("kernel::plan_finding"));
+        }
+        match finding_id.split_once(':') {
+            Some(("duplicate", asset)) => self.plan_adopt(asset),
+            _ => Err(Error::NotImplemented("kernel::plan_finding")),
+        }
+    }
+
     /// 项目页「历史」页签（6.3、M1-14）：这个项目的快照，从新到旧，标出当前磁盘状态。
     /// 跨项目的记录也算（它给每个项目各留一个快照）。快照的范围按真实路径比。
     pub fn history(&self, project_root: &Path) -> Result<Vec<crate::journal::HistoryEntry>> {

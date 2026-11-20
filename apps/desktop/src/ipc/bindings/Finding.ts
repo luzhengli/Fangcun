@@ -18,4 +18,8 @@ action: string,
 /**
  * 按钮下的小字。
  */
-foot: string, };
+foot: string, 
+/**
+ * 一键动作已经能用（M1-26）：界面据此决定按钮亮不亮，点了调 `Kernel::plan_finding`。
+ */
+ready: boolean, };

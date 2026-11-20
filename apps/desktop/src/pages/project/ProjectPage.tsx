@@ -439,7 +439,7 @@ function ItemInspector({
         </div>
       </Section>
       <Section title="写入了哪些文件">
-        <p className={styles.sectionNote}>M0 不写文件。下面是工具实际读取的位置。</p>
+        <p className={styles.sectionNote}>下面是工具实际读取的位置。</p>
         <ul className={styles.files}>
           {item.files.map((f) => (
             <li key={f} className={page.code}>
@@ -449,7 +449,7 @@ function ItemInspector({
         </ul>
       </Section>
       <Section title="最近活动">
-        <p className={styles.sectionNote}>还没有活动。M0 只记录体检。</p>
+        <p className={styles.sectionNote}>还没有活动。</p>
       </Section>
     </Inspector>
   );
@@ -493,7 +493,7 @@ function OverriddenBox({
               type="button"
               className={page.button}
               disabled
-              title="M0 只读，在 M1 开放"
+              title="还没开放，见 M1-19、M1-20"
             >
               {a}
             </button>
@@ -501,7 +501,7 @@ function OverriddenBox({
       </div>
       {globalWins && (
         <span className={styles.sectionNote}>
-          两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。M0 只读，在 M1 开放。
+          两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。还没开放。
         </span>
       )}
     </div>
@@ -520,11 +520,14 @@ function ManifestTab({ context }: { context: EffectiveContext }) {
     <div className={page.empty}>
       <p>清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。</p>
       {context.hasManifest ? (
-        <p>这个项目有 fangcun.toml。按清单解析在 M1 开放。</p>
+        <p>
+          这个项目有 fangcun.toml。清单的表格视图还没做，可以直接打开文件，或用 fangcun status
+          查看。
+        </p>
       ) : (
         <p>
           这个项目还没有 <span className={page.version}>fangcun.toml</span>
-          。登记项目、从现状反推清单在 M1 开放，命令行写法是{" "}
+          。重新登记会从现状反推清单，命令行写法是{" "}
           <span className={page.version}>fangcun init --from-existing</span>。
         </p>
       )}

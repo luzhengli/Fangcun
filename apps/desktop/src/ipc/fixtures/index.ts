@@ -20,6 +20,7 @@ import { globalClaude } from "./global";
 import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProject } from "./main";
 import {
   applyPlan,
+  findingPlan,
   history,
   initPlan,
   isRegistered,
@@ -80,6 +81,8 @@ const handlers: Partial<Commands> = {
   suggest_mode: () => ({ mode: "link", committers: 1 }),
   plan_rollback_record: () => rollbackPlan(),
   plan_rollback: ({ snapshot }) => rollbackToPlan(snapshot),
+  /** Checkup.dc.html 的 dup。 */
+  plan_finding: () => findingPlan(),
   /** Main.dc.html 的 HIST。 */
   history: () => history(),
   apply_plan: ({ plan }) => applyPlan(plan),

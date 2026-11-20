@@ -11,8 +11,8 @@ mod usage;
 
 pub use checkup::{
     CheckupReport, Finding, FindingCategory, FindingLocation, FindingStatus, GROUP_MIN,
-    GlobalGroup, LocationTone, common_prefix_label, diagnose, format_k, group_global_skills,
-    looks_like_secret, short_hash,
+    GlobalGroup, LocationTone, common_prefix_label, diagnose, finding_ready, format_k,
+    group_global_skills, looks_like_secret, short_hash,
 };
 pub use collect::{
     Collected, InstructionFile, LockInfo, McpEntry, ObservedEntry, Reach, SkillCopy, collect,

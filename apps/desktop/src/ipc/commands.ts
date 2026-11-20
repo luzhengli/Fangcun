@@ -48,6 +48,7 @@ export interface Commands {
   settings: () => SettingsForm;
   save_settings: (args: { form: SettingsForm }) => SettingsForm;
   history: (args: { projectRoot: string }) => HistoryEntry[];
+  plan_finding: (args: { findingId: string }) => ChangePlan;
 }
 
 export const kernel = {
@@ -73,4 +74,5 @@ export const kernel = {
   settings: () => call("settings"),
   saveSettings: (form: SettingsForm) => call("save_settings", { form }),
   history: (projectRoot: string) => call("history", { projectRoot }),
+  planFinding: (findingId: string) => call("plan_finding", { findingId }),
 };

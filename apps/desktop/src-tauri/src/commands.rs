@@ -212,3 +212,14 @@ pub async fn history(
 ) -> CommandResult<Vec<HistoryEntry>> {
     state.run(move |kernel| kernel.history(&project_root)).await
 }
+
+/// 体检报告的一键动作（6.2、M1-26）。
+#[tauri::command]
+pub async fn plan_finding(
+    state: State<'_, AppState>,
+    finding_id: String,
+) -> CommandResult<ChangePlan> {
+    state
+        .run(move |kernel| kernel.plan_finding(&finding_id))
+        .await
+}

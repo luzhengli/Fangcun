@@ -109,7 +109,7 @@ export function CommandHint({ command }: { command: string }) {
   );
 }
 
-/** M0 只读：写入类的动作按钮置灰，旁边说明。 */
+/** 还没接上内核用例的写入动作：按钮置灰，旁边说明。 */
 export function ReadOnlyAction({
   label,
   primary = true,
@@ -125,11 +125,11 @@ export function ReadOnlyAction({
         type="button"
         className={primary ? styles.primary : styles.secondary}
         disabled
-        title="M0 只读，这个动作在 M1 开放"
+        title={note ?? "这个动作还没有开放"}
       >
         {label}
       </button>
-      <span className={styles.hint}>{note ?? "M0 只读，这个动作在 M1 开放"}</span>
+      <span className={styles.hint}>{note ?? "这个动作还没有开放"}</span>
     </div>
   );
 }
