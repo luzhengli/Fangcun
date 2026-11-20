@@ -19,6 +19,9 @@ export const keys = {
   why: (projectRoot: string | null, asset: string) => ["why", projectRoot, asset] as const,
   globalOverview: (tool: ToolId) => ["global-overview", tool] as const,
   activity: (filter: RecordFilter) => ["activity", filter] as const,
+  syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
+  settings: ["settings"] as const,
+  history: (projectRoot: string) => ["history", projectRoot] as const,
 };
 
 export function useTools() {
@@ -71,5 +74,46 @@ export function useRescan() {
         predicate: (q) => q.queryKey[0] !== "checkup" && q.queryKey[0] !== "tools",
       });
     },
+  });
+}
+
+/**
+ * 「同步 · N」里的 N：这个项目现在的同步计划有几处变更。只对已登记的项目取。
+ * 每次取都会在内核里出一份计划（内核只留最近 64 份），所以不自动重取，写入后才失效。
+ */
+export function useSyncPlan(projectRoot: string | undefined, registered: boolean) {
+  return useQuery({
+    queryKey: keys.syncPlan(projectRoot ?? ""),
+    queryFn: () => kernel.planSync(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && registered,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+}
+
+export function useSettings() {
+  return useQuery({ queryKey: keys.settings, queryFn: kernel.settings });
+}
+
+/** 设置页保存。只读开关一变，内核换了，别的查询都要重新取。 */
+export function useSaveSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: kernel.saveSettings,
+    onSuccess: (saved) => {
+      client.setQueryData(keys.settings, saved);
+      void client.invalidateQueries({
+        predicate: (q) => q.queryKey[0] !== "settings" && q.queryKey[0] !== "tools",
+      });
+    },
+  });
+}
+
+/** 项目页「历史」页签：这个项目的快照，从新到旧。 */
+export function useHistory(projectRoot: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.history(projectRoot ?? ""),
+    queryFn: () => kernel.history(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && enabled,
   });
 }

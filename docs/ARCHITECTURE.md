@@ -98,6 +98,8 @@ model  paths  error                        纯类型，不做 IO
 
 错误过 IPC 时是 `{ code, message }`。界面按 `code` 分支，`message` 原样展示。
 
+写入命令成对：`plan_*`（`plan_sync`、`plan_init`、`plan_adopt`、`plan_finding`、`plan_rollback`、`plan_rollback_record`）出计划，`apply_plan` 落盘。外壳另有三个不属于内核用例的命令：`pick_directory`（「添加项目…」，外壳用 tauri-plugin-dialog 弹选文件夹面板，capabilities 不开它的权限，界面调不到插件）、`settings` / `save_settings`（只读开关变了时 `AppState::reopen` 换一个新内核）。应用菜单「设置…」（⌘,）发 `open-settings` 事件，界面切到 `/settings`。
+
 内核事件（漂移、活动记录新增）的转发还没接：`watcher::EventSink` 已定义，M1 在外壳里实现它，用 Tauri 事件发给界面，界面收到后让 `ipc/queries.ts` 里对应的查询失效。
 
 菜单栏图标、`⌘K` 命令面板都还没有，实现时在外壳里加。
@@ -122,9 +124,10 @@ src/
 - **两种状态分开放。** 内核的数据走 TanStack Query，键集中在 `ipc/queries.ts`。只属于窗口的状态（侧栏折叠、待应用的同步计划）放 `state/`。
 - **样式用 CSS Modules 加 token。** 不引入第二套设计系统。原型是行内样式，实现时改写成模块样式，尺寸照抄。
 - **页面自己摆「列表 + 检查器」。** 骨架只管工具栏和侧栏，因为套装页的左栏和别的页不一样。
-- **跨页面的组件先写一次。** `components/` 里已有：检查器 `Inspector`（6.1 统一结构，含 `Section`、`ReadOnlyAction`）、状态 `StatusDot`/`StatusBadge`（圆点加短标签，语气见 `tone.ts`）、层级刻度 `ScopeTicks`、预算条 `BudgetBar`、目标工具 `ToolSwitch`。变更计划弹窗（6.8）在 M1 第一次用到时加。
+- **跨页面的组件先写一次。** `components/` 里已有：检查器 `Inspector`（6.1 统一结构，含 `Section`、`ReadOnlyAction`）、状态 `StatusDot`/`StatusBadge`（圆点加短标签，语气见 `tone.ts`）、层级刻度 `ScopeTicks`、预算条 `BudgetBar`、目标工具 `ToolSwitch`、变更计划弹窗与提示条 `PlanHost`、登记弹窗 `RegisterHost`（后两个挂在 `AppShell` 上，全应用一份）。
+- **写入一律走 `state/plan.ts`。** 页面调 `usePlan().preview({ load, done, after?, back?, undoable? })`：`load` 向内核要计划，`PlanHost` 弹窗、应用、让查询失效、出提示条；提示条的「撤销」先出 `plan_rollback_record` 的计划。登记先经 `state/register.ts` 问物化方式。
 - **页面的公共版式** 在 `pages/page.module.css`：页头、列表栏、行、芯片、按钮、空状态。
-- **M0 的写入按钮一律置灰**，旁边写「M0 只读，在 M1 开放」。
+- **还没接上内核用例的写入按钮置灰**，用 `ReadOnlyAction` 写一句为什么。
 
 | 路由 | 页面 | 设计文档 | 原型画板 |
 | --- | --- | --- | --- |
@@ -134,6 +137,7 @@ src/
 | `/bundles` | `pages/bundles` | 6.5 | `Bundles` |
 | `/global` | `pages/global` | 6.6 | `Global` |
 | `/activity` | `pages/activity` | 6.7 | `Activity` |
+| `/settings` | `pages/settings` | 6.1「设置」 | `Settings` |
 
 ## 照着原型实现一个页面
 
@@ -165,6 +169,7 @@ src/
 | `pnpm screens [画板…]` | 给应用截图，和原型截图对比 |
 | `pnpm screens --snapshot target/ipc-snapshot.json [画板…]` | 用本机真实数据截图，写到 `screens/real-<画板>.png`。快照先用 `cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json` 生成，只读 |
 | `pnpm screens --compare [画板…]` | 本机重渲原型，写出「原型 · 应用 · 差异」拼图 `screens/compare-<画板>.png`，打印差异占比 |
+| `pnpm screens Main@codex …` | 截非默认状态的场景，场景表在 `apps/desktop/scripts/scenes.mjs`：一张画板加几步按文字点击，原型和应用走同样的步骤。`--compare` 另出局部放大对比 `compare-<场景>-focus.png`（默认检查器，弹窗场景是弹窗）。不带参数时截全部画板和场景 |
 | `pnpm window-shot [--launch]` | 给真实的桌面窗口截图（`screens/window.png`），放大左上角，量关闭按钮离工具栏按钮中心多少 pt。要终端有「屏幕录制」权限 |
 | `pnpm icons` | 从 `icons/source/app-icon.svg`（16 px 一档用 `app-icon-16.svg`）出各尺寸 png、`icon.icns`、`icon.ico`，覆盖 `apps/desktop/src-tauri/icons/`。改图标先改原型的设计系统画板，再改 SVG |
 | `pnpm workflow [--fetch]` | 工作流卡在哪：待人处理、没合并的分支、原型待改、落后的示例数据、没复盘的摩擦。`accept <画板…>` 记下示例数据已跟上 |
@@ -205,6 +210,10 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **示例数据**在 `apps/desktop/src/ipc/fixtures/`，按画板分文件，照抄原型。原型和真实内核的差别（例如全局指令的「6 / 6」、MCP 有常驻数）保留在示例数据里，以便和原型截图对比。各画板的示例数据有几处对不上（全局层有什么、tdd 与 project-harness 的差异行数等），文档各小节照各自画板写，没有强行统一。和原型对齐到哪一版记在 `prototype-sync.json`，用 `pnpm workflow accept` 改。
 - **看真实数据**：`cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json`，再 `pnpm screens --snapshot target/ipc-snapshot.json`，图在 `apps/desktop/screens/real-*.png`。
 - **使用数据**：Claude Code 认 `Skill` 工具调用、用户输入的 `/命令`、`mcp__服务__工具`；Codex 认命令里读了 `…/skills/<名称>/SKILL.md`（插件缓存里的不算）和 `mcp__` 调用。Codex 的 MCP 调用本机没有样本。
+- **计划只留最近 64 份**：界面每次预览都在内核里出一份计划（`Kernel::issue`），旧的被挤掉后应用会报「计划不存在」，重新预览即可。「同步 · N」的查询不自动重取，写入后才失效。
+- **历史页签的「当前磁盘状态」**是最新一条已应用、不是回滚的写入（`journal::history_of`）；「回滚到此」调 `plan_rollback(项目, 快照)`，即撤销比它新的写入。
+- **体检的一键动作**按发现编号分派（`Kernel::plan_finding`），能用的由 `scanner::finding_ready` 决定，界面只看 `Finding.ready`。
+- **设置**存在 `~/.fangcun/settings.toml`，`Settings::save` 不经变更计划（方寸自己的文件），只读模式下也能存。
 - **快照按范围各自编号**，跨项目操作每个项目各留一个快照（M1）。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 

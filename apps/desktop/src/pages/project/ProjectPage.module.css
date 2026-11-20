@@ -200,3 +200,67 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* 未登记的目录：列表顶上一句说明（Main.dc.html 的 recentNote）。 */
+.recentNote {
+  margin: 12px 16px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  color: var(--tx-2);
+  font-size: 12px;
+}
+
+/* 历史页签，照抄 Main.dc.html 的 history。 */
+.history {
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.historyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.historyId {
+  flex: 0 0 44px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.historyTitle {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.historyName {
+  font-weight: 500;
+}
+
+.historyWhen {
+  color: var(--tx-3);
+}
+
+.historyCurrent {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ok-weak);
+  color: var(--ok);
+}
+
+.historyButton {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--tx-1);
+}

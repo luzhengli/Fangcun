@@ -8,7 +8,9 @@ import type { Record as ActivityRecord } from "@/ipc/bindings/Record";
 import type { RecordKind } from "@/ipc/bindings/RecordKind";
 import type { RecordStatus } from "@/ipc/bindings/RecordStatus";
 import type { Trigger } from "@/ipc/bindings/Trigger";
+import { kernel } from "@/ipc/commands";
 import { useActivity, useProjects } from "@/ipc/queries";
+import { usePlan } from "@/state/plan";
 import page from "../page.module.css";
 import styles from "./ActivityPage.module.css";
 
@@ -273,6 +275,7 @@ function RecordInspector({ record, onClose }: { record: ActivityRecord; onClose:
           </pre>
         </Section>
       )}
+      <RollbackAction record={record} />
       {record.kind === "checkup" && (
         <div>
           <Link
@@ -285,5 +288,39 @@ function RecordInspector({ record, onClose }: { record: ActivityRecord; onClose:
         </div>
       )}
     </Inspector>
+  );
+}
+
+/**
+ * 「回滚到此之前…」（6.7）：有快照、已应用的写入记录才能回滚，先出回滚计划。
+ * 已回滚的写一句说明；密钥记录不能回滚。
+ */
+function RollbackAction({ record }: { record: ActivityRecord }) {
+  const preview = usePlan((s) => s.preview);
+  if (record.kind === "secret")
+    return (
+      <p className={styles.rollbackNote}>
+        密钥记录不能回滚，钥匙串条目保持现状。要撤销，用「替换」或「删除」再记一条。
+      </p>
+    );
+  if (record.status === "rolled-back")
+    return <p className={styles.rollbackNote}>这次变更已被回滚，磁盘状态与上一快照一致。</p>;
+  if (record.status !== "applied" || record.snapshots.length === 0) return null;
+  return (
+    <div>
+      <button
+        type="button"
+        className={page.button}
+        onClick={() =>
+          preview({
+            load: () => kernel.planRollbackRecord(record.id),
+            done: (_, plan) => `已${plan.title}，磁盘状态逐字节一致`,
+            undoable: true,
+          })
+        }
+      >
+        回滚到此之前…
+      </button>
+    </div>
   );
 }

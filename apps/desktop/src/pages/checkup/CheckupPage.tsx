@@ -6,7 +6,9 @@ import { TONE_COLORS, type Tone } from "@/components/tone";
 import type { Finding } from "@/ipc/bindings/Finding";
 import type { FindingCategory } from "@/ipc/bindings/FindingCategory";
 import type { LocationTone } from "@/ipc/bindings/LocationTone";
+import { kernel } from "@/ipc/commands";
 import { useCheckup } from "@/ipc/queries";
+import { usePlan } from "@/state/plan";
 import page from "../page.module.css";
 import styles from "./CheckupPage.module.css";
 
@@ -30,6 +32,7 @@ function locationColor(tone: LocationTone | null): string {
 
 /** 体检报告（6.2）：发现列表加检查器。首次启动先进这一页。 */
 export function CheckupPage() {
+  const preview = usePlan((s) => s.preview);
   const report = useCheckup();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string | null>(null);
@@ -169,10 +172,27 @@ export function CheckupPage() {
                   </div>
                   <span className={styles.locFoot}>{current.foot}</span>
                 </Section>
-                <ReadOnlyAction
-                  label={current.action}
-                  note="M0 只读，应用前会列出变更计划，在 M1 开放"
-                />
+                {current.ready ? (
+                  <div>
+                    <button
+                      type="button"
+                      className={page.buttonPrimary}
+                      onClick={() =>
+                        preview({
+                          load: () => kernel.planFinding(current.id),
+                          done: (_, plan) => `已处理：${plan.title} · 已留快照`,
+                        })
+                      }
+                    >
+                      {current.action}
+                    </button>
+                  </div>
+                ) : (
+                  <ReadOnlyAction
+                    label={current.action}
+                    note="这一类的一键处理还没接上，先在命令行或对应页面处理"
+                  />
+                )}
               </Inspector>
             )}
           </div>

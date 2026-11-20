@@ -81,6 +81,13 @@ pub struct Finding {
     pub action: String,
     /// 按钮下的小字。
     pub foot: String,
+    /// 一键动作已经能用（M1-26）：界面据此决定按钮亮不亮，点了调 `Kernel::plan_finding`。
+    pub ready: bool,
+}
+
+/// 哪些发现的一键动作已经接上了内核用例。和 `Kernel::plan_finding` 的分派一致。
+pub fn finding_ready(id: &str) -> bool {
+    matches!(id.split_once(':'), Some(("duplicate", name)) if name != "repos")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -117,6 +124,9 @@ pub fn diagnose(scan: &Scan) -> CheckupReport {
     inconsistent(scan, &mut findings);
     detached(scan, &mut findings);
     secrets(scan, &mut findings);
+    for finding in &mut findings {
+        finding.ready = finding_ready(&finding.id);
+    }
 
     let mut skill_dirs: BTreeSet<&PathBuf> = BTreeSet::new();
     let mut others = 0u32;
@@ -246,6 +256,7 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
             })
             .collect();
         findings.push(Finding {
+            ready: false,
             id: format!("duplicate:{name}"),
             category: FindingCategory::Duplicate,
             title,
@@ -295,6 +306,7 @@ fn repos(scan: &Scan, findings: &mut Vec<Finding>) {
         })
         .collect();
     findings.push(Finding {
+        ready: false,
         id: "duplicate:repos".to_owned(),
         category: FindingCategory::Duplicate,
         title: format!("{} 个仓库存放着相同的 skill", shared.len()),
@@ -418,6 +430,7 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
             .collect();
         let users: Vec<String> = projects.iter().map(|p| super::project_name(p)).collect();
         findings.push(Finding {
+            ready: false,
             id: format!("global-tax:{}", group.label),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个 {} skill 加载进了每一个项目", group.members.len(), group.label),
@@ -466,6 +479,7 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
             })
             .collect();
         findings.push(Finding {
+            ready: false,
             id: "global-tax:never-used".to_owned(),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个全局 skill 近 30 天没有项目用到", never_used.len()),
@@ -520,6 +534,7 @@ fn inconsistent(scan: &Scan, findings: &mut Vec<Finding>) {
         })
         .collect();
     findings.push(Finding {
+        ready: false,
         id: "inconsistent:global-skills".to_owned(),
         category: FindingCategory::Inconsistent,
         title: format!("{} 个全局 skill 在各工具间分发不齐", all.len()),
@@ -613,6 +628,7 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
             });
         }
         findings.push(Finding {
+            ready: false,
             id: format!("detached:{}", lock.path.display()),
             category: FindingCategory::Detached,
             title: "全局锁文件与实际目录不一致".to_owned(),
@@ -702,6 +718,7 @@ fn secrets(scan: &Scan, findings: &mut Vec<Finding>) {
         })
         .collect();
     findings.push(Finding {
+        ready: false,
         id: "secret:mcp".to_owned(),
         category: FindingCategory::Secret,
         title: format!("{} 处已提交的 MCP 配置里有明文密钥", hits.len()),

@@ -33,7 +33,7 @@ function statusOf(row: GlobalRow): { tone: Tone; label: string } {
 
 type Filter = "all" | AssetKind;
 
-/** 全局：瘦身（6.6）。M0 只读：列表、预算、建议；转成套装与从全局移除在 M1。 */
+/** 全局：瘦身（6.6）。列表、预算、建议；转成套装与从全局移除还没开放（M1-19、M1-20）。 */
 export function GlobalPage() {
   const tool = useUi((s) => s.tool);
   const setTool = useUi((s) => s.setTool);
@@ -282,14 +282,19 @@ export function GlobalPage() {
                 <button type="button" className={styles.ghost} onClick={() => pick([])}>
                   取消选择
                 </button>
-                <button type="button" className={page.button} disabled title="M0 只读，在 M1 开放">
+                <button
+                  type="button"
+                  className={page.button}
+                  disabled
+                  title="还没开放，见 M1-19、M1-20"
+                >
                   从全局移除…
                 </button>
                 <button
                   type="button"
                   className={page.buttonPrimary}
                   disabled
-                  title="M0 只读，在 M1 开放"
+                  title="还没开放，见 M1-19、M1-20"
                 >
                   转成套装…
                 </button>
@@ -376,7 +381,7 @@ function RowInspector({
                     type="button"
                     className={i === 0 ? page.buttonPrimary : page.button}
                     disabled
-                    title="M0 只读，在 M1 开放"
+                    title="还没开放，见 M1-19、M1-20"
                   >
                     {a}
                   </button>
@@ -385,7 +390,7 @@ function RowInspector({
             </div>
           )}
           {row.actions.some((a) => a !== "去资产库收编") && (
-            <span className={styles.cli}>M0 只读，这两个动作在 M1 开放。</span>
+            <span className={styles.cli}>这两个动作还没开放。</span>
           )}
         </div>
         <span className={styles.cli}>$ fangcun why {row.members[0] ?? row.name} --global</span>
@@ -434,7 +439,7 @@ function RowInspector({
       </Section>
       <Section title="最近活动">
         <p className={styles.note}>
-          还没有活动。M0 只记录体检。<Link to="/activity">在「活动」里查看全部</Link>
+          还没有活动。<Link to="/activity">在「活动」里查看全部</Link>
         </p>
       </Section>
     </Inspector>

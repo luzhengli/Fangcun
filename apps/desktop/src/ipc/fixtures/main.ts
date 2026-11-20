@@ -265,3 +265,50 @@ export const effectiveCodex: EffectiveContext = {
   observed: [],
   observedMissing: ["plugin", "hook"],
 };
+
+/** 近 30 天的项目里没登记的那个。Main.dc.html 的 RECENT。 */
+export const recentProject: ProjectSummary = {
+  id: "/Users/me/code/luyao-skills",
+  name: "luyao-skills",
+  path: "~/code/luyao-skills",
+  state: null,
+  lastSeen: null,
+  sessions: 0,
+  tools: ["claude-code"],
+  registered: false,
+};
+
+/**
+ * luyao-skills 的生效上下文：原型 isRecent 分支，只有全局层的三项，项目层没有发现资产。
+ * frontend-design 在这里没有同名项，状态改成「全局生效」。
+ */
+export function effectiveRecent(tool: EffectiveContext["tool"]): EffectiveContext {
+  const base = {
+    tool,
+    projectName: recentProject.name,
+    projectPath: recentProject.path,
+    hasManifest: false,
+  };
+  if (tool !== "claude-code") {
+    return {
+      ...base,
+      budget: { limit: 20000, instructions: 0, skills: 0, mcp: 0, mcpUnestimated: 0 },
+      items: [],
+      observed: [],
+      observedMissing: ["plugin", "hook"],
+    };
+  }
+  const fedg: EffectiveItem = {
+    ...R.fedg,
+    label: "全局生效",
+    declared: stack(["生效 · v1.1.0", "", "", ""]),
+    reason: "它装在全局目录里，所以对本项目也生效。\n本项目没有同名项。",
+  };
+  return {
+    ...base,
+    budget: { limit: 20000, instructions: 0, skills: 6900, mcp: 0, mcpUnestimated: 0 },
+    items: [R.lark, R.prrev, fedg],
+    observed: effectiveClaude.observed.filter((o) => o.scope === "global"),
+    observedMissing: ["subagent"],
+  };
+}

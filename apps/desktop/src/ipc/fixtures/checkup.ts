@@ -28,6 +28,7 @@ export const checkup: CheckupReport = {
   findings: [
     {
       id: "dup",
+      ready: true,
       category: "duplicate",
       status: "pending",
       title: "project-harness 有 5 份副本，1 份已分叉",
@@ -44,6 +45,7 @@ export const checkup: CheckupReport = {
     },
     {
       id: "repos",
+      ready: false,
       category: "duplicate",
       status: "pending",
       title: "4 个仓库存放着相同的 skill",
@@ -59,6 +61,7 @@ export const checkup: CheckupReport = {
     },
     {
       id: "tax",
+      ready: false,
       category: "global-tax",
       status: "pending",
       title: "16 个飞书 skill 加载进了每一个项目",
@@ -72,6 +75,7 @@ export const checkup: CheckupReport = {
     },
     {
       id: "spread",
+      ready: false,
       category: "inconsistent",
       status: "pending",
       title: "31 个全局 skill 在各工具间分发不齐",
@@ -86,6 +90,7 @@ export const checkup: CheckupReport = {
     },
     {
       id: "lock",
+      ready: false,
       category: "detached",
       status: "pending",
       title: "全局锁文件与实际目录不一致",
@@ -99,6 +104,7 @@ export const checkup: CheckupReport = {
     },
     {
       id: "secret",
+      ready: false,
       category: "secret",
       status: "not-scanned",
       title: "检查已提交文件中的明文密钥",

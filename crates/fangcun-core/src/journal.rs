@@ -145,6 +145,56 @@ pub struct RecordSnapshot {
     pub id: SnapshotId,
 }
 
+/// 项目页「历史」页签的一行（6.3）：这个项目的一个快照，和留下它的那条记录。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct HistoryEntry {
+    /// 这个项目的快照编号。
+    pub snapshot: SnapshotId,
+    /// 留下它的活动记录。
+    pub record: String,
+    pub title: String,
+    pub at: Timestamp,
+    pub kind: RecordKind,
+    pub status: RecordStatus,
+    /// 磁盘现在就是这一条写完后的样子：最新的、还算数的那次写入（回滚记录本身不算）。
+    pub current: bool,
+}
+
+/// 从全部记录（从新到旧）里挑出给这个项目留过快照的，标出「当前磁盘状态」。
+/// `same_project` 判断快照的范围是不是这个项目（调用方按真实路径比）。
+pub fn history_of(
+    newest_first: &[Record],
+    same_project: impl Fn(&ProjectId) -> bool,
+) -> Vec<HistoryEntry> {
+    let mut entries: Vec<HistoryEntry> = newest_first
+        .iter()
+        .filter_map(|r| {
+            let snap = r
+                .snapshots
+                .iter()
+                .find(|s| s.project.as_ref().is_some_and(&same_project))?;
+            Some(HistoryEntry {
+                snapshot: snap.id,
+                record: r.id.clone(),
+                title: r.title.clone(),
+                at: r.at.clone(),
+                kind: r.kind,
+                status: r.status,
+                current: false,
+            })
+        })
+        .collect();
+    if let Some(current) = entries
+        .iter_mut()
+        .find(|e| e.status == RecordStatus::Applied && e.kind != RecordKind::Rollback)
+    {
+        current.current = true;
+    }
+    entries
+}
+
 /// 从新到旧走一遍：一条回滚记录自己没被撤销时，它撤销的那条算「已回滚」。
 /// 撤销一次回滚（回滚那条回滚记录），原来那条就回到「已应用」。
 fn mark_rolled_back(newest_first: &mut [Record]) {
@@ -365,6 +415,50 @@ mod tests {
         journal.remember(redo);
         assert_eq!(status("undo"), RecordStatus::RolledBack);
         assert_eq!(status("sync"), RecordStatus::Applied);
+    }
+
+    #[test]
+    fn history_marks_the_newest_write_that_still_counts_as_current() {
+        let project = ProjectId("/p".to_owned());
+        let with_snap = |id: &str, at: &str, kind: RecordKind, status: RecordStatus, n: u32| {
+            let mut r = record(id, at, kind);
+            r.status = status;
+            r.snapshots = vec![RecordSnapshot {
+                project: Some(project.clone()),
+                id: SnapshotId(n),
+            }];
+            r
+        };
+        let records = vec![
+            with_snap(
+                "undo",
+                "2026-11-20T03:00:00Z",
+                RecordKind::Rollback,
+                RecordStatus::Applied,
+                3,
+            ),
+            with_snap(
+                "b",
+                "2026-11-20T02:00:00Z",
+                RecordKind::Sync,
+                RecordStatus::RolledBack,
+                2,
+            ),
+            with_snap(
+                "a",
+                "2026-11-20T01:00:00Z",
+                RecordKind::Sync,
+                RecordStatus::Applied,
+                1,
+            ),
+            record("checkup", "2026-11-20T00:00:00Z", RecordKind::Checkup),
+        ];
+        let history = history_of(&records, |p| p == &project);
+        let rows: Vec<(&str, bool)> = history
+            .iter()
+            .map(|e| (e.record.as_str(), e.current))
+            .collect();
+        assert_eq!(rows, vec![("undo", false), ("b", false), ("a", true)]);
     }
 
     #[test]

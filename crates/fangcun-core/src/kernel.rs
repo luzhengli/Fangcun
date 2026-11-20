@@ -35,6 +35,9 @@ use crate::scanner::fsutil::display_path;
 use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
+/// 内存里最多留多少份没应用的计划。
+const PENDING_LIMIT: usize = 64;
+
 /// 内核的访问方式。默认可写；设置里开了只读模式或命令行加了 `--read-only` 时只读（7.5）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Access {
@@ -214,6 +217,10 @@ impl Kernel {
         let plan = builder.build(id);
         if let Ok(mut pending) = self.pending.lock() {
             pending.insert(id, plan.clone());
+            // 界面每次预览都出一份新计划，只留最近的，旧的应用时会报「计划不存在」，重新预览即可。
+            while pending.len() > PENDING_LIMIT {
+                pending.pop_first();
+            }
         }
         plan
     }
@@ -394,6 +401,19 @@ impl Kernel {
 
     // ───────────── 只读用例（M0） ─────────────
 
+    /// 设置页（6.1、M1-24）：读 `~/.fangcun/settings.toml`，没有时是默认值。
+    pub fn settings(&self) -> Result<crate::settings::SettingsForm> {
+        Ok((&crate::settings::Settings::load(&self.home)?).into())
+    }
+
+    /// 设置页保存。只读模式下也能保存（不然关不掉）；只读开关要重开内核才生效，由外壳负责。
+    pub fn save_settings(
+        &self,
+        form: &crate::settings::SettingsForm,
+    ) -> Result<crate::settings::SettingsForm> {
+        Ok((&crate::settings::Settings::save(&self.home, form)?).into())
+    }
+
     /// 已知的工具，供目标工具分段控件使用。
     pub fn tools(&self) -> Vec<ToolInfo> {
         self.adapters
@@ -517,6 +537,29 @@ impl Kernel {
     /// `fangcun log`、活动页。
     pub fn log(&self, filter: &RecordFilter) -> Result<Vec<Record>> {
         self.journal.read(filter)
+    }
+
+    /// 体检报告的一键动作（6.2、M1-26）：按发现的编号分派到对应的写入用例。
+    /// 「重复」收编进资产库；其余几类等各自的条目（M1-19、M1-17 等）接上。
+    pub fn plan_finding(&self, finding_id: &str) -> Result<ChangePlan> {
+        if !crate::scanner::finding_ready(finding_id) {
+            return Err(Error::NotImplemented("kernel::plan_finding"));
+        }
+        match finding_id.split_once(':') {
+            Some(("duplicate", asset)) => self.plan_adopt(asset),
+            _ => Err(Error::NotImplemented("kernel::plan_finding")),
+        }
+    }
+
+    /// 项目页「历史」页签（6.3、M1-14）：这个项目的快照，从新到旧，标出当前磁盘状态。
+    /// 跨项目的记录也算（它给每个项目各留一个快照）。快照的范围按真实路径比。
+    pub fn history(&self, project_root: &Path) -> Result<Vec<crate::journal::HistoryEntry>> {
+        let records = self.journal.read(&RecordFilter::default())?;
+        let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+        let root = real(project_root);
+        Ok(crate::journal::history_of(&records, |p| {
+            real(Path::new(&p.0)) == root
+        }))
     }
 
     /// `fangcun sync --frozen`：锁与清单不一致就失败。本身不改项目文件。
