@@ -45,6 +45,36 @@ impl DisableSection {
     pub fn is_empty(&self) -> bool {
         self.skills.is_empty() && self.mcp.is_empty()
     }
+
+    /// 这一类里的这个名字被停用了没有（名字照写或 `*` 通配）。
+    pub fn covers(&self, kind: crate::model::AssetKind, name: &str) -> bool {
+        let list = match kind {
+            crate::model::AssetKind::Skill => &self.skills,
+            crate::model::AssetKind::Mcp => &self.mcp,
+            crate::model::AssetKind::Instruction => return false,
+        };
+        list.iter().any(|p| glob(p, name))
+    }
+}
+
+/// `[disable]` 的通配：只认 `*`，任意长度的任意字符。
+pub fn glob(pattern: &str, name: &str) -> bool {
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let (first, last) = (parts[0], parts[parts.len() - 1]);
+    if parts.len() == 1 {
+        return pattern == name;
+    }
+    if !name.starts_with(first) || name.len() < first.len() + last.len() || !name.ends_with(last) {
+        return false;
+    }
+    let mut rest = &name[first.len()..name.len() - last.len()];
+    for part in &parts[1..parts.len() - 1] {
+        match rest.find(part) {
+            Some(i) => rest = &rest[i + part.len()..],
+            None => return false,
+        }
+    }
+    true
 }
 
 /// `[dev]`：在本机走开发模式的 skill。

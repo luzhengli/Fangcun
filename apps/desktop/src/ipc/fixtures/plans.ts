@@ -4,9 +4,11 @@
  * 原型里应用会改界面状态（同步后计划清零、登记后挪进已登记项目），这里用模块变量记着，
  * 刷新页面就回到初始状态。
  */
+
 import type { Applied } from "../bindings/Applied";
 import type { ChangePlan } from "../bindings/ChangePlan";
 import type { HistoryEntry } from "../bindings/HistoryEntry";
+import type { ManifestEdit } from "../bindings/ManifestEdit";
 import type { SyncMode } from "../bindings/SyncMode";
 
 const state = {
@@ -18,7 +20,7 @@ const state = {
 };
 
 /** Main.dc.html 的 plan：evals_studio 的四处变更。 */
-export function syncPlan(projectRoot: string): ChangePlan {
+export function syncPlan(projectRoot: string, edits: ManifestEdit[] = []): ChangePlan {
   const name = projectRoot.split("/").pop() ?? projectRoot;
   const changes: ChangePlan["changes"] = state.synced
     ? []
@@ -28,6 +30,20 @@ export function syncPlan(projectRoot: string): ChangePlan {
         { op: "modify", path: ".mcp.json", detail: "新增键 mcpServers.github" },
         { op: "remove", path: ".trae/project-harness", detail: "改由资产库管理，已备份" },
       ];
+  // 暂存的「在本项目停用」：清单加一节，Claude Code 的开关加 16 个键（原型 larkOff）。
+  for (const edit of edits) {
+    const n = edit.names.length;
+    changes.unshift({
+      op: "modify",
+      path: "fangcun.toml",
+      detail: `[disable] ${edit.op === "disable" ? "停用" : "恢复"} skill ${n > 3 ? `${edit.names.slice(0, 2).join("、")} 等 ${n} 项` : edit.names.join("、")}`,
+    });
+    changes.push({
+      op: "modify",
+      path: ".claude/settings.json",
+      detail: `${n} 处键的变更，其余键不动`,
+    });
+  }
   return {
     id: state.next++,
     title: changes.length > 0 ? `即将对 ${name} 做 ${changes.length} 处变更` : `${name} 已是最新`,

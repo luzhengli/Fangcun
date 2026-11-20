@@ -13,7 +13,7 @@ use super::fsutil::{
 };
 use crate::adapter::{
     Adapter, FileFormat, InstructionLocation, LockFormat, McpLocation, ObservedLocation, Pick,
-    Requirement, expand, walk_dirs,
+    Requirement, SwitchShape, expand, walk_dirs,
 };
 use crate::estimator::{estimate_text, skill_listing};
 use crate::model::{ContentHash, ObservedKind, Scope, TokenEstimate, ToolId};
@@ -84,6 +84,8 @@ pub struct McpEntry {
     pub env: Vec<(String, String)>,
     pub url: Option<String>,
     pub enabled: bool,
+    /// 被别处的开关停用时，写明是哪份配置，例如 `~/.claude.json`。
+    pub disabled_by: Option<String>,
     /// 这一条自己写了哪些字段：command、args、env、url、enabled。按字段合并时用。
     pub defines: Vec<&'static str>,
     /// 工具不读这份配置的原因，例如项目没有标为受信任。为空表示会读。
@@ -110,6 +112,47 @@ pub struct Collected {
     pub instructions: Vec<InstructionFile>,
     pub mcp: Vec<McpEntry>,
     pub observed: Vec<ObservedEntry>,
+    /// 项目层、个人层配置里的 skill 开关，按读到的顺序。全局层的 skill 也要过一遍（按项目停用，7.4）。
+    pub project_switches: Vec<SwitchRule>,
+    /// 项目层、个人层配置里按名字停用的 MCP 服务，作用于全局层这几份（7.4）。
+    pub mcp_off: Vec<McpOff>,
+}
+
+/// 一条 skill 开关：按 SKILL.md 的路径或按名字匹配。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SwitchRule {
+    pub path: Option<PathBuf>,
+    pub name: Option<String>,
+    pub enabled: bool,
+    /// 哪份配置，例如 `.claude/settings.json`。
+    pub label: String,
+}
+
+/// 一条按项目停用 MCP 的记录。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct McpOff {
+    pub name: String,
+    pub applies_to: Vec<Scope>,
+    pub label: String,
+}
+
+impl Collected {
+    /// 全局层这份按项目的开关改过之后的样子：项目里停用的全局 skill、全局 MCP 标成停用。
+    pub fn with_project_switches(&self, project: &Collected) -> Collected {
+        let mut out = self.clone();
+        apply_rules(&project.project_switches, &mut out.skills);
+        for entry in &mut out.mcp {
+            if let Some(off) = project
+                .mcp_off
+                .iter()
+                .find(|o| o.name == entry.name && o.applies_to.contains(&entry.scope))
+            {
+                entry.enabled = false;
+                entry.disabled_by = Some(off.label.clone());
+            }
+        }
+        out
+    }
 }
 
 /// 一份 skill 锁文件读出来的内容。
@@ -294,31 +337,26 @@ pub fn collect(adapter: &Adapter, home: &Path, reach: Reach<'_>, locks: &[LockIn
         read_observed(location, &tool, home, project, &mut out.observed);
     }
 
-    apply_skill_switches(adapter, home, project, &mut out.skills);
+    // 全局层的开关对所有项目生效；项目层、个人层的排在后面，后面的赢。
+    let global_rules = switch_rules(adapter, home, project, |scope| scope == Scope::Global);
+    apply_rules(&global_rules, &mut out.skills);
+    if project.is_some() {
+        out.project_switches = switch_rules(adapter, home, project, |scope| scope != Scope::Global);
+        apply_rules(&out.project_switches, &mut out.skills);
+        out.mcp_off = mcp_off(adapter, home, project);
+    }
     out
 }
 
-/// 按配置里的开关停用 skill。全局层的开关对所有项目生效，项目层的开关排在后面，后面的赢。
-fn apply_skill_switches(
+/// 读出一组开关，按适配器里写的顺序。
+fn switch_rules(
     adapter: &Adapter,
     home: &Path,
     project: Option<&Path>,
-    skills: &mut [SkillCopy],
-) {
-    let mut ordered: Vec<&crate::adapter::SkillSwitches> = adapter
-        .skill_switches
-        .iter()
-        .filter(|s| s.scope == Scope::Global)
-        .collect();
-    if project.is_some() {
-        ordered.extend(
-            adapter
-                .skill_switches
-                .iter()
-                .filter(|s| s.scope != Scope::Global),
-        );
-    }
-    for switches in ordered {
+    wanted: impl Fn(Scope) -> bool,
+) -> Vec<SwitchRule> {
+    let mut rules = Vec::new();
+    for switches in adapter.skill_switches.iter().filter(|s| wanted(s.scope)) {
         if switches
             .requires
             .as_ref()
@@ -332,32 +370,100 @@ fn apply_skill_switches(
         let Some(config) = read_config(&file, switches.format == FileFormat::Toml) else {
             continue;
         };
-        let Some(entries) = lookup(&config, &switches.key).and_then(|v| v.as_array()) else {
+        let Some(node) = lookup(&config, &switches.key) else {
             continue;
         };
         let label = super::fsutil::display_path(&file, home);
-        for skill in skills.iter_mut() {
-            let skill_md = skill.dir.join("SKILL.md");
-            let real_md = skill.real_dir.join("SKILL.md");
-            for entry in entries {
-                let by_path = entry
-                    .get(&switches.path_field)
-                    .and_then(|v| v.as_str())
-                    .and_then(|p| expand(p, home, project))
-                    .is_some_and(|p| p == skill_md || p == real_md);
-                let by_name = entry.get(&switches.name_field).and_then(|v| v.as_str())
-                    == Some(skill.name.as_str());
-                if !(by_path || by_name) {
-                    continue;
+        match switches.shape {
+            SwitchShape::List => {
+                for entry in node.as_array().into_iter().flatten() {
+                    let field = |f: &Option<String>| {
+                        f.as_ref()
+                            .and_then(|f| entry.get(f))
+                            .and_then(|v| v.as_str())
+                    };
+                    rules.push(SwitchRule {
+                        path: field(&switches.path_field).and_then(|p| expand(p, home, project)),
+                        name: field(&switches.name_field).map(str::to_owned),
+                        enabled: switches
+                            .enabled_field
+                            .as_ref()
+                            .and_then(|f| entry.get(f))
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(true),
+                        label: label.clone(),
+                    });
                 }
-                let enabled = entry
-                    .get(&switches.enabled_field)
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(true);
-                skill.disabled_by = (!enabled).then(|| label.clone());
+            }
+            SwitchShape::Map => {
+                for (name, value) in node.as_object().into_iter().flatten() {
+                    let off = value
+                        .as_str()
+                        .is_some_and(|v| switches.off_values.iter().any(|o| o == v));
+                    rules.push(SwitchRule {
+                        path: None,
+                        name: Some(name.clone()),
+                        enabled: !off,
+                        label: label.clone(),
+                    });
+                }
             }
         }
     }
+    rules
+}
+
+/// 按顺序把开关用到 skill 上，后面的赢。
+fn apply_rules(rules: &[SwitchRule], skills: &mut [SkillCopy]) {
+    for skill in skills.iter_mut() {
+        let skill_md = skill.dir.join("SKILL.md");
+        let real_md = skill.real_dir.join("SKILL.md");
+        for rule in rules {
+            let by_path = rule
+                .path
+                .as_ref()
+                .is_some_and(|p| *p == skill_md || *p == real_md);
+            let by_name = rule.name.as_deref() == Some(skill.name.as_str());
+            if by_path || by_name {
+                skill.disabled_by = (!rule.enabled).then(|| rule.label.clone());
+            }
+        }
+    }
+}
+
+/// 项目里按名字停用的 MCP 服务，例如 Claude Code `~/.claude.json` 里这个项目的 `disabledMcpServers`。
+fn mcp_off(adapter: &Adapter, home: &Path, project: Option<&Path>) -> Vec<McpOff> {
+    let Some(root) = project else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for switches in &adapter.mcp_switches {
+        let Some(file) = expand(&switches.file, home, project) else {
+            continue;
+        };
+        let Some(config) = read_config(&file, switches.format == FileFormat::Toml) else {
+            continue;
+        };
+        let key: Vec<String> = switches
+            .key
+            .iter()
+            .map(|segment| segment.replace("{project}", &root.to_string_lossy()))
+            .collect();
+        let label = super::fsutil::display_path(&file, home);
+        for name in lookup(&config, &key)
+            .and_then(|v| v.as_array())
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str())
+        {
+            out.push(McpOff {
+                name: name.to_owned(),
+                applies_to: switches.applies_to.clone(),
+                label: label.clone(),
+            });
+        }
+    }
+    out
 }
 
 /// 找出文本里 `@路径` 引用的文件，递归到 `depth` 层。代码块和反引号里的不算。
@@ -709,6 +815,7 @@ fn read_mcp(
             env,
             url,
             enabled,
+            disabled_by: None,
             defines,
             inactive: inactive.clone(),
             hash: super::fsutil::hash_bytes(canonical_text.as_bytes()),
@@ -809,7 +916,7 @@ fn add_server_map(value: &serde_json::Value, names: &mut std::collections::BTree
 }
 
 /// 另一份配置里某个键是否等于要求的值。
-fn requirement_met(req: &Requirement, home: &Path, project: Option<&Path>) -> bool {
+pub(crate) fn requirement_met(req: &Requirement, home: &Path, project: Option<&Path>) -> bool {
     let Some(file) = expand(&req.file, home, project) else {
         return false;
     };

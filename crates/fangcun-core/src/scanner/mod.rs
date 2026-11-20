@@ -14,9 +14,10 @@ pub use checkup::{
     GlobalGroup, LocationTone, common_prefix_label, diagnose, finding_ready, format_k,
     group_global_skills, looks_like_secret, short_hash,
 };
+pub(crate) use collect::requirement_met;
 pub use collect::{
-    Collected, InstructionFile, LockInfo, McpEntry, ObservedEntry, Reach, SkillCopy, collect,
-    read_locks,
+    Collected, InstructionFile, LockInfo, McpEntry, McpOff, ObservedEntry, Reach, SkillCopy,
+    SwitchRule, collect, read_locks,
 };
 pub use usage::{
     ProjectActivity, USAGE_WINDOW_DAYS, UsageKey, UsageStats, collect_usage, project_root,

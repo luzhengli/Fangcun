@@ -10,11 +10,13 @@
 //! 界面改清单时要保住人写的注释和顺序。这里的 serde 结构只负责读；
 //! 写回用保留格式的编辑方式，实现 M1 的清单编辑时再引入。
 
+mod edit;
 mod interop;
 mod lock;
 mod render;
 mod schema;
 
+pub use edit::{ManifestEdit, apply_edits};
 pub use interop::{
     ExportedSkillsLock, SkillsLock, SkillsLockEntry, export_skills_lock, read_skills_lock,
 };
@@ -22,7 +24,7 @@ pub use lock::{LOCK_VERSION, Lock, LockedInstruction, LockedMcp, LockedSkill};
 pub use render::render_manifest;
 pub use schema::{
     Bundle, BundleSection, DevSection, DisableSection, InstructionsDecl, Manifest, McpDecl,
-    ProjectSection, SkillDecl,
+    ProjectSection, SkillDecl, glob,
 };
 
 use std::collections::BTreeMap;
@@ -49,6 +51,9 @@ pub struct ProjectBasics {
     pub mode: Option<SyncMode>,
     #[serde(default)]
     pub targets: Vec<ToolId>,
+    /// 清单的 `[disable]`。
+    #[serde(skip)]
+    pub disable: DisableSection,
 }
 
 /// 读项目清单 `[project]` 的预算、物化方式、目标工具。没有清单时返回 `None`。
@@ -59,6 +64,8 @@ pub fn project_basics(project_root: &Path) -> Result<Option<ProjectBasics>> {
     struct Partial {
         #[serde(default)]
         project: ProjectBasics,
+        #[serde(default)]
+        disable: Option<toml::Value>,
     }
 
     let path = project_root.join(crate::paths::MANIFEST_FILE);
@@ -71,7 +78,13 @@ pub fn project_basics(project_root: &Path) -> Result<Option<ProjectBasics>> {
         origin: path.display().to_string(),
         message: e.to_string(),
     })?;
-    Ok(Some(partial.project))
+    let mut basics = partial.project;
+    // `[disable]` 写错了不挡项目页：读不懂就当没写，同步时再报。
+    basics.disable = partial
+        .disable
+        .and_then(|v| v.try_into().ok())
+        .unwrap_or_default();
+    Ok(Some(basics))
 }
 
 /// 一个项目的全部声明文件。

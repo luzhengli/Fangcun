@@ -299,3 +299,28 @@
   font-size: 12px;
   color: var(--tx-2);
 }
+
+/* 全局税、已停用这类状态块的标题（Main.dc.html「全局税：每个项目都在缴」）。 */
+.stateTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 「已加入同步计划 · 预计常驻减少 6.4k　撤回」。 */
+.staged {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--info);
+}
+
+.linkButton {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font-size: inherit;
+}

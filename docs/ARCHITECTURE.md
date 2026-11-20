@@ -215,6 +215,9 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **体检的一键动作**按发现编号分派（`Kernel::plan_finding`），能用的由 `scanner::finding_ready` 决定，界面只看 `Finding.ready`。
 - **设置**存在 `~/.fangcun/settings.toml`，`Settings::save` 不经变更计划（方寸自己的文件），只读模式下也能存。
 - **快照按范围各自编号**，跨项目操作每个项目各留一个快照（M1）。
+- **按项目停用**（M1-18，`materializer/sync/disable.rs`）：写哪儿全看适配器，`[[skill-switches]]`（`list` 数组或 `map` 对象两种形状）和 `[[mcp-switches]]`（名字表）；都没有时 MCP 写项目层服务表的 `enabled` 字段（要按字段合并）。台账的 `OwnedKey.kind` 区分 MCP 服务表的键和开关，撤销只撤值还是方寸写的那个。读的一侧：项目层、个人层的开关存在 `Collected.project_switches`、`mcp_off`，`Collected::with_project_switches` 再作用到全局层；按字段合并时只写了 `enabled` 的那条是开关，折到下面那份上。
+- **同一个配置文件只写一次**：同步里 MCP 和停用都会改 `.codex/config.toml`，`PlanBuilder` 同一路径写两次会互相覆盖。改动先攒在 `Run.docs`（`take_doc`/`put_doc`），`flush_docs` 统一写。
+- **界面暂存的清单改动**（6.8）：`state/staged.ts` 按项目存 `ManifestEdit`，「同步 · N」把它们交给 `plan_sync`（内核 `plan_sync_with`），清单用 `toml_edit` 改（`manifest::apply_edits`），和同步一份计划。能不能停用由内核填 `EffectiveItem.disable`，界面不判断。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型

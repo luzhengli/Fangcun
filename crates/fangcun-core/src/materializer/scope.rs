@@ -169,6 +169,13 @@ fn global_specs(adapter: &crate::adapter::Adapter) -> Vec<String> {
             .filter(|l| wanted(l.scope))
             .map(|l| l.file.clone()),
     );
+    specs.extend(
+        adapter
+            .mcp_switches
+            .iter()
+            .filter(|l| wanted(l.scope))
+            .map(|l| l.file.clone()),
+    );
     specs
 }
 

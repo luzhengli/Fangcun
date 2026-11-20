@@ -386,6 +386,45 @@ impl Kernel {
         }
     }
 
+    /// 每个工具在这个项目读到的 skill 与 MCP 名字（全局层加项目层，停用的也算），
+    /// 同步时展开 `[disable]` 的通配用（7.4）。
+    fn visible_names(
+        &self,
+        root: &Path,
+        tools: &[ToolId],
+    ) -> BTreeMap<ToolId, crate::materializer::sync::Visible> {
+        let scan = self.scan();
+        let mut out = BTreeMap::new();
+        for tool in tools {
+            let Ok(project) = self.project_collected(&scan, root, tool) else {
+                continue;
+            };
+            let empty = Collected::default();
+            let global = scan.global.get(tool).unwrap_or(&empty);
+            let mut skills: Vec<String> = global
+                .skills
+                .iter()
+                .chain(project.skills.iter())
+                .map(|s| s.name.clone())
+                .collect();
+            let mut mcp: Vec<String> = global
+                .mcp
+                .iter()
+                .chain(project.mcp.iter())
+                .map(|m| m.name.clone())
+                .collect();
+            skills.sort();
+            skills.dedup();
+            mcp.sort();
+            mcp.dedup();
+            out.insert(
+                tool.clone(),
+                crate::materializer::sync::Visible { skills, mcp },
+            );
+        }
+        out
+    }
+
     fn project_collected(&self, scan: &Scan, root: &Path, tool: &ToolId) -> Result<Collected> {
         if let Some(found) = scan.project_items.get(root).and_then(|p| p.get(tool)) {
             return Ok(found.clone());
@@ -496,6 +535,8 @@ impl Kernel {
             }
             context.mode = Some(basics.mode.unwrap_or(crate::model::SyncMode::Link));
             context.targets = basics.targets;
+            // 只有已登记、有清单的项目能在本项目停用（6.3 全局税、7.4）。
+            crate::resolver::attach_disable(&mut context, adapter, &basics.disable);
         }
         Ok(context)
     }
@@ -941,8 +982,18 @@ impl Kernel {
     ///
     /// 锁和清单不一致时不出计划，要先 `fangcun lock`。资产库里没有的正本会按锁联网取回。
     pub fn plan_sync(&self, project_root: &Path) -> Result<ChangePlan> {
+        self.plan_sync_with(project_root, &[])
+    }
+
+    /// 「同步 · N」带上界面暂存的清单改动（6.8）：先改 `fangcun.toml`，再按改过的清单物化，
+    /// 一份计划、一个快照。例如检查器里的「在本项目停用」（6.3、7.4）。
+    pub fn plan_sync_with(
+        &self,
+        project_root: &Path,
+        edits: &[crate::manifest::ManifestEdit],
+    ) -> Result<ChangePlan> {
         self.require_write("sync")?;
-        let (project, lock) = self.manifest_and_lock(project_root)?;
+        let (mut project, lock) = self.manifest_and_lock(project_root)?;
         let library = Library::open(&self.home)?;
         let sources = self.sources();
         let mut builder = PlanBuilder::new(
@@ -951,9 +1002,29 @@ impl Kernel {
             SnapshotScope::Project(project_root.to_path_buf()),
         )
         .command("fangcun sync");
+        if !edits.is_empty() {
+            let file = project_root.join(crate::paths::MANIFEST_FILE);
+            let text = std::fs::read_to_string(&file).map_err(|source| Error::Io {
+                path: file.clone(),
+                source,
+            })?;
+            let origin = crate::paths::MANIFEST_FILE;
+            let edited = crate::manifest::apply_edits(origin, &text, edits)?;
+            if edited != text {
+                project.manifest = crate::manifest::parse_manifest(origin, &edited)?;
+                let detail = edits
+                    .iter()
+                    .map(crate::manifest::ManifestEdit::describe)
+                    .collect::<Vec<_>>()
+                    .join("；");
+                builder.write_file(&file, edited.into_bytes(), detail)?;
+            }
+        }
+        let visible = self.visible_names(project_root, &project.manifest.project.targets);
         crate::materializer::sync::plan(
             &crate::materializer::sync::SyncInput {
                 root: project_root,
+                visible: &visible,
                 home: &self.home,
                 user_home: &self.user_home,
                 adapters: &self.adapters,

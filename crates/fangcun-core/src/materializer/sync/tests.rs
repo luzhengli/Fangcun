@@ -559,3 +559,141 @@ fn adopt_merges_copies_into_the_library_and_rolls_back() {
     assert_eq!(tree(&f.proj), before_proj);
     assert!(fs::symlink_metadata(&global).unwrap().is_dir());
 }
+
+/// 按项目停用（M1-18）：全局装了 lark-doc、lark-im、keep-me 三个 skill 和 playwright 一个 MCP，
+/// 清单 `[disable]` 停用 `lark-*` 和 playwright。同步后写进三处开关，生效上下文显示「已停用」；
+/// 从清单里删掉后再同步，只撤方寸写的，别人写的键原样留着。
+#[test]
+fn disable_writes_each_tool_switch_and_takes_back_only_its_own() {
+    let f = fixture("disable");
+    for name in ["lark-doc", "lark-im", "keep-me"] {
+        let text = format!("---\nname: {name}\ndescription: d\n---\nx\n");
+        write(
+            &f.user_home.join(format!(".claude/skills/{name}/SKILL.md")),
+            &text,
+        );
+        write(
+            &f.user_home.join(format!(".agents/skills/{name}/SKILL.md")),
+            &text,
+        );
+    }
+    let proj = f.proj.display().to_string();
+    write(
+        &f.user_home.join(".claude.json"),
+        &format!(
+            "{{\n  \"mcpServers\": {{ \"playwright\": {{ \"command\": \"p\" }} }},\n  \"projects\": {{ \"{proj}\": {{ \"hasTrustDialogAccepted\": true }} }}\n}}\n"
+        ),
+    );
+    write(
+        &f.user_home.join(".codex/config.toml"),
+        &format!(
+            "[mcp_servers.playwright]\ncommand = \"p\"\n\n[projects.\"{proj}\"]\ntrust_level = \"trusted\"\n"
+        ),
+    );
+    write(
+        &f.proj.join(".claude/settings.json"),
+        "{\n  \"skillOverrides\": { \"mine\": \"name-only\" }\n}\n",
+    );
+    let k = kernel(&f);
+    let base = manifest("link", TDD_DECL, false);
+    let with = format!("{base}\n[disable]\nskills = [\"lark-*\"]\nmcp = [\"playwright\"]\n");
+    let plan = lock_and_sync(&k, &f, &with);
+    assert!(
+        plan.notes.iter().all(|n| n.tone != NoteTone::Warning),
+        "受信任的项目不该有提醒：{:?}",
+        plan.notes
+    );
+
+    let settings = fs::read_to_string(f.proj.join(".claude/settings.json")).unwrap();
+    assert!(
+        settings.contains("\"lark-doc\": \"off\"") && settings.contains("\"lark-im\": \"off\"")
+    );
+    assert!(!settings.contains("keep-me") && settings.contains("\"mine\": \"name-only\""));
+    let codex = fs::read_to_string(f.proj.join(".codex/config.toml")).unwrap();
+    assert!(
+        codex.starts_with("# 人写的注释"),
+        "别人写的注释要留着：{codex}"
+    );
+    assert!(codex.contains("[[skills.config]]\nname = \"lark-doc\"\nenabled = false"));
+    assert!(codex.contains("[mcp_servers.playwright]\nenabled = false"));
+    let claude_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(f.user_home.join(".claude.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        claude_json["projects"][proj.as_str()]["disabledMcpServers"],
+        serde_json::json!(["playwright"])
+    );
+    assert_eq!(
+        claude_json["projects"][proj.as_str()]["hasTrustDialogAccepted"],
+        true
+    );
+
+    // 换一个内核重新扫描：两个工具都显示已停用，不计入常驻。
+    let fresh = kernel(&f);
+    for tool in ["claude-code", "codex"] {
+        let context = fresh
+            .effective_context(&f.proj, &crate::model::ToolId::from(tool))
+            .unwrap();
+        for name in ["lark-doc", "playwright"] {
+            let item = context
+                .items
+                .iter()
+                .find(|i| i.name == name && i.label == "已停用")
+                .unwrap_or_else(|| panic!("{tool} 下 {name} 应显示已停用"));
+            assert!(!item.counted);
+            let option = item.disable.as_ref().expect("全局层的项能在本项目停用");
+            assert!(option.active && option.unsupported.is_none());
+        }
+        assert!(
+            context
+                .items
+                .iter()
+                .any(|i| i.name == "keep-me" && i.label != "已停用"),
+            "{tool} 下 keep-me 不该停用"
+        );
+    }
+
+    // 界面暂存的「在本项目停用」：清单和开关一份计划写。
+    let k = kernel(&f);
+    let plan = k
+        .plan_sync_with(
+            &f.proj,
+            &[crate::manifest::ManifestEdit::Disable {
+                kind: crate::model::AssetKind::Skill,
+                names: vec!["keep-me".to_owned()],
+            }],
+        )
+        .unwrap();
+    assert!(
+        plan.changes
+            .iter()
+            .any(|c| c.path.ends_with("fangcun.toml"))
+    );
+    k.apply(&plan).unwrap();
+    let manifest_text = fs::read_to_string(f.proj.join("fangcun.toml")).unwrap();
+    assert!(
+        manifest_text.starts_with(&base),
+        "清单原文不动：{manifest_text}"
+    );
+    assert!(manifest_text.contains("\"keep-me\""));
+    let settings = fs::read_to_string(f.proj.join(".claude/settings.json")).unwrap();
+    assert!(settings.contains("\"keep-me\": \"off\""));
+
+    // 从清单里删掉：撤回方寸写的，别人写的留着。
+    lock_and_sync(&kernel(&f), &f, &base);
+    let settings = fs::read_to_string(f.proj.join(".claude/settings.json")).unwrap();
+    assert!(!settings.contains("lark-") && settings.contains("\"mine\": \"name-only\""));
+    let codex = fs::read_to_string(f.proj.join(".codex/config.toml")).unwrap();
+    assert!(
+        !codex.contains("skills.config") && !codex.contains("playwright"),
+        "{codex}"
+    );
+    assert!(codex.starts_with("# 人写的注释"));
+    let claude_json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(f.user_home.join(".claude.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        claude_json["projects"][proj.as_str()]["disabledMcpServers"],
+        serde_json::json!([])
+    );
+}

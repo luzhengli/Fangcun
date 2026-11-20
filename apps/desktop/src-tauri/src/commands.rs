@@ -96,14 +96,16 @@ pub async fn activity(
     state.run(move |kernel| kernel.log(&filter)).await
 }
 
-/// 「同步 · N」：按清单与锁物化这个项目（6.8、M1-13）。
+/// 「同步 · N」：按清单与锁物化这个项目（6.8、M1-13）。`edits` 是界面暂存的清单改动，例如在本项目停用。
 #[tauri::command]
 pub async fn plan_sync(
     state: State<'_, AppState>,
     project_root: PathBuf,
+    edits: Option<Vec<fangcun_core::manifest::ManifestEdit>>,
 ) -> CommandResult<ChangePlan> {
+    let edits = edits.unwrap_or_default();
     state
-        .run(move |kernel| kernel.plan_sync(&project_root))
+        .run(move |kernel| kernel.plan_sync_with(&project_root, &edits))
         .await
 }
 

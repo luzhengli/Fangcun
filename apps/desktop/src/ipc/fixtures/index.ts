@@ -75,7 +75,7 @@ const handlers: Partial<Commands> = {
     ),
 
   /** Main.dc.html 的 plan、regPlan，以及提示条的撤销。 */
-  plan_sync: ({ projectRoot }) => syncPlan(projectRoot),
+  plan_sync: ({ projectRoot, edits }) => syncPlan(projectRoot, edits),
   plan_init: ({ projectRoot, mode }) => initPlan(projectRoot, mode),
   /** Main.dc.html 的 REG_OPTS 依据：git 历史里有 1 位提交者，建议链接。 */
   suggest_mode: () => ({ mode: "link", committers: 1 }),

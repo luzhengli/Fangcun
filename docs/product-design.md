@@ -887,9 +887,9 @@ skills = ["lark-*"]              # 停用全局的 16 个飞书 skill，只影�
 mcp    = ["playwright"]
 ```
 
-同步时写进各工具自己的开关：Claude Code 是项目 `.claude/settings.json` 的 `skillOverrides` 设 `"off"`，Codex 是 `.codex/config.toml` 的 `[[skills.config]] enabled = false`。适配器标明某个工具不支持按项目停用时，「在本项目停用」置灰，写「<工具> 不支持按项目停用」，旁边给「转成套装」；清单里写了也只对支持的工具生效，生效上下文如实显示。
+同步时写进各工具自己的开关：Claude Code 是项目 `.claude/settings.json` 的 `skillOverrides` 设 `"off"`，Codex 是 `.codex/config.toml` 的 `[[skills.config]] enabled = false`。MCP：Codex 是 `.codex/config.toml` 里那一项的 `enabled = false`；Claude Code 没有能提交的按项目开关，写本机 `~/.claude.json` 里这个项目那一节的 `disabledMcpServers`（和 `/mcp` 的开关同一处），清单照样提交，每台机器同步时各自写。通配在同步时按工具实际读到的名字展开。适配器标明某个工具不支持按项目停用时，「在本项目停用」置灰，写「<工具> 不支持按项目停用」，旁边给「转成套装」；清单里写了也只对支持的工具生效，生效上下文如实显示。
 
-**个人覆盖** `fangcun.local.toml` 是清单的子集：能加资产、能停用、能改版本约束，不能改 `targets`、`mode`、`budget` 这些全队共享的设置。个人加的项不进锁，记在本机 `~/.fangcun/state/`；停用写进工具的个人层文件，例如 `.claude/settings.local.json`。另外只有个人覆盖能写 `[dev]`，列出在本机走开发模式的 skill（F2）：
+**个人覆盖** `fangcun.local.toml` 是清单的子集：能加资产、能停用、能改版本约束，不能改 `targets`、`mode`、`budget` 这些全队共享的设置。个人加的项不进锁，记在本机 `~/.fangcun/state/`；停用写进工具的个人层文件，例如 `.claude/settings.local.json`；Codex 项目里没有不提交的配置，个人停用对 Codex 不生效，同步计划里写一条说明。另外只有个人覆盖能写 `[dev]`，列出在本机走开发模式的 skill（F2）：
 
 ```toml
 # fangcun.local.toml
@@ -1055,6 +1055,8 @@ git-commit = { source = "local:luyao-skills", pin = "0d81aa3" }
 | 停用的写法 | 清单单独一节 `[disable]`，按类型列名字，支持 `*` 通配（7.4） |
 | 工具不支持按项目停用 | 按钮置灰并说明，给「转成套装」（7.4） |
 | `fangcun.local.toml` 能写什么 | 清单的子集：加资产、停用、改版本约束；不能改 targets、mode、budget；个人项不进锁（7.4） |
+| Claude Code 按项目停用全局 MCP（M1-18，2026-11-21） | 写本机 `~/.claude.json` 里这个项目那一节的 `disabledMcpServers`，和 `/mcp` 开关同一处；清单照样提交，每台机器同步时各自写（7.4） |
+| 个人停用对 Codex（M1-18，2026-11-21） | 不生效。Codex 项目里只有会提交的 `.codex/config.toml`，同步计划写一条说明（7.4） |
 
 **M1 开工前的四件（M1-pre-05 至 08）**，2026-11-19 人都选了推荐项。
 

@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use super::ledger::{Ledger, OwnedKey, OwnedPath, PathKind};
+use super::ledger::{KeyKind, Ledger, OwnedKey, OwnedPath, PathKind};
 use super::{PlanBuilder, State};
 use crate::adapter::{AdapterRegistry, FileFormat, SupportLevel};
 use crate::library::Library;
@@ -40,6 +40,8 @@ const IGNORE_END: &str = "# <<< fangcun";
 
 pub struct SyncInput<'a> {
     pub root: &'a Path,
+    /// 每个目标工具在这个项目实际读到的 skill 与 MCP 名字，展开 `[disable]` 的通配用。
+    pub visible: &'a BTreeMap<crate::model::ToolId, disable::Visible>,
     pub home: &'a FangcunHome,
     pub user_home: &'a Path,
     pub adapters: &'a AdapterRegistry,
@@ -94,6 +96,8 @@ pub fn plan(input: &SyncInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         notes: Vec::new(),
         replaced: Vec::new(),
         ignored: BTreeSet::from(["/fangcun.local.toml".to_owned()]),
+        docs: BTreeMap::new(),
+        bad_docs: BTreeSet::new(),
     };
 
     let placed = state.collect_skills(mode)?;
@@ -101,15 +105,12 @@ pub fn plan(input: &SyncInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         state.place_skill(skill, mode)?;
     }
     state.sync_mcp()?;
+    state.sync_disable()?;
+    state.flush_docs()?;
     state.sync_instructions()?;
     state.remove_dropped()?;
     state.sync_gitignore()?;
 
-    if !project.local_declarations().disable.is_empty() {
-        state.notes.push(PlanNote::info(
-            "按项目停用（[disable]）在 M1-18 实现，这次没有写",
-        ));
-    }
     if !state.replaced.is_empty() {
         state.notes.push(PlanNote::warning(format!(
             "{} 处本机原有的内容和锁定版本不同，替换前已备份，回滚能找回：{}",
@@ -157,6 +158,17 @@ struct Run<'a, 'b> {
     replaced: Vec<String>,
     /// `.gitignore` 方寸那一段的行。
     ignored: BTreeSet<String>,
+    /// 改在内存里、还没写进计划的配置文件。
+    docs: BTreeMap<PathBuf, PendingDoc>,
+    bad_docs: BTreeSet<PathBuf>,
+}
+
+/// 一份改在内存里的配置，和改之前的原文。
+struct PendingDoc {
+    doc: ConfigDoc,
+    original: Option<String>,
+    /// 计划里这一行的说明，例如「新增键 mcpServers.github」。
+    rows: Vec<String>,
 }
 
 impl Run<'_, '_> {
@@ -547,7 +559,7 @@ impl Run<'_, '_> {
                 }
             }
         }
-        for key in &self.old.keys {
+        for key in self.old.keys.iter().filter(|k| k.kind.is_mcp()) {
             if !files.iter().any(|f| f.0 == key.file) {
                 let format = if key.file.ends_with(".toml") {
                     FileFormat::Toml
@@ -565,15 +577,10 @@ impl Run<'_, '_> {
 
         for (file, format, key_path, target) in files {
             let path = input.root.join(&file);
-            let text = std::fs::read_to_string(&path).ok();
-            let mut doc = match ConfigDoc::parse(format, text.as_deref()) {
-                Ok(doc) => doc,
-                Err(e) => {
-                    self.notes
-                        .push(PlanNote::warning(format!("{file} 读不懂（{e}），没有改")));
-                    continue;
-                }
+            let Some(mut pending) = self.take_doc(&path, format, &file) else {
+                continue;
             };
+            let doc = &mut pending.doc;
             let prefix = key_path.join(".");
             let mut rows = Vec::new();
             if target {
@@ -594,10 +601,17 @@ impl Run<'_, '_> {
                         file: file.clone(),
                         key,
                         asset: (*name).clone(),
+                        kind: KeyKind::Mcp,
+                        tool: None,
                     });
                 }
             }
-            for owned in self.old.keys.iter().filter(|k| k.file == file) {
+            for owned in self
+                .old
+                .keys
+                .iter()
+                .filter(|k| k.kind.is_mcp() && k.file == file)
+            {
                 let name = owned.key.rsplit('.').next().unwrap_or_default();
                 let still = target && desired.keys().any(|n| n.as_str() == name);
                 if still {
@@ -611,13 +625,54 @@ impl Run<'_, '_> {
                     rows.push(format!("删除键 {}", owned.key));
                 }
             }
-            if rows.is_empty() {
+            pending.rows.extend(rows);
+            self.put_doc(path, pending);
+        }
+        Ok(())
+    }
+
+    // ───────────── 配置文件：先改在内存里，最后每个文件写一次 ─────────────
+
+    /// 取出一份要改的配置。同一个文件 MCP 和按项目停用都会改（例如 `.codex/config.toml`），
+    /// 计划里只能写一次，所以改动都攒在这里。读不懂的文件记一条提示，不改。
+    fn take_doc(&mut self, path: &Path, format: FileFormat, label: &str) -> Option<PendingDoc> {
+        if let Some(pending) = self.docs.remove(path) {
+            return Some(pending);
+        }
+        if self.bad_docs.contains(path) {
+            return None;
+        }
+        let original = std::fs::read_to_string(path).ok();
+        match ConfigDoc::parse(format, original.as_deref()) {
+            Ok(doc) => Some(PendingDoc {
+                doc,
+                original,
+                rows: Vec::new(),
+            }),
+            Err(e) => {
+                self.notes
+                    .push(PlanNote::warning(format!("{label} 读不懂（{e}），没有改")));
+                self.bad_docs.insert(path.to_path_buf());
+                None
+            }
+        }
+    }
+
+    fn put_doc(&mut self, path: PathBuf, pending: PendingDoc) {
+        self.docs.insert(path, pending);
+    }
+
+    /// 把攒下的配置改动写进计划。
+    fn flush_docs(&mut self) -> Result<()> {
+        for (path, pending) in std::mem::take(&mut self.docs) {
+            if pending.rows.is_empty() {
                 continue;
             }
-            let new_text = doc.render();
-            if text.as_deref() == Some(new_text.as_str()) {
+            let new_text = pending.doc.render();
+            if pending.original.as_deref() == Some(new_text.as_str()) {
                 continue;
             }
+            let rows = &pending.rows;
             let detail = if rows.len() <= 2 {
                 format!("{}，其余键不动", rows.join("、"))
             } else {
@@ -1030,6 +1085,10 @@ impl ConfigDoc {
         }
     }
 }
+
+mod disable;
+
+pub use disable::Visible;
 
 #[cfg(all(test, unix))]
 mod tests;

@@ -58,6 +58,7 @@ function item(
     triggers: null,
     files: [],
     overriddenBy: null,
+    disable: null,
     ...x,
   };
 }
@@ -157,6 +158,8 @@ const R = {
     source: "~/.agents/skills",
     triggers: 0,
     members: ["lark-doc"],
+    // 原型的「在本项目停用」：清单写 7.4 示例里的 lark-*。
+    disable: { names: ["lark-*"], active: false, idle: true, unsupported: null, note: null },
     declared: stack(["生效 · 16 项", "", "", ""]),
     files: ["~/.claude/skills/lark-*（16 个链接，全局）"],
     reason:

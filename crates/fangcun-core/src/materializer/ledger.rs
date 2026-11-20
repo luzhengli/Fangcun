@@ -61,11 +61,37 @@ pub enum PathKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct OwnedKey {
-    /// 相对项目根目录。
+    /// 相对项目根目录；按项目停用写的可能是适配器里的写法，例如 `~/.claude.json`。
     pub file: String,
-    /// 服务表的键路径加服务名，用 `.` 连接。
+    /// 服务表的键路径加服务名，用 `.` 连接。开关的写法见 [`KeyKind`]。
     pub key: String,
     pub asset: String,
+    #[serde(default, skip_serializing_if = "KeyKind::is_mcp")]
+    pub kind: KeyKind,
+    /// 按项目停用写的键属于哪个工具，撤销时按它的适配器找写法。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool: Option<crate::model::ToolId>,
+}
+
+/// 方寸写的配置键是哪一种。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum KeyKind {
+    /// MCP 服务表里的一项（M1-10）。
+    #[default]
+    Mcp,
+    /// 按项目停用一个 skill：适配器 `[[skill-switches]]` 那份配置里的一项。
+    SkillOff,
+    /// 按项目停用一个 MCP：适配器 `[[mcp-switches]]` 列表里的一个名字。
+    McpOff,
+    /// 按项目停用一个 MCP：项目层服务表里这一项的停用字段（Codex 的 `enabled = false`）。
+    McpField,
+}
+
+impl KeyKind {
+    pub fn is_mcp(&self) -> bool {
+        *self == Self::Mcp
+    }
 }
 
 impl Ledger {

@@ -8,9 +8,9 @@ mod schema;
 pub use registry::AdapterRegistry;
 pub use schema::{
     Adapter, Capabilities, ConfigList, FileFormat, InstallIndex, InstructionLocation, LockFormat,
-    LockRef, McpFields, McpLocation, MergeMode, ObservedLocation, Pick, Precedence, Requirement,
-    RulesLocation, SessionFormat, SessionSource, SkillLocation, SkillSwitches, SupportLevel,
-    ToolInfo, Walk,
+    LockRef, McpFields, McpLocation, McpSwitches, MergeMode, ObservedLocation, Pick, Precedence,
+    Requirement, RulesLocation, SessionFormat, SessionSource, SkillLocation, SkillSwitches,
+    SupportLevel, SwitchShape, ToolInfo, Walk,
 };
 
 use std::path::{Path, PathBuf};

@@ -80,10 +80,23 @@ scope = "global"
 file = "$CODEX_HOME/config.toml"
 format = "toml"
 key = ["skills", "config"]
+shape = "list"                 # list（默认）：数组，每项按 path-field 或 name-field 匹配，enabled-field 为 false 时停用
 path-field = "path"
 name-field = "name"
 enabled-field = "enabled"
 # requires = { … }             # 可选，同 [[mcp]]
+# shape = "map"：对象，名字到值，值是 off-values 之一时停用；按项目停用写第一个值。例如 Claude Code：
+# key = ["skillOverrides"]  shape = "map"  off-values = ["off", "user-invocable-only"]
+# 项目层、个人层的开关也作用于全局层的 skill。按项目停用（7.4）写的是 scope = "project"（个人覆盖写 "personal"）的那份。
+
+[[mcp-switches]]               # 按名字停用 MCP 服务的字符串数组，键路径里的 {project} 换成项目根目录
+scope = "personal"
+file = "~/.claude.json"
+format = "json"
+key = ["projects", "{project}", "disabledMcpServers"]
+applies-to = ["global", "personal"] # 管哪几层的服务
+# 没有这张表时，按项目停用 MCP 写项目层 [[mcp]] 那份配置里服务的停用字段（[mcp-fields] 的 enabled），
+# 要求 [precedence] mcp-merge = "fields"，例如 Codex。都没有就不支持。
 
 [[observed]]                   # 「其他加载项」，只看不管
 kind = "hook"                  # plugin | hook | slash-command | subagent

@@ -2,6 +2,7 @@
 import type { AssetKind } from "./AssetKind";
 import type { AssetState } from "./AssetState";
 import type { Declaration } from "./Declaration";
+import type { DisableOption } from "./DisableOption";
 import type { Scope } from "./Scope";
 import type { TokenEstimate } from "./TokenEstimate";
 
@@ -68,4 +69,8 @@ files: Array<string>,
 /**
  * 被谁覆盖：生效那一项的 `id`。
  */
-overriddenBy: string | null, };
+overriddenBy: string | null, 
+/**
+ * 「在本项目停用」（6.3 全局税、7.4）。只有全局层的 skill 与 MCP 有，内核按清单和适配器填。
+ */
+disable: DisableOption | null, };

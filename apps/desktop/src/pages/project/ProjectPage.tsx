@@ -10,6 +10,7 @@ import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
+import type { ManifestEdit } from "@/ipc/bindings/ManifestEdit";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
 import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
@@ -17,6 +18,7 @@ import { useEffectiveContext, useHistory, useProjects, useSyncPlan, useTools } f
 import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
+import { useStaged, useStagedEdits } from "@/state/staged";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
 import styles from "./ProjectPage.module.css";
@@ -84,14 +86,18 @@ function ProjectView({ root }: { root: string | undefined }) {
   const context = useEffectiveContext(root, tool);
   const summary = useProjects().data?.find((p) => p.id === root);
   const registered = summary?.registered ?? false;
-  const syncPlan = useSyncPlan(root, registered);
+  // 检查器里「加入同步计划」的清单改动（6.8），点「同步 · N」时一起出计划。
+  const staged = useStagedEdits(root);
+  const clearStaged = useStaged((s) => s.clear);
+  const syncPlan = useSyncPlan(root, registered, staged);
   const preview = usePlan((s) => s.preview);
   const openSync = () =>
     root &&
     preview({
-      load: () => kernel.planSync(root),
+      load: () => kernel.planSync(root, staged),
       done: (applied, plan) =>
         `已同步 ${plan.changes.length} 处变更 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
+      after: () => clearStaged(root),
     });
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
@@ -224,6 +230,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           {data && (tab === "effective" || !registered) && (
             <EffectiveList
               context={data}
+              staged={staged}
               selectedId={current?.id}
               onPick={(id) => {
                 setSelected(id);
@@ -255,6 +262,8 @@ function ProjectView({ root }: { root: string | undefined }) {
           <ItemInspector
             item={current}
             context={data}
+            root={registered ? root : undefined}
+            staged={staged}
             onPick={setSelected}
             onClose={() => setInspectorOpen(false)}
           />
@@ -266,10 +275,12 @@ function ProjectView({ root }: { root: string | undefined }) {
 
 function EffectiveList({
   context,
+  staged,
   selectedId,
   onPick,
 }: {
   context: EffectiveContext;
+  staged: ManifestEdit[];
   selectedId: string | undefined;
   onPick: (id: string) => void;
 }) {
@@ -296,37 +307,47 @@ function EffectiveList({
                 常驻 {unestimated && cost === 0 ? "未估算" : formatK(cost)}
               </span>
             </h2>
-            {rows.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={page.row}
-                aria-pressed={item.id === selectedId}
-                onClick={() => onPick(item.id)}
-              >
-                <span className={styles.colName}>
-                  <span
-                    className={`${page.name} ${item.state === "overridden" ? page.struck : ""}`}
-                  >
-                    {item.name}
+            {rows.map((raw) => {
+              const pending = stagedOp(staged, raw);
+              // 暂存了停用的项：照原型写「已停用（待同步）」，划线，常驻写「—」。
+              const item: EffectiveItem =
+                pending === "disable"
+                  ? { ...raw, label: "已停用（待同步）", state: null, resident: null }
+                  : pending === "enable"
+                    ? { ...raw, label: "恢复（待同步）" }
+                    : raw;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={page.row}
+                  aria-pressed={item.id === selectedId}
+                  onClick={() => onPick(item.id)}
+                >
+                  <span className={styles.colName}>
+                    <span
+                      className={`${page.name} ${item.state === "overridden" || pending === "disable" ? page.struck : ""}`}
+                    >
+                      {item.name}
+                    </span>
+                    {item.version && <span className={page.version}>{item.version}</span>}
                   </span>
-                  {item.version && <span className={page.version}>{item.version}</span>}
-                </span>
-                <span className={styles.colLayer}>
-                  <ScopeTicks scope={item.scope} />
-                  <span>{SCOPE_NAMES[item.scope]}</span>
-                </span>
-                <span className={styles.colStatus}>
-                  <StatusDot
-                    tone={item.state ? toneOfState(item.state) : "neutral"}
-                    label={item.label}
-                  />
-                </span>
-                <span className={`${styles.colCost} ${page.cost}`}>
-                  {!item.counted ? "–" : item.resident === null ? "—" : formatK(item.resident)}
-                </span>
-              </button>
-            ))}
+                  <span className={styles.colLayer}>
+                    <ScopeTicks scope={item.scope} />
+                    <span>{SCOPE_NAMES[item.scope]}</span>
+                  </span>
+                  <span className={styles.colStatus}>
+                    <StatusDot
+                      tone={item.state ? toneOfState(item.state) : "neutral"}
+                      label={item.label}
+                    />
+                  </span>
+                  <span className={`${styles.colCost} ${page.cost}`}>
+                    {!item.counted ? "–" : item.resident === null ? "—" : formatK(item.resident)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         );
       })}
@@ -363,11 +384,16 @@ function EffectiveList({
 function ItemInspector({
   item,
   context,
+  root,
+  staged,
   onPick,
   onClose,
 }: {
   item: EffectiveItem;
   context: EffectiveContext;
+  /** 已登记的项目才给：没有清单的不能在本项目停用。 */
+  root: string | undefined;
+  staged: ManifestEdit[];
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -444,6 +470,9 @@ function ItemInspector({
         <p className={page.why}>{item.reason}</p>
         <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
       </Section>
+      {root && item.disable && (
+        <DisableBox item={item} root={root} staged={staged} toolName={toolName} />
+      )}
       {item.overriddenBy && (
         <OverriddenBox
           item={item}
@@ -496,6 +525,103 @@ function ItemInspector({
         <p className={styles.sectionNote}>还没有活动。</p>
       </Section>
     </Inspector>
+  );
+}
+
+/** 这一项在暂存里是要停用还是要恢复。 */
+function stagedOp(staged: ManifestEdit[], item: EffectiveItem): ManifestEdit["op"] | null {
+  const names = item.disable?.names;
+  if (!names) return null;
+  const hit = staged.find((e) => e.kind === item.kind && e.names.join("\n") === names.join("\n"));
+  return hit?.op ?? null;
+}
+
+/**
+ * 全局的 skill 与 MCP「在本项目停用」（6.3 检查器「全局税」、7.4）。点了先加入同步计划（6.8），
+ * 由「同步 · N」统一预览和应用。清单里已经停用的给「恢复」。
+ */
+function DisableBox({
+  item,
+  root,
+  staged,
+  toolName,
+}: {
+  item: EffectiveItem;
+  root: string;
+  staged: ManifestEdit[];
+  toolName: string;
+}) {
+  const stage = useStaged((s) => s.stage);
+  const unstage = useStaged((s) => s.unstage);
+  const option = item.disable;
+  if (!option) return null;
+  const pending = stagedOp(staged, item);
+  if (!option.idle && !option.active && !pending) return null;
+  if (item.kind === "instruction") return null;
+  const kind = item.kind;
+  const edit = (op: ManifestEdit["op"]): ManifestEdit => ({ op, kind, names: option.names });
+  const what =
+    item.kind === "mcp"
+      ? "这个 MCP 服务每次会话都会启动，本项目从未调用。"
+      : option.names.length > 1 || item.members.length > 1
+        ? `${item.members.length || option.names.length} 个 skill 的名称与描述常驻上下文，本项目从未触发。`
+        : "它的名称与描述常驻上下文，本项目从未触发。";
+  const saving =
+    item.resident && item.resident > 0 ? ` · 预计常驻减少 ${formatK(item.resident)}` : "";
+
+  if (pending) {
+    return (
+      <div className={styles.stateBox}>
+        <div className={styles.staged}>
+          {pending === "disable" ? `已加入同步计划${saving}` : "已加入同步计划 · 恢复后重新加载"}
+          <button
+            type="button"
+            className={styles.linkButton}
+            onClick={() => unstage(root, edit(pending))}
+          >
+            撤回
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (option.active) {
+    return (
+      <div className={styles.stateBox}>
+        <h3 className={styles.stateTitle}>已在本项目停用</h3>
+        <p className={styles.stateText}>
+          清单的 [disable] 写了它，同步时写进 {toolName} 自己的开关，其他项目照常加载。
+        </p>
+        {option.note && <span className={styles.sectionNote}>{option.note}</span>}
+        <div className={styles.stateActions}>
+          <button type="button" className={page.button} onClick={() => stage(root, edit("enable"))}>
+            在本项目恢复
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.stateBox}>
+      <h3 className={styles.stateTitle}>全局税：每个项目都在缴</h3>
+      <p className={styles.stateText}>{what}停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+      {option.unsupported && <span className={styles.sectionNote}>{option.unsupported}</span>}
+      {option.note && <span className={styles.sectionNote}>{option.note}</span>}
+      <div className={styles.stateActions}>
+        <button
+          type="button"
+          className={page.buttonPrimary}
+          disabled={option.unsupported !== null}
+          title={option.unsupported ?? "加入同步计划，点「同步」时一起预览和应用"}
+          onClick={() => stage(root, edit("disable"))}
+        >
+          在本项目停用
+        </button>
+        <button type="button" className={page.button} disabled title="还没开放，见 M1-19">
+          改为套装…
+        </button>
+      </div>
+    </div>
   );
 }
 

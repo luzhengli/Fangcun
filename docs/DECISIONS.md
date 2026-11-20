@@ -8,6 +8,14 @@
 
 ---
 
+## 2026-11-21 M1-18 按项目停用：Claude Code 的 MCP、Codex 的个人停用
+
+- **查到的事实**：Claude Code 文档里，能提交的 `disabledMcpjsonServers` 只管项目 `.mcp.json` 里的服务；用户层、本地层的服务按项目开关只有 `/mcp`，记在 `~/.claude.json` 按项目的 `disabledMcpServers`；`deniedMcpServers` 能提交，但是拒绝策略，文档没说能当按项目停用。`skillOverrides` 的值有 `on`、`name-only`、`user-invocable-only`、`off`，用户、项目、本地设置里只按名字匹配。
+- **人定**：Claude Code 停用全局 MCP 写在哪：「~/.claude.json 本机开关（推荐）」。其余选项：项目 `.claude/settings.json` 的 `deniedMcpServers`；Claude Code 不支持，置灰给「转成套装」。
+- **人定**：个人覆盖的停用对 Codex：「Codex 不支持个人停用（推荐）」。其余选项：写全局 `~/.codex/config.toml` 按路径停用项目层 skill；照样写进 `.codex/config.toml`。
+- **Agent 定，可逆**：通配在同步时按工具实际读到的名字展开，展开后的名字记进台账，从清单里删掉时只撤自己写的项。读 `skillOverrides` 时 `off` 和 `user-invocable-only` 都算不进上下文。
+- **Agent 定，可逆**：检查器的「在本项目停用」照 6.8 先加入同步计划（界面暂存，`state/staged.ts`），「同步 · N」时内核 `plan_sync_with` 把改清单和写开关合成一份计划；没有单独的停用命令，命令行是改清单后 `fangcun sync`。合成一行的项（lark-* 16 项）写全部成员的名字，不自动合成通配。Codex 按字段合并时项目里只写了 `enabled` 的那条按开关折算到全局那份上，不另出一行。清单里已停用的项给「在本项目恢复」、第二个按钮写「改为套装…」，这两处文档和原型都没有，进 H-10 待人确认。
+
 ## 2026-11-21 项目卡片：取消「‹ 项目名」，已登记项目也有
 
 - **人定**：人看了 #35 后说「点检查器顶部的「‹ 项目名」 这个取消吧。已登记的项目没有项目卡片，也可以加上保持一致。」
