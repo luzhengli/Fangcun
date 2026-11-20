@@ -57,6 +57,8 @@ function item(
     reason: "",
     triggers: null,
     files: [],
+    secrets: [],
+    recent: [],
     overriddenBy: null,
     disable: null,
     ...x,

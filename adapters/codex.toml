@@ -94,6 +94,9 @@ args = "args"
 env = "env"
 url = "url"
 enabled = "enabled"
+# mcp 文档（2026-11-21 核实）：env_vars 列出要从启动 Codex 的环境里转发的变量名；env 里没有 ${VAR} 展开。
+# 用了 secret: 的服务，项目配置只写 env_vars，明文不落（Codex 项目里没有不提交的配置，9.3）。
+env-forward = "env_vars"
 
 [precedence]
 # skills 文档：同名的 skill 不合并，都出现在可选列表里。所以这里留空，表示都加载。

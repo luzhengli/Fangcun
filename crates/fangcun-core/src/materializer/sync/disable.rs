@@ -153,7 +153,7 @@ impl Run<'_, '_> {
             .old
             .keys
             .iter()
-            .filter(|k| !k.kind.is_mcp())
+            .filter(|k| !k.kind.is_mcp() && k.kind != KeyKind::McpPersonal)
             .filter_map(|k| {
                 Some(Want {
                     tool: k.tool.clone()?,
@@ -216,6 +216,8 @@ impl Run<'_, '_> {
                 asset: want.name.clone(),
                 kind: want.kind,
                 tool: Some(want.tool.clone()),
+                path: Vec::new(),
+                secrets: std::collections::BTreeMap::new(),
             });
         } else if spot.unset(&mut pending.doc, &want.name, &project) {
             pending.rows.push(format!("撤销停用 {display}"));
@@ -281,7 +283,7 @@ impl<'a> Spot<'a> {
                 let format = adapter.mcp.iter().find(|l| l.file == file)?.format;
                 (file == want.file).then_some(Spot::McpField { format, key, field })
             }
-            KeyKind::Mcp => None,
+            KeyKind::Mcp | KeyKind::McpPersonal => None,
         }
     }
 

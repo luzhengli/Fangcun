@@ -35,6 +35,8 @@ use crate::scanner::fsutil::display_path;
 use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
+mod item_state;
+
 /// 内存里最多留多少份没应用的计划。
 const PENDING_LIMIT: usize = 64;
 
@@ -91,6 +93,28 @@ pub struct ProjectStatus {
     pub updatable: Vec<String>,
 }
 
+/// `fangcun secret ls` 的一行：一个密钥存没存、谁在用。没有值。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SecretInfo {
+    pub name: String,
+    /// 钥匙串里有。
+    pub stored: bool,
+    pub used_by: Vec<SecretUse>,
+}
+
+/// 哪个项目的哪个服务、哪个变量引用了它。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SecretUse {
+    pub project: ProjectId,
+    pub project_name: String,
+    pub server: String,
+    pub var: String,
+}
+
 #[derive(Debug)]
 pub struct Kernel {
     home: FangcunHome,
@@ -107,6 +131,20 @@ pub struct Kernel {
     /// 出了还没应用的计划，按编号。
     pending: Mutex<BTreeMap<u32, ChangePlan>>,
     next_plan: AtomicU32,
+    /// 密钥的存放处（F6、M1-17）：本机是钥匙串，测试换成内存里的。
+    secrets: Arc<dyn crate::secrets::SecretStore>,
+}
+
+/// 本机是钥匙串；内核自己的测试一律用内存里的，不碰真实的钥匙串。
+fn default_secrets() -> Arc<dyn crate::secrets::SecretStore> {
+    #[cfg(test)]
+    {
+        Arc::new(crate::secrets::MemoryStore::default())
+    }
+    #[cfg(not(test))]
+    {
+        crate::secrets::default_store()
+    }
 }
 
 impl Kernel {
@@ -144,6 +182,7 @@ impl Kernel {
             github_base: None,
             pending: Mutex::new(BTreeMap::new()),
             next_plan: AtomicU32::new(1),
+            secrets: default_secrets(),
         })
     }
 
@@ -165,6 +204,13 @@ impl Kernel {
     #[must_use]
     pub fn with_project(mut self, root: impl Into<PathBuf>) -> Self {
         self.extra_projects.push(root.into());
+        self
+    }
+
+    /// 换掉密钥的存放处。测试用 [`crate::secrets::MemoryStore`]，不碰真实的钥匙串。
+    #[must_use]
+    pub fn with_secret_store(mut self, store: Arc<dyn crate::secrets::SecretStore>) -> Self {
+        self.secrets = store;
         self
     }
 
@@ -538,6 +584,26 @@ impl Kernel {
             // 只有已登记、有清单的项目能在本项目停用（6.3 全局税、7.4）。
             crate::resolver::attach_disable(&mut context, adapter, &basics.disable);
         }
+        // 检查器的「写入了哪些文件」「最近活动」、密钥的显示（M1-17、M1-32、M1-33）。
+        let ledger = crate::materializer::ledger::Ledger::load(&self.home, project_root)?;
+        let wanted = crate::scanner::fsutil::canonical(project_root);
+        let records: Vec<Record> = self
+            .journal
+            .read(&RecordFilter::default())?
+            .into_iter()
+            .filter(|r| {
+                r.project
+                    .as_ref()
+                    .is_some_and(|p| crate::scanner::fsutil::canonical(Path::new(&p.0)) == wanted)
+            })
+            .collect();
+        item_state::attach(
+            &mut context,
+            adapter,
+            &ledger,
+            &records,
+            &self.home.library_dir(),
+        );
         Ok(context)
     }
 
@@ -737,6 +803,8 @@ impl Kernel {
         let library = Library::open(&self.home)?;
         let sources = self.sources();
         let mut notes = Vec::new();
+        // 反推时改写成 `secret:` 引用的明文，一并存进钥匙串（9.3）。
+        let mut migrate = BTreeMap::new();
         let (project, seed, new_manifest) = if has_manifest {
             notes.push(crate::model::PlanNote::info(
                 "已有 fangcun.toml，按现有清单登记，不再反推",
@@ -765,6 +833,7 @@ impl Kernel {
             let (mut manifest, seed) = if from_existing {
                 let inferred = crate::resolver::infer_project(&input, &sources, &library)?;
                 notes.extend(inferred.notes);
+                migrate = inferred.secrets;
                 (inferred.manifest, Some(inferred.seed))
             } else {
                 let manifest = crate::manifest::Manifest {
@@ -827,10 +896,131 @@ impl Kernel {
                 format!("登记 {}", display_path(root, &self.user_home)),
             )?;
         }
+        for (secret, value) in migrate {
+            match self.secrets.get(&secret) {
+                Ok(Some(existing)) if existing == value => {}
+                Ok(Some(_)) => notes.push(crate::model::PlanNote::warning(format!(
+                    "钥匙串里已经有 {secret}，值和项目里的不同，没有替换。要换用 fangcun secret set {secret}"
+                ))),
+                Ok(None) => builder.store_secret(&secret, value),
+                Err(e) => notes.push(crate::model::PlanNote::warning(format!(
+                    "{e}。{secret} 没有存进钥匙串，之后用 fangcun secret set {secret}"
+                ))),
+            }
+        }
         for note in notes {
             builder.note(note);
         }
         Ok(self.issue(builder))
+    }
+
+    // ───────────── 密钥（F6、M1-17） ─────────────
+
+    /// `fangcun secret ls`：已登记项目的清单与个人覆盖里引用的密钥，加上钥匙串里存着的。
+    /// 只有名称和用处，从不读值。
+    pub fn secrets(&self) -> Result<Vec<SecretInfo>> {
+        let stored = self.secrets.names()?;
+        let mut out: BTreeMap<String, SecretInfo> = stored
+            .iter()
+            .map(|name| {
+                (
+                    name.clone(),
+                    SecretInfo {
+                        name: name.clone(),
+                        stored: true,
+                        used_by: Vec::new(),
+                    },
+                )
+            })
+            .collect();
+        for registered in crate::registry::load(&self.home)? {
+            let Ok(Some(project)) = crate::manifest::load_project(&registered.path, &self.home)
+            else {
+                continue;
+            };
+            for (server, item) in &project.local_declarations().mcp {
+                for (var, value) in &item.decl.env {
+                    let Some(name) = crate::secrets::reference(value) else {
+                        continue;
+                    };
+                    let info = out.entry(name.to_owned()).or_insert_with(|| SecretInfo {
+                        name: name.to_owned(),
+                        stored: false,
+                        used_by: Vec::new(),
+                    });
+                    info.used_by.push(SecretUse {
+                        project: ProjectId(registered.path.to_string_lossy().into_owned()),
+                        project_name: crate::scanner::project_name(&registered.path),
+                        server: server.clone(),
+                        var: var.clone(),
+                    });
+                }
+            }
+        }
+        Ok(out.into_values().collect())
+    }
+
+    /// `fangcun secret set <名称>`：存入或替换，记一条密钥记录（只记名称和位置，9.3）。
+    /// 值不过 IPC：只有命令行调它，桌面应用给出命令（9.3）。
+    pub fn secret_set(
+        &self,
+        name: &str,
+        value: &crate::secrets::SecretValue,
+    ) -> Result<crate::materializer::SecretOp> {
+        use crate::materializer::SecretOp;
+        self.require_write("secret set")?;
+        crate::secrets::check_name(name)?;
+        if value.expose().is_empty() {
+            return Err(Error::Secret("值是空的，没有存".to_owned()));
+        }
+        let existed = self.secrets.get(name)?;
+        if existed.as_ref() == Some(value) {
+            return Ok(SecretOp::Replace);
+        }
+        self.secrets.set(name, value)?;
+        let (op, title) = if existed.is_some() {
+            (SecretOp::Replace, format!("替换钥匙串里的 {name}"))
+        } else {
+            (SecretOp::Store, format!("{name} 存入钥匙串"))
+        };
+        self.record_secret(op, name, title);
+        Ok(op)
+    }
+
+    /// `fangcun secret rm <名称>`：删掉钥匙串里的条目。本来没有时返回 `false`，不记录。
+    pub fn secret_remove(&self, name: &str) -> Result<bool> {
+        use crate::materializer::SecretOp;
+        self.require_write("secret rm")?;
+        crate::secrets::check_name(name)?;
+        let removed = self.secrets.delete(name)?;
+        if removed {
+            self.record_secret(SecretOp::Delete, name, format!("删除钥匙串里的 {name}"));
+        }
+        Ok(removed)
+    }
+
+    /// 只有一个项目用到这个密钥时，记录挂在那个项目下。
+    fn record_secret(&self, op: crate::materializer::SecretOp, name: &str, title: String) {
+        let users: Vec<PathBuf> = self
+            .secrets()
+            .map(|all| {
+                let mut roots: Vec<PathBuf> = all
+                    .into_iter()
+                    .filter(|s| s.name == name)
+                    .flat_map(|s| s.used_by)
+                    .map(|u| PathBuf::from(u.project.0))
+                    .collect();
+                roots.sort();
+                roots.dedup();
+                roots
+            })
+            .unwrap_or_default();
+        let project = match users.as_slice() {
+            [one] => Some(one.as_path()),
+            _ => None,
+        };
+        let record = crate::materializer::secret_record(op, name, title, project, self.origin);
+        let _ = self.journal.record(record);
     }
 
     /// `fangcun add <资产>`：加入清单。
@@ -1032,6 +1222,7 @@ impl Kernel {
                 lock: &lock,
                 library: &library,
                 sources: &sources,
+                secrets: self.secrets.as_ref(),
             },
             &mut builder,
         )?;
@@ -1129,7 +1320,14 @@ impl Kernel {
                 })
             })
         };
-        rollback::plan(&self.home, &record, &snapshots, &later, &mut builder)?;
+        rollback::plan(
+            &self.home,
+            self.secrets.as_ref(),
+            &record,
+            &snapshots,
+            &later,
+            &mut builder,
+        )?;
         Ok(self.issue(builder))
     }
 
@@ -1150,9 +1348,11 @@ impl Kernel {
             &issued,
             &ApplyContext {
                 home: &self.home,
+                user_home: &self.user_home,
                 scope: &scope,
                 journal: &self.journal,
                 trigger: self.origin,
+                secrets: self.secrets.as_ref(),
             },
         )?;
         // 扫描缓存不在这里清：清了下一次查询会全盘重扫，桌面端还会多记一条体检。
@@ -1277,6 +1477,34 @@ mod tests {
     }
 
     #[test]
+    fn secret_set_records_names_only_and_cannot_be_rolled_back() {
+        use crate::materializer::SecretOp;
+        let home = temp_home("secret-set");
+        let kernel = kernel_at(home, Access::ReadWrite);
+        let value = crate::secrets::SecretValue::new("tok_abcdefghijkl");
+        assert_eq!(kernel.secret_set("gh", &value).unwrap(), SecretOp::Store);
+        let other = crate::secrets::SecretValue::new("tok_zzzzzzzzzzzz");
+        assert_eq!(kernel.secret_set("gh", &other).unwrap(), SecretOp::Replace);
+        assert!(kernel.secret_set("bad name", &value).is_err());
+        let listed = kernel.secrets().unwrap();
+        assert_eq!(listed.len(), 1);
+        assert!(listed[0].stored);
+        assert!(kernel.secret_remove("gh").unwrap());
+        assert!(!kernel.secret_remove("gh").unwrap());
+        let records = kernel.log(&RecordFilter::default()).unwrap();
+        let titles: Vec<&str> = records.iter().map(|r| r.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            ["删除钥匙串里的 gh", "替换钥匙串里的 gh", "gh 存入钥匙串"]
+        );
+        assert!(!serde_json::to_string(&records).unwrap().contains("tok_"));
+        assert!(matches!(
+            kernel.plan_rollback_record(&records[0].id),
+            Err(Error::Blocked(_))
+        ));
+    }
+
+    #[test]
     fn opening_does_not_create_the_home_directory() {
         let kernel = kernel(Access::ReadOnly);
         assert!(!kernel.home().root().exists());
@@ -1305,6 +1533,10 @@ mod tests {
             kernel.plan_update(None, &[]).err(),
             kernel.plan_rollback(root, SnapshotId(1)).err(),
             kernel.apply(&plan).err(),
+            kernel
+                .secret_set("t", &crate::secrets::SecretValue::new("x"))
+                .err(),
+            kernel.secret_remove("t").err(),
         ];
         for refusal in refusals {
             assert!(

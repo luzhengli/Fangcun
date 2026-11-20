@@ -23,6 +23,8 @@ toml = "1"
 # 按键合并 .codex/config.toml，保住人写的注释和顺序（4.6 第 5 条）。
 toml_edit = "0.25"
 ts-rs = "12"
+# 密钥存进 macOS 钥匙串（F6、7.5、M1-17）。只用 passwords 与 item 两块。
+security-framework = { version = "3.7", default-features = false }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

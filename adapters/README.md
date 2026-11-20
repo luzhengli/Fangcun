@@ -66,6 +66,8 @@ args = "args"
 env = "env"
 url = "url"
 enabled = "enabled"            # 可选，值为 false 时不加载
+env-reference = { prefix = "${", suffix = "}" }   # 可选：提交的配置里 env 怎么引用环境变量（密钥，M1-17）
+env-forward = "env_vars"       # 可选：没有 env-reference 时，按名字转发环境变量的列表字段
 
 [precedence]                   # 同名时谁生效，排在前面的层赢；空表示都加载
 skills = ["global", "project"]

@@ -94,6 +94,8 @@ pub struct Inferred {
     /// 已经解析好的 skill。交给 [`super::resolve_lock`] 当「上一份锁」，约束没变就原样沿用。
     pub seed: Lock,
     pub notes: Vec<PlanNote>,
+    /// 改写成 `secret:` 引用的明文：登记时一并存进钥匙串（M1-17，9.3）。名称 → 值。
+    pub secrets: BTreeMap<String, crate::secrets::SecretValue>,
 }
 
 pub fn infer_project(
@@ -111,6 +113,7 @@ pub fn infer_project(
         },
         seed: Lock::default(),
         notes: Vec::new(),
+        secrets: BTreeMap::new(),
     };
     infer_skills(input, sources, library, &mut out)?;
     infer_mcp(input, &mut out);
@@ -514,6 +517,9 @@ fn infer_mcp(input: &InferInput<'_>, out: &mut Inferred) {
                     let reference = secret_name(&entry.name, key);
                     secrets.push(format!("{} 的 {key}", entry.name));
                     env.insert(key.clone(), format!("secret:{reference}"));
+                    out.secrets
+                        .entry(reference)
+                        .or_insert_with(|| crate::secrets::SecretValue::new(value.clone()));
                 } else {
                     env.insert(key.clone(), value.clone());
                 }
@@ -545,7 +551,7 @@ fn infer_mcp(input: &InferInput<'_>, out: &mut Inferred) {
     secrets.dedup();
     if !secrets.is_empty() {
         out.notes.push(PlanNote::danger(format!(
-            "{} 个明文密钥没有抄进清单，改写成了 secret: 引用：{}。钥匙串接上之前（M1-17），这几个服务同步不了",
+            "{} 个明文密钥没有抄进清单，改写成了 secret: 引用：{}。明文存进钥匙串；提交的配置在同步后只留环境变量引用",
             secrets.len(),
             secrets.join("、")
         )));

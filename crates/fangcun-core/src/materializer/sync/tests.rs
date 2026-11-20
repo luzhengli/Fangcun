@@ -697,3 +697,160 @@ fn disable_writes_each_tool_switch_and_takes_back_only_its_own() {
         serde_json::json!([])
     );
 }
+
+/// 目录下全部文件的文本，找明文用。
+fn all_text(dir: &Path) -> String {
+    let mut out = String::new();
+    let Ok(entries) = fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            out.push_str(&all_text(&path));
+        } else {
+            out.push_str(&String::from_utf8_lossy(
+                &fs::read(&path).unwrap_or_default(),
+            ));
+        }
+    }
+    out
+}
+
+#[test]
+fn secrets_go_to_the_personal_layer_and_never_into_plans_snapshots_or_the_journal() {
+    const TOKEN: &str = "tok_abcdefghijklmnop";
+    let f = fixture("secrets");
+    let store = std::sync::Arc::new(crate::secrets::MemoryStore::with(&[(
+        "secretive-token",
+        TOKEN,
+    )]));
+    let kernel = kernel(&f).with_secret_store(store.clone());
+    let claude_json = f.user_home.join(".claude.json");
+    write(&claude_json, "{\n  \"numStartups\": 3\n}\n");
+    let project = f.proj.to_string_lossy().into_owned();
+
+    let first = lock_and_sync(&kernel, &f, &manifest("link", TDD_DECL, true));
+    // 提交的配置只写环境变量引用：Claude Code 写 ${TOKEN}，Codex 写 env_vars。
+    let mcp: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(f.proj.join(".mcp.json")).unwrap()).unwrap();
+    assert_eq!(mcp["mcpServers"]["secretive"]["env"]["TOKEN"], "${TOKEN}");
+    let codex = fs::read_to_string(f.proj.join(".codex/config.toml")).unwrap();
+    assert!(codex.contains("[mcp_servers.secretive]"), "{codex}");
+    assert!(codex.contains("env_vars = [\"TOKEN\"]"), "{codex}");
+    assert!(!codex.contains(TOKEN));
+    assert!(
+        first
+            .notes
+            .iter()
+            .any(|n| n.text.contains("Codex 从启动它的环境里读 TOKEN")),
+        "{:?}",
+        first.notes
+    );
+    // 明文只在 Claude Code 的个人层：~/.claude.json 里这个项目那一节，别的键不动。
+    let personal: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&claude_json).unwrap()).unwrap();
+    assert_eq!(personal["numStartups"], 3);
+    assert_eq!(
+        personal["projects"][&project]["mcpServers"]["secretive"]["env"]["TOKEN"],
+        TOKEN
+    );
+    assert!(personal["projects"][&project]["mcpServers"]["github"].is_null());
+    assert!(!serde_json::to_string(&first).unwrap().contains(TOKEN));
+
+    // 项目页：个人层那条显示「密钥在钥匙串」，项目层的引用并进它，不单列；写入与活动从台账、记录来。
+    kernel.rescan().unwrap();
+    let context = kernel
+        .effective_context(
+            &f.proj,
+            &crate::model::ToolId::from(crate::model::ToolId::CLAUDE_CODE),
+        )
+        .unwrap();
+    let rows: Vec<_> = context
+        .items
+        .iter()
+        .filter(|i| i.name == "secretive")
+        .collect();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    let row = rows[0];
+    assert_eq!(row.label, "密钥在钥匙串");
+    assert_eq!(row.secrets, ["TOKEN → 钥匙串 secretive-token"]);
+    assert!(
+        row.files
+            .iter()
+            .any(|l| l == ".mcp.json → mcpServers.secretive（按键合并）"),
+        "{:?}",
+        row.files
+    );
+    assert!(
+        row.files.iter().any(|l| l.contains("本机个人层")),
+        "{:?}",
+        row.files
+    );
+    assert!(!row.recent.is_empty());
+    assert!(!serde_json::to_string(&context).unwrap().contains(TOKEN));
+    let tdd = context.items.iter().find(|i| i.name == "tdd").unwrap();
+    assert!(
+        tdd.files.iter().any(|l| l == ".agents/skills/tdd → 资产库"),
+        "{:?}",
+        tdd.files
+    );
+    assert!(
+        tdd.recent.iter().any(|a| a.text.contains("tdd")),
+        "{:?}",
+        tdd.recent
+    );
+
+    // 个人覆盖加一个服务：写进个人层；Codex 没有个人层，写一条说明。
+    let before_second = fs::read(&claude_json).unwrap();
+    write(
+        &f.proj.join("fangcun.local.toml"),
+        "[mcp.mine]\ncommand = \"m\"\n",
+    );
+    let second = kernel.plan_sync(&f.proj).unwrap();
+    assert!(
+        second
+            .notes
+            .iter()
+            .any(|n| n.text.contains("个人覆盖里的 MCP 对它不生效：mine")),
+        "{:?}",
+        second.notes
+    );
+    let applied = kernel.apply(&second).unwrap();
+    let personal: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&claude_json).unwrap()).unwrap();
+    assert_eq!(
+        personal["projects"][&project]["mcpServers"]["mine"]["command"],
+        "m"
+    );
+    assert!(
+        !fs::read_to_string(f.proj.join(".mcp.json"))
+            .unwrap()
+            .contains("mine")
+    );
+
+    // 快照里存的 ~/.claude.json 换掉了明文，活动记录里也没有。
+    assert!(!all_text(&f.home.snapshots_dir()).contains(TOKEN));
+    assert!(!all_text(&f.home.journal_dir()).contains(TOKEN));
+
+    // 回滚第二次同步：明文从钥匙串取回，逐字节一致。
+    let undo = kernel.plan_rollback_record(&applied.record).unwrap();
+    assert!(!undo.blocked, "{:?}", undo.notes);
+    kernel.apply(&undo).unwrap();
+    assert_eq!(fs::read(&claude_json).unwrap(), before_second);
+
+    // 钥匙串里删掉之后，再回滚到那份快照就挡住了。
+    let again = kernel.plan_sync(&f.proj).unwrap();
+    let applied = kernel.apply(&again).unwrap();
+    use crate::secrets::SecretStore as _;
+    store.delete("secretive-token").unwrap();
+    let undo = kernel.plan_rollback_record(&applied.record).unwrap();
+    assert!(undo.blocked);
+    assert!(
+        undo.notes
+            .iter()
+            .any(|n| n.text.contains("钥匙串里没有 secretive-token")),
+        "{:?}",
+        undo.notes
+    );
+}

@@ -99,6 +99,9 @@ command = "command"
 args = "args"
 env = "env"
 url = "url"
+# mcp 文档（2026-11-21 核实）：command、args、env、url、headers 里可以写 ${VAR} 或 ${VAR:-default}，
+# 变量没设又没有默认值时照原样传。用了 secret: 的服务，.mcp.json 的 env 写成 ${变量名}（M1-17）。
+env-reference = { prefix = "${", suffix = "}" }
 
 [precedence]
 # skills 文档：「Enterprise over personal, and personal over project」。全局盖过项目。

@@ -155,8 +155,12 @@ fn claude_code_reads_what_the_docs_say() {
     // 指令：全局 CLAUDE.md 与项目 CLAUDE.md 都加载；有 CLAUDE.md 时不读 AGENTS.md；带 paths 的规则按需。
     // 项目 CLAUDE.md 里的 @docs/conventions.md 一起带进来，反引号里的不算。
     let project_md = find(&context, "CLAUDE.md", Scope::Project);
-    assert_eq!(project_md.files.len(), 2, "{:?}", project_md.files);
-    assert!(project_md.files[1].contains("conventions.md"));
+    assert!(
+        project_md.reason.contains("经 @ 引用一起带入")
+            && project_md.reason.contains("conventions.md"),
+        "{}",
+        project_md.reason
+    );
     let global_md = context
         .items
         .iter()

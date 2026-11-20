@@ -283,6 +283,24 @@ pub struct McpFields {
     pub url: String,
     /// 停用开关的字段名，值为 `false` 时不加载。没有这个开关的工具不写。
     pub enabled: Option<String>,
+    /// 提交进仓库的配置怎么在 `env` 里引用环境变量（M1-17），例如 Claude Code 的 `${NAME}`。
+    pub env_reference: Option<EnvReference>,
+    /// 没有 `env-reference` 的工具：按名字从启动它的环境里转发变量的列表字段，例如 Codex 的 `env_vars`。
+    pub env_forward: Option<String>,
+}
+
+/// `env` 的值写成「前缀 + 变量名 + 后缀」，例如 `${` `GITHUB_TOKEN` `}`。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct EnvReference {
+    pub prefix: String,
+    pub suffix: String,
+}
+
+impl EnvReference {
+    pub fn render(&self, var: &str) -> String {
+        format!("{}{var}{}", self.prefix, self.suffix)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]

@@ -6,6 +6,7 @@
 //!
 //! 台账是方寸自己的文件，随变更计划一起写，所以回滚时一起还原。
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -68,9 +69,15 @@ pub struct OwnedKey {
     pub asset: String,
     #[serde(default, skip_serializing_if = "KeyKind::is_mcp")]
     pub kind: KeyKind,
-    /// 按项目停用写的键属于哪个工具，撤销时按它的适配器找写法。
+    /// 按项目停用写的键、个人层的 MCP 属于哪个工具，撤销时按它的适配器找写法。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool: Option<crate::model::ToolId>,
+    /// 个人层的 MCP：服务的完整键路径（含服务名），`{project}` 是项目根目录。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub path: Vec<String>,
+    /// 个人层的 MCP：`env` 里哪些变量的值取自钥匙串，变量名 → 密钥名称。存快照时据此换掉明文。
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub secrets: BTreeMap<String, String>,
 }
 
 /// 方寸写的配置键是哪一种。
@@ -86,6 +93,9 @@ pub enum KeyKind {
     McpOff,
     /// 按项目停用一个 MCP：项目层服务表里这一项的停用字段（Codex 的 `enabled = false`）。
     McpField,
+    /// 工具个人层里的 MCP 服务（M1-17、M1-27）：个人覆盖加的，或带着钥匙串里明文的那一条。
+    /// 例如 Claude Code `~/.claude.json` 里这个项目那一节的 `mcpServers`。
+    McpPersonal,
 }
 
 impl KeyKind {
@@ -132,6 +142,71 @@ impl Ledger {
     pub fn key(&self, file: &str, key: &str) -> Option<&OwnedKey> {
         self.keys.iter().find(|k| k.file == file && k.key == key)
     }
+}
+
+/// 全部台账里，个人层 MCP 的 `env` 现在在 `paths` 这几个文件里写着的明文。
+/// 应用计划存快照前用它把明文换成占位（规则 9）。读不到、对不上的跳过。
+pub fn redactions(
+    home: &FangcunHome,
+    user_home: &Path,
+    paths: &[&Path],
+) -> Vec<super::snapshot::Redaction> {
+    let mut out = Vec::new();
+    let Ok(entries) = fs::read_dir(home.state_dir().join("projects")) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let Ok(text) = fs::read_to_string(entry.path()) else {
+            continue;
+        };
+        let Ok(ledger) = toml::from_str::<Ledger>(&text) else {
+            continue;
+        };
+        let project = ledger.project.to_string_lossy().into_owned();
+        for key in ledger
+            .keys
+            .iter()
+            .filter(|k| k.kind == KeyKind::McpPersonal && !k.secrets.is_empty())
+        {
+            let Some(file) = crate::adapter::expand(&key.file, user_home, Some(&ledger.project))
+            else {
+                continue;
+            };
+            if !paths.iter().any(|p| *p == file) {
+                continue;
+            }
+            let path: Vec<String> = key
+                .path
+                .iter()
+                .map(|s| s.replace("{project}", &project))
+                .collect();
+            for (var, name) in &key.secrets {
+                if let Some(value) = env_value(&file, &path, var) {
+                    out.push((name.clone(), crate::secrets::SecretValue::new(value)));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// 配置文件里 `path` 那个服务的 `env.<var>`。
+fn env_value(file: &Path, path: &[String], var: &str) -> Option<String> {
+    let text = fs::read_to_string(file).ok()?;
+    if file.extension().is_some_and(|e| e == "toml") {
+        let root: toml::Value = toml::from_str(&text).ok()?;
+        let mut node = &root;
+        for key in path {
+            node = node.get(key)?;
+        }
+        return Some(node.get("env")?.get(var)?.as_str()?.to_owned());
+    }
+    let root: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let mut node = &root;
+    for key in path {
+        node = node.get(key)?;
+    }
+    Some(node.get("env")?.get(var)?.as_str()?.to_owned())
 }
 
 /// 收编换过的位置（M1-12）：原来是一份副本，现在是指向资产库的软链。

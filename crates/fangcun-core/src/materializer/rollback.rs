@@ -73,6 +73,7 @@ pub type LaterWrite<'a> = &'a dyn Fn(&SnapshotScope, &Path, u32) -> Option<(Stri
 /// 填回滚计划：把每个范围的快照里的路径还原成写入前的样子。
 pub fn plan(
     home: &FangcunHome,
+    secrets: &dyn crate::secrets::SecretStore,
     record: &Record,
     snapshots: &[(SnapshotScope, Snapshot)],
     later_titles: LaterWrite<'_>,
@@ -109,9 +110,16 @@ pub fn plan(
                 continue;
             }
             builder.set_quiet(nested && !changed_later);
-            let result = restore_one(home, builder, path, &entry.state, &current, detail);
+            let result = restore_one(home, secrets, builder, entry, &current, detail);
             builder.set_quiet(false);
-            result?;
+            match result {
+                // 换过明文的文件，钥匙串里已经没有那个密钥：这一行还原不了，整份计划挡住。
+                Err(Error::Blocked(why)) => {
+                    builder.block();
+                    builder.note(PlanNote::warning(why));
+                }
+                other => other?,
+            }
         }
     }
     if !conflicts.is_empty() {
@@ -148,12 +156,14 @@ fn describe(saved: &Saved, current: &Saved) -> String {
 
 fn restore_one(
     home: &FangcunHome,
+    secrets: &dyn crate::secrets::SecretStore,
     builder: &mut PlanBuilder,
-    path: &Path,
-    saved: &Saved,
+    entry: &snapshot::Entry,
     current: &Saved,
     detail: String,
 ) -> Result<()> {
+    let path = entry.path.as_path();
+    let saved = &entry.state;
     // 现在是目录、要还原成别的：先删里面的（不列行）。目录是这次变更建的，里面的东西也是。
     if *current == Saved::Dir && *saved != Saved::Dir {
         builder.set_quiet(true);
@@ -165,8 +175,8 @@ fn restore_one(
         Saved::Absent => builder.remove(path, detail),
         Saved::Dir => builder.dir(path, detail),
         Saved::Symlink { target } => builder.symlink(path, target, detail),
-        Saved::File { hash, mode } => {
-            let bytes = snapshot::object(home, hash)?;
+        Saved::File { mode, .. } => {
+            let bytes = snapshot::content(home, entry, secrets)?;
             builder.write_file_mode(path, bytes, *mode, detail)
         }
     }

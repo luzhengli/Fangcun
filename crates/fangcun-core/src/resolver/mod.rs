@@ -97,12 +97,29 @@ pub struct EffectiveItem {
     pub reason: String,
     /// 近 30 天在本项目被触发的次数。指令文件不统计，为空。
     pub triggers: Option<u32>,
-    /// 写入了哪些文件：这里是工具实际读的文件。
+    /// 写入了哪些文件（6.3 检查器第 5 条）：方寸实际物化的路径与软链指向、按键合并的配置项，
+    /// 从台账取。方寸没写过的为空。
     pub files: Vec<String>,
+    /// 用到的密钥，例如「GITHUB_TOKEN → 钥匙串 github-token」。只有名称，没有值。
+    pub secrets: Vec<String>,
+    /// 最近活动（6.3 检查器第 6 条）：这一项的时间线，从活动记录按资产取，新的在前。
+    pub recent: Vec<ItemActivity>,
     /// 被谁覆盖：生效那一项的 `id`。
     pub overridden_by: Option<String>,
     /// 「在本项目停用」（6.3 全局税、7.4）。只有全局层的 skill 与 MCP 有，内核按清单和适配器填。
     pub disable: Option<DisableOption>,
+}
+
+/// 检查器「最近活动」的一行，点了跳到活动页那条记录。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemActivity {
+    pub record: String,
+    pub at: crate::model::Timestamp,
+    pub kind: crate::journal::RecordKind,
+    /// 这条记录里和这一项有关的那一行，没有时是记录的标题。
+    pub text: String,
 }
 
 /// 一项全局的 skill 或 MCP 能不能在本项目停用、停没停。
@@ -430,12 +447,11 @@ fn instruction_item(file: &InstructionFile, home: &Path, tool_name: &str) -> Eff
         )
     };
     let location = display_path(&file.path, home);
-    let mut files = vec![location.clone()];
-    files.extend(
-        file.imports
-            .iter()
-            .map(|p| format!("{} · 经 @ 引用带入", display_path(p, home))),
-    );
+    let mut reason = reason;
+    if !file.imports.is_empty() {
+        let imports: Vec<String> = file.imports.iter().map(|p| display_path(p, home)).collect();
+        reason.push_str(&format!("\n经 @ 引用一起带入：{}。", imports.join("、")));
+    }
     let mut present = BTreeMap::new();
     present.insert(file.scope, location.clone());
     EffectiveItem {
@@ -458,7 +474,9 @@ fn instruction_item(file: &InstructionFile, home: &Path, tool_name: &str) -> Eff
         declared: declarations(&present, Some(file.scope)),
         reason,
         triggers: None,
-        files,
+        files: Vec::new(),
+        secrets: Vec::new(),
+        recent: Vec::new(),
         overridden_by: None,
         disable: None,
     }
@@ -620,7 +638,9 @@ fn skills(
                 declared: declarations(&present, if both { Some(copy.scope) } else { win }),
                 reason,
                 triggers: Some(triggers),
-                files: vec![display_path(&copy.dir.join("SKILL.md"), home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
             });
         }
     }
@@ -675,11 +695,9 @@ fn skills(
                 trigger_sentence(triggers)
             ),
             triggers: Some(triggers),
-            files: group
-                .members
-                .iter()
-                .map(|m| display_path(&m.dir, home))
-                .collect(),
+            files: Vec::new(),
+            secrets: Vec::new(),
+            recent: Vec::new(),
             overridden_by: None,
             disable: None,
         });
@@ -766,7 +784,9 @@ fn single_global(copy: &SkillCopy, triggers: u32, tool_name: &str, home: &Path) 
         declared: Vec::new(),
         reason,
         triggers: Some(triggers),
-        files: vec![display_path(&copy.dir.join("SKILL.md"), home)],
+        files: Vec::new(),
+        secrets: Vec::new(),
+        recent: Vec::new(),
         overridden_by: None,
         disable: None,
     }
@@ -854,7 +874,9 @@ fn mcp(
                     entry.inactive.clone().unwrap_or_default()
                 ),
                 triggers: None,
-                files: vec![display_path(&entry.file, home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
                 overridden_by: None,
                 disable: None,
             });
@@ -991,7 +1013,9 @@ fn mcp(
                 declared: declarations(&present, win),
                 reason,
                 triggers: Some(calls),
-                files: vec![display_path(&entry.file, home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
             });
         }
     }
