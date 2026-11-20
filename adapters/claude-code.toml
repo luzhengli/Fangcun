@@ -23,7 +23,8 @@ follows-symlinks = true
 # mcp 文档：项目层是项目根目录的 .mcp.json。
 project-mcp = true
 # skills 文档：项目的 .claude/settings.json（个人用 settings.local.json）里 skillOverrides 把某个 skill 设 "off"，
-# 名称与描述都不进上下文。只按名字匹配，同名的项目 skill 会不会一起关掉，文档没说，M1-02 实测。
+# 名称与描述都不进上下文。只按名字匹配：2026-11-21 实测（H-11，claude 2.1.329），全局与项目同名时
+# 项目 settings.json 设 off，两份一起消失，项目那份不会顶上来。
 # 开关的位置见下面「skill 开关」「MCP 开关」。
 per-project-disable = true
 

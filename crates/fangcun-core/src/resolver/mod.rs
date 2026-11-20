@@ -134,6 +134,13 @@ pub fn attach_disable(
         .and_then(|c| c.per_project_disable)
         == Some(true);
     let tool_name = adapter.tool.name.as_str();
+    // 项目层、个人层也有的同名 skill：开关只按名字匹配，停用全局那份会把它们一起关掉（H-11 实测）。
+    let below: Vec<String> = context
+        .items
+        .iter()
+        .filter(|i| i.kind == AssetKind::Skill && i.scope != Scope::Global)
+        .map(|i| i.name.clone())
+        .collect();
     for item in &mut context.items {
         if item.scope != Scope::Global
             || item.kind == AssetKind::Instruction
@@ -157,9 +164,27 @@ pub fn attach_disable(
                     .is_some());
         let unsupported =
             (!supported || mcp_unsupported).then(|| format!("{tool_name} 不支持按项目停用"));
-        let note = (item.kind == AssetKind::Mcp && !adapter.mcp_switches.is_empty()).then(|| {
-            format!("{tool_name} 没有能提交的按项目开关，停用写在本机，每台机器同步时各自写")
-        });
+        let same_name: Vec<&String> = if item.kind == AssetKind::Skill {
+            names.iter().filter(|n| below.contains(n)).collect()
+        } else {
+            Vec::new()
+        };
+        let note = if !same_name.is_empty() {
+            Some(format!(
+                "项目里也有同名的 {}。{tool_name} 的开关只按名字匹配，停用会把两份一起关掉，项目那份不会顶上来",
+                same_name
+                    .iter()
+                    .map(|n| n.as_str())
+                    .collect::<Vec<_>>()
+                    .join("、")
+            ))
+        } else if item.kind == AssetKind::Mcp && !adapter.mcp_switches.is_empty() {
+            Some(format!(
+                "{tool_name} 没有能提交的按项目开关，停用写在本机，每台机器同步时各自写"
+            ))
+        } else {
+            None
+        };
         item.disable = Some(DisableOption {
             names,
             active,
