@@ -472,16 +472,29 @@ body{margin:0}
         <!-- 全局税 -->
         <sc-if value="{{sel.isUnused}}" hint-placeholder-val="{{false}}">
           <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
-            <h3 style="margin: 0; font-size: 13px; font-weight: 600;">全局税：每个项目都在缴</h3>
-            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">16 个飞书 skill 的名称与描述常驻上下文，本项目从未触发。停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+            <sc-if value="{{larkTax}}" hint-placeholder-val="{{true}}">
+              <h3 style="margin: 0; font-size: 13px; font-weight: 600;">全局税：每个项目都在缴</h3>
+              <p style="margin: 0; font-size: 12px; color: var(--tx-2);">16 个飞书 skill 的名称与描述常驻上下文，本项目从未触发。停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+            </sc-if>
             <sc-if value="{{larkOff}}" hint-placeholder-val="{{false}}">
               <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--info);">已加入同步计划 · 预计常驻减少 6.4k<button type="button" onClick="{{toggleLark}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">撤回</button></div>
             </sc-if>
             <sc-if value="{{larkOn}}" hint-placeholder-val="{{true}}">
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button type="button" class="fc-btn" onClick="{{toggleLark}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 500;">在本项目停用</button>
-                <button type="button" class="fc-btn" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">改为套装「飞书办公」</button>
+                <button type="button" disabled="" title="M1-19 开放" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-3); cursor: default;">改为套装…</button>
               </div>
+            </sc-if>
+            <!-- 清单里已停用：可在本项目恢复（H-10） -->
+            <sc-if value="{{larkDone}}" hint-placeholder-val="{{false}}">
+              <h3 style="margin: 0; font-size: 13px; font-weight: 600;">已在本项目停用</h3>
+              <p style="margin: 0; font-size: 12px; color: var(--tx-2);">清单的 [disable] 写了它，同步时写进 Claude Code 自己的开关，其他项目照常加载。</p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="fc-btn" onClick="{{restoreLark}}" style="height: 28px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1);">在本项目恢复</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{larkBack}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--info);">已加入同步计划 · 恢复后重新加载<button type="button" onClick="{{restoreLark}}" style="border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline;">撤回</button></div>
             </sc-if>
           </div>
         </sc-if>
@@ -686,7 +699,7 @@ class Component extends DCLogic {
   st() {
     return Object.assign({
       tool: 'claude', tab: 'effective', sel: 'proj', drift: null, driftPick: 'promote',
-      tddQueued: false, tddAlso: {}, larkOff: false, sheet: false, palette: false, query: '',
+      tddQueued: false, tddAlso: {}, larkOff: false, larkApplied: false, larkBack: false, sheet: false, palette: false, query: '',
       toast: false, toastText: '', synced: false, current: '#127', mfile: 'toml', mview: 'table', navC: false, inspOpen: true,
       proj: 'evals_studio', regAsk: false, regSheet: false, regMode: 'link', registered: false
     }, this.state || {});
@@ -724,7 +737,11 @@ class Component extends DCLogic {
 
     if (s.drift) { R.harness.tone = 'ok'; R.harness.status = driftDoneMap[s.drift].status; }
     if (s.tddQueued) { R.tdd.status = '待同步 ↑ b7e9f0'; }
+    // lark-* 的三种情况：暂存停用（larkOff）、清单里已停用（larkApplied）、暂存恢复（larkBack）。
     if (s.larkOff) { R.lark.status = '已停用（待同步）'; R.lark.struck = true; R.lark.cost = '0'; }
+    else if (s.larkBack) { R.lark.status = '恢复（待同步）'; R.lark.struck = true; R.lark.cost = '0'; }
+    else if (s.larkApplied) { R.lark.status = '已停用'; R.lark.struck = true; R.lark.cost = '0'; }
+    const larkInManifest = s.larkOff || s.larkApplied;
     if (s.tool !== 'claude') Object.assign(R.fedp, { tone: 'neutral', status: '固定 v1.3.0', cost: '0.2k', overridden: false, struck: false, reversed: false, fields: [['来源', 'github:acme/skills', 1], ['版本', 'pin v1.3.0', 1]], why: '项目清单里声明了它，所以它对本项目生效。\nCodex 不读 Claude Code 的全局目录，这里没有同名项。' });
 
     // 近 30 天的项目里未登记的目录：只读显示它实际加载的内容。示例只有全局层的项。
@@ -783,7 +800,7 @@ class Component extends DCLogic {
       agents: ['', '', '生效 · 正本', ''], claude: ['', '', '生效 · 生成的镜像', ''],
       harness: ['', '', '生效 · 固定 4d9b1eb', ''], tdd: ['', '生效 · 来自「工程基线」', '', ''],
       fedp: s.tool === 'claude' ? ['生效 · 同名 v1.1.0', '', 'v1.3.0 · 被遮蔽', ''] : ['', '', '生效 · v1.3.0', ''],
-      lark: [s.larkOff ? '已安装 · 被本项目停用' : '生效 · 16 项', '', s.larkOff ? '本项目停用（待同步）' : '', ''],
+      lark: [larkInManifest ? '已安装 · 被本项目停用' : '生效 · 16 项', '', larkInManifest ? (s.larkOff ? '本项目停用（待同步）' : '本项目停用') : '', ''],
       prrev: ['生效 · 来源未知', '', '', ''], fedg: ['生效 · v1.1.0', '', '同名 v1.3.0 · 被遮蔽', ''],
       github: ['', '', '生效 · 密钥在钥匙串', '']
     };
@@ -853,8 +870,10 @@ class Component extends DCLogic {
       toggle: () => { const a = Object.assign({}, s.tddAlso); a[name] = !a[name]; set({ tddAlso: a, synced: false }); } }));
     const tddPicked = tddOthers.filter((p) => p.checked);
     if (s.tddQueued) tddPicked.forEach((p) => plan.push({ op: '~', path: p.name + '/.agents/skills/tdd', note: '改到 b7e9f0 · 另留该项目的快照' }));
-    if (s.larkOff) plan.push({ op: '~', path: 'fangcun.toml', note: '停用全局 lark-* 16 项（仅本项目）' });
-    if (s.larkOff) plan.push({ op: '−', path: '.claude/skills/lark-*', note: '16 个全局链接从本项目视图移除' });
+    if (s.larkOff) plan.push({ op: '~', path: 'fangcun.toml', note: '[disable] 停用全局 lark-* 16 项（仅本项目）' });
+    if (s.larkOff) plan.push({ op: '~', path: '.claude/settings.json', note: 'skillOverrides 16 个设为 off，其余键不动' });
+    if (s.larkBack) plan.push({ op: '~', path: 'fangcun.toml', note: '[disable] 去掉 lark-*' });
+    if (s.larkBack) plan.push({ op: '~', path: '.claude/settings.json', note: 'skillOverrides 撤掉方寸写的 16 个，其余键不动' });
     const OPC = { '+': 'var(--ok)', '~': 'var(--warn)', '−': 'var(--danger)' };
     const planOut = s.synced ? [] : plan.map((c) => Object.assign({}, c, { opStyle: 'flex: 0 0 12px; font-weight: 600; color: ' + OPC[c.op] + ';' }));
     const planCount = s.synced ? 0 : plan.length;
@@ -868,7 +887,7 @@ class Component extends DCLogic {
       'env     = { GITHUB_TOKEN = "secret:github-token" }   # 值在钥匙串', '',
       '[instructions]', 'canonical = "AGENTS.md"          # 正本', 'mirror    = ["CLAUDE.md"]        # 生成为对正本的引用'
     ];
-    if (s.larkOff) MAN.push('', '[disable]', 'global = ["lark-*"]              # 仅本项目停用');
+    if (larkInManifest) MAN.push('', '[disable]', 'skills = ["lark-*"]              # 仅本项目停用');
     const manifest = MAN.map((t) => ({ t, s: t.charAt(0) === '#' ? 'color: var(--tx-3);' : (t.charAt(0) === '[' ? 'color: var(--accent); font-weight: 500;' : 'color: var(--tx-1);') }));
     const lineify = (arr) => arr.map((t, i) => ({ n: String(i + 1), t: t, s: 'flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; ' + (t.charAt(0) === '#' ? 'color: var(--tx-3);' : (t.charAt(0) === '[' ? 'color: var(--accent); font-weight: 500;' : 'color: var(--tx-1);')) }));
     const cs = (isMono, tone) => 'padding: 8px 12px; vertical-align: top; text-align: left; word-break: break-word; ' + (isMono ? 'font-family: var(--mono); font-size: 11px; line-height: 18px; ' : '') + 'color: ' + (tone || 'var(--tx-1)') + ';';
@@ -879,7 +898,7 @@ class Component extends DCLogic {
       RW('frontend-design', 'github:acme/skills', '固定 v1.3.0'),
       RW('tdd', 'github:obra/superpowers', '跟随 main 分支', '来自套装「工程基线」')
     ];
-    if (s.larkOff) tomlSkills.push(RW('lark-*（16 项）', '全局层', '本项目停用', '待同步', { ct: 'var(--warn)' }));
+    if (larkInManifest) tomlSkills.push(RW('lark-*（16 项）', '全局层', '本项目停用', s.larkOff ? '待同步' : '', { ct: 'var(--warn)' }));
     const MF = {
       toml: { name: 'fangcun.toml', role: '项目清单', tag: '提交到 git', tone: 'ok',
         desc: '项目清单。同事克隆仓库后运行 fangcun sync，就能还原完全相同的环境。界面上的改动最终都写回这个文件。',
@@ -1081,7 +1100,9 @@ class Component extends DCLogic {
       tddQueued: s.tddQueued, tddNotQueued: !s.tddQueued, tddOthers,
       tddQueuedText: '已加入同步计划 · ' + (tddPicked.length ? '共 ' + (tddPicked.length + 1) + ' 个项目' : '仅本项目'),
       tddBtnLabel: tddPicked.length ? '审阅后加入同步计划 · ' + (tddPicked.length + 1) + ' 个项目' : '审阅后加入同步计划',
-      larkOff: s.larkOff, larkOn: !s.larkOff,
+      larkOff: s.larkOff, larkOn: !s.larkOff && !s.larkApplied, larkTax: !s.larkApplied,
+      larkDone: s.larkApplied && !s.larkBack, larkBack: s.larkBack,
+      restoreLark: () => set({ larkBack: !s.larkBack, synced: false }),
       driftDone: { title: dd.title, desc: dd.desc, showProjects: dd.showProjects },
       sheet: s.sheet, palette: s.palette, query: s.query, noResults: results.length === 0,
       toast: s.toast, toastText: s.toastText,
@@ -1095,7 +1116,8 @@ class Component extends DCLogic {
       closeSheet: () => set({ sheet: false }),
       applySync: () => planCount === 0
         ? set({ sheet: false })
-        : set({ sheet: false, synced: true, current: '#128', toast: true, toastText: '已同步 ' + planCount + ' 处变更 · 快照 #128' }),
+        : set({ sheet: false, synced: true, current: '#128', toast: true, toastText: '已同步 ' + planCount + ' 处变更 · 快照 #128',
+          larkApplied: (s.larkApplied || s.larkOff) && !s.larkBack, larkOff: false, larkBack: false }),
       openPalette: () => set({ palette: true, query: '' }),
       closePalette: () => set({ palette: false }),
       onQuery: (e) => set({ query: e.target.value }),

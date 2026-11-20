@@ -41,7 +41,7 @@ export function syncPlan(projectRoot: string, edits: ManifestEdit[] = []): Chang
     changes.push({
       op: "modify",
       path: ".claude/settings.json",
-      detail: `${n} 处键的变更，其余键不动`,
+      detail: `skillOverrides ${edit.op === "disable" ? "16 个设为 off" : "撤掉方寸写的 16 个"}，其余键不动`,
     });
   }
   return {

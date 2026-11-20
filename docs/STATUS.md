@@ -11,12 +11,12 @@ M0（透视版，只读）完成，M1 进行中。M1 按「一批一个分支、
 - **批 4 做完的**：M1-18 按项目停用。清单 `[disable]` 同步时写进 Claude Code 的 `skillOverrides`、Codex 的 `[[skills.config]]` 和服务表 `enabled`，Claude Code 的全局 MCP 写本机 `~/.claude.json` 的 `disabledMcpServers`；检查器全局税块「在本项目停用」先加入同步计划。
 - **批 4 没做的**：M1-02 同名冲突（H-11 实测完，处理依赖 M1-19、M1-20，挪到批 5）、M1-17 密钥、M1-15+16 漂移与更新、M1-01 MCP 试启动、M1-27 个人覆盖的 MCP，可以并进 M1-28。
 - **能用的**：命令行 `doctor`、`status`、`why`、`log`、`init [--from-existing]`、`lock`、`export skills-lock`、`sync [--frozen]`、`rollback N`、`adopt`。桌面应用：同步与变更计划、历史回滚、登记、设置、体检「重复」一键收编、项目卡片、在本项目停用。
-- **原型**：`prototype/` 在 1795193620-6b7f。原型待改 P-08（全局税块按钮、已停用的项给「在本项目恢复」），界面已按 6.3 做。
+- **原型**：`prototype/` 在 1795196431-b5e5（P-08 改了 Main），和第 6 节没有已知不一致，没有「原型待改」。
 - **检查**：`pnpm check` 通过，内核 163 个测试，前端 12 个。
 
 ## 下一步
 
-1. **人**：H-09（`pnpm dev` 里点一遍写入）。P-08 要改原型（终端会话里说「按原型待改改原型并同步」）。
+1. **人**：H-09（`pnpm dev` 里点一遍写入）；看 #36。
 2. **批 4 接着做**：M1-17 密钥（钥匙串、`secret:` 引用，也让用了密钥的 MCP 能同步）→ M1-15+16 漂移与更新 → M1-01 → M1-27。开工前 `pnpm workflow find`。
 
 ## 卡在哪
