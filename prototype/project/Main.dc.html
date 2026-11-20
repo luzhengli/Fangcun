@@ -320,13 +320,13 @@ body{margin:0}
 
       <!-- 检查器 -->
       <aside aria-label="检查器" class="fc-col {{inspClass}}" style="flex: 1 1 320px; box-sizing: border-box; border-left: 1px solid var(--line); background: var(--bg-subtle); padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 16px;">
-        <!-- 未登记的目录：项目本身 -->
+        <!-- 项目卡片：没选中任何一项时 -->
         <sc-if value="{{showProj}}" hint-placeholder-val="{{false}}">
           <div style="position: relative; display: flex; flex-direction: column; gap: 6px; padding-right: 32px;">
             <button type="button" class="fc-h" onClick="{{closeInsp}}" aria-label="关闭检查器" title="关闭检查器" style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-2);"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg></button>
             <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">项目</span>
-            <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">luyao-skills</h2>
-            <span style="{{recentBadge.style}}"><span aria-hidden="true" style="{{recentBadge.dot}}"></span>{{recentBadge.label}}</span>
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600; word-break: break-all;">{{projName}}</h2>
+            <span style="{{projBadge.style}}"><span aria-hidden="true" style="{{projBadge.dot}}"></span>{{projBadge.label}}</span>
           </div>
           <dl style="margin: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px 12px; font-size: 12px;">
             <sc-for list="{{projFields}}" as="f" hint-placeholder-count="4">
@@ -334,10 +334,27 @@ body{margin:0}
               <dd style="{{f.s}}">{{f.v}}</dd>
             </sc-for>
           </dl>
+          <!-- 已登记：待处理 -->
+          <sc-if value="{{isEvals}}" hint-placeholder-val="{{false}}">
+            <section aria-label="待处理" style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line);">
+              <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">待处理</h3>
+              <sc-if value="{{noPending}}" hint-placeholder-val="{{false}}">
+                <span style="font-size: 12px; color: var(--tx-2);">没有待处理的项</span>
+              </sc-if>
+              <sc-for list="{{pending}}" as="p" hint-placeholder-count="2">
+                <button type="button" class="fc-h" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 4px 10px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--tx-1); text-align: left;">
+                  <span style="flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{p.name}}</span>
+                  <span style="{{p.statusStyle}}"><span aria-hidden="true" style="{{p.dotStyle}}"></span>{{p.status}}</span>
+                </button>
+              </sc-for>
+            </section>
+          </sc-if>
+          <sc-if value="{{isRecent}}" hint-placeholder-val="{{true}}">
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">为什么是这个状态</span>
             <p style="margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); font-size: 12px; line-height: 1.65; white-space: pre-line; color: var(--tx-1);">{{projWhy}}</p>
           </div>
+          </sc-if>
           <sc-if value="{{regOpen}}" hint-placeholder-val="{{true}}">
             <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line);">
               <h3 style="margin: 0; font-size: 11px; font-weight: 600; color: var(--tx-3);">登记</h3>
@@ -668,7 +685,7 @@ body{margin:0}
 class Component extends DCLogic {
   st() {
     return Object.assign({
-      tool: 'claude', tab: 'effective', sel: 'harness', drift: null, driftPick: 'promote',
+      tool: 'claude', tab: 'effective', sel: 'proj', drift: null, driftPick: 'promote',
       tddQueued: false, tddAlso: {}, larkOff: false, sheet: false, palette: false, query: '',
       toast: false, toastText: '', synced: false, current: '#127', mfile: 'toml', mview: 'table', navC: false, inspOpen: true,
       proj: 'evals_studio', regAsk: false, regSheet: false, regMode: 'link', registered: false
@@ -757,7 +774,8 @@ class Component extends DCLogic {
     };
 
     const visible = layout.reduce((a, g) => a.concat(g[1]), []);
-    const showProj = isRecent && visible.indexOf(s.sel) < 0;
+    // 没选中任何一项时看项目卡片，已登记、未登记一样（6.3）。
+    const showProj = visible.indexOf(s.sel) < 0;
     const selId = visible.indexOf(s.sel) >= 0 ? s.sel : (isRecent ? 'lark' : 'harness');
     const r = R[selId];
     const [stc, sdc] = TONE[r.tone];
@@ -949,7 +967,7 @@ class Component extends DCLogic {
     const rowOn = ' color: var(--tx-1); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line-strong);';
     // 示例数据只有 evals_studio 和 luyao-skills 两个项目可选。
     const pickProj = (name) => () => {
-      if (name === 'evals_studio') set({ proj: name, sel: 'harness', inspOpen: true });
+      if (name === 'evals_studio') set({ proj: name, sel: 'proj', inspOpen: true });
       else if (name === 'luyao-skills') set({ proj: name, sel: 'proj', tab: 'effective', inspOpen: true });
     };
     const recentProjects = RECENT.map(([name, note]) => ({ name, note, current: s.proj === name ? 'page' : 'false', pick: pickProj(name),
@@ -985,7 +1003,28 @@ class Component extends DCLogic {
       ['提交者', '1 位（git 历史，不算 [bot]）'],
       ['常驻', budget.total + ' tokens（估算）· 全部来自全局层']
     ];
-    const projFields = PF.map((f) => ({ k: f[0], v: f[1], s: 'margin: 0; min-width: 0; word-break: break-all; color: var(--tx-1);' + (f[2] ? ' font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') }));
+    // 已登记的 evals_studio：字段加「待处理」，点一行选中那一项。
+    const pendIds = visible.filter((id) => R[id].tone === 'warn' || R[id].tone === 'info');
+    const pending = isRecent ? [] : pendIds.map((id) => {
+      const [tc, dc] = TONE[R[id].tone];
+      return { name: R[id].name, status: R[id].status, pick: () => set({ sel: id, inspOpen: true }),
+        statusStyle: 'flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; color: ' + tc + ';',
+        dotStyle: 'width: 7px; height: 7px; border-radius: 4px; flex: none; background: ' + dc + ';' };
+    });
+    const nDrift = pendIds.filter((id) => R[id].tone === 'warn').length;
+    const badgeOf = (label, tone) => ({ label, style: 'align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; color: ' + TONE[tone][0] + '; background: var(--bg); border: 1px solid var(--line);', dot: 'width: 7px; height: 7px; border-radius: 4px; background: ' + TONE[tone][1] + ';' });
+    const projBadge = isRecent ? recentBadge
+      : nDrift > 0 ? badgeOf(nDrift + ' 处漂移', 'warn')
+      : pendIds.length > 0 ? badgeOf(pendIds.length + ' 处可更新', 'info')
+      : badgeOf('已登记', 'ok');
+    if (!isRecent) PF.splice(0, PF.length,
+      ['路径', '~/code/evals_studio', 1],
+      ['清单', 'fangcun.toml · fangcun.lock', 1],
+      ['物化方式', '链接'],
+      ['目标工具', 'Claude Code、Codex'],
+      ['提交者', '1 位（git 历史，不算 [bot]）'],
+      ['常驻', budget.total + ' tokens（估算）/ 项目预算 20k']);
+    const projFields = PF.map((f) => ({ k: f[0], v: f[1], s: 'margin: 0; min-width: 0; color: var(--tx-1);' + (f[2] ? ' word-break: break-all; font-family: var(--mono); font-size: 11px; line-height: 18px;' : '') }));
     const projWhy = s.registered
       ? '已登记，清单与锁写在项目根目录。\n之后由方寸同步，写入前都先出变更计划。'
       : '近 30 天的会话记录里出现过这个目录，但它还没登记。\n方寸只读显示它实际加载了什么，不写入。登记后才能同步、停用、升级。';
@@ -1029,7 +1068,8 @@ class Component extends DCLogic {
       projCount: PROJ.length, isEvals: !isRecent, isRecent, noRecent: RECENT.length === 0, recentNote, recentBadge,
       projName: isRecent ? 'luyao-skills' : 'evals_studio', projPath: isRecent ? '~/code/luyao-skills' : '~/code/evals_studio',
       showProj, showItem: !showProj, projFields, projWhy,
-      regOpen: !s.registered, regDone: s.registered,
+      regOpen: isRecent && !s.registered, regDone: isRecent && s.registered,
+      projBadge, pending, noPending: pending.length === 0,
       regDoneText: '生成了 fangcun.toml 与 fangcun.lock，mode = "' + s.regMode + '"。撤销会删掉这两个文件和登记表里的这一节。',
       regAsk: s.regAsk, regSheet: s.regSheet, regOpts, regPlan,
       openReg: () => set({ regAsk: true, regMode: 'link' }),

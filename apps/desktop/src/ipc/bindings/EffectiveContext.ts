@@ -3,6 +3,7 @@ import type { Budget } from "./Budget";
 import type { EffectiveItem } from "./EffectiveItem";
 import type { ObservedItem } from "./ObservedItem";
 import type { ObservedKind } from "./ObservedKind";
+import type { SyncMode } from "./SyncMode";
 import type { ToolId } from "./ToolId";
 
 /**
@@ -16,7 +17,15 @@ projectPath: string,
 /**
  * 项目有没有 `fangcun.toml`。
  */
-hasManifest: boolean, budget: Budget, items: Array<EffectiveItem>, observed: Array<ObservedItem>, 
+hasManifest: boolean, 
+/**
+ * 清单的物化方式，清单没写时是同步用的默认值「链接」。没有清单时为空。
+ */
+mode: SyncMode | null, 
+/**
+ * 清单的目标工具。没有清单时为空。
+ */
+targets: Array<ToolId>, budget: Budget, items: Array<EffectiveItem>, observed: Array<ObservedItem>, 
 /**
  * 适配器能读、但这个项目里没发现的「其他加载项」类型。
  */

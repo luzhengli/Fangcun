@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::adapter::{Adapter, MergeMode};
-use crate::model::{AssetKind, AssetState, ObservedKind, Scope, TokenEstimate, ToolId};
+use crate::model::{AssetKind, AssetState, ObservedKind, Scope, SyncMode, TokenEstimate, ToolId};
 use crate::scanner::fsutil::display_path;
 use crate::scanner::{
     Collected, InstructionFile, McpEntry, Scan, SkillCopy, group_global_skills, short_hash,
@@ -126,6 +126,10 @@ pub struct EffectiveContext {
     pub project_path: String,
     /// 项目有没有 `fangcun.toml`。
     pub has_manifest: bool,
+    /// 清单的物化方式，清单没写时是同步用的默认值「链接」。没有清单时为空。
+    pub mode: Option<SyncMode>,
+    /// 清单的目标工具。没有清单时为空。
+    pub targets: Vec<ToolId>,
     pub budget: Budget,
     pub items: Vec<EffectiveItem>,
     pub observed: Vec<ObservedItem>,
@@ -259,6 +263,8 @@ pub fn effective_context(
         project_name: crate::scanner::project_name(project_root),
         project_path: display_path(project_root, home),
         has_manifest: project_root.join(crate::paths::MANIFEST_FILE).is_file(),
+        mode: None,
+        targets: Vec::new(),
         budget,
         items,
         observed,

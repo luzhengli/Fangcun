@@ -28,6 +28,7 @@ pub use schema::{
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use crate::model::{SyncMode, ToolId};
 use crate::paths::FangcunHome;
 use crate::{Error, Result};
 
@@ -39,18 +40,25 @@ pub fn parse_manifest(origin: &str, text: &str) -> Result<Manifest> {
     })
 }
 
-/// 项目清单里写的常驻预算。没有清单或没写时返回 `None`，调用方用默认值。
+/// 项目清单 `[project]` 里项目页要显示的几个键。
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Deserialize)]
+pub struct ProjectBasics {
+    /// 常驻预算。没写时 `None`，调用方用默认值（D-22）。
+    pub budget: Option<u32>,
+    /// 物化方式。没写时 `None`，同步按链接（`materializer::sync`）。
+    pub mode: Option<SyncMode>,
+    #[serde(default)]
+    pub targets: Vec<ToolId>,
+}
+
+/// 读项目清单 `[project]` 的预算、物化方式、目标工具。没有清单时返回 `None`。
 ///
-/// M0 只读这一个键：清单的其余部分在 M1 才用，这里不因为别的键报错。
-pub fn project_budget(project_root: &Path) -> Result<Option<u32>> {
+/// 只读这几个键，不因为清单别处的键报错：项目页能显示，校验留给同步。
+pub fn project_basics(project_root: &Path) -> Result<Option<ProjectBasics>> {
     #[derive(serde::Deserialize)]
     struct Partial {
         #[serde(default)]
-        project: PartialProject,
-    }
-    #[derive(serde::Deserialize, Default)]
-    struct PartialProject {
-        budget: Option<u32>,
+        project: ProjectBasics,
     }
 
     let path = project_root.join(crate::paths::MANIFEST_FILE);
@@ -63,7 +71,7 @@ pub fn project_budget(project_root: &Path) -> Result<Option<u32>> {
         origin: path.display().to_string(),
         message: e.to_string(),
     })?;
-    Ok(partial.project.budget)
+    Ok(Some(partial.project))
 }
 
 /// 一个项目的全部声明文件。
@@ -312,16 +320,27 @@ mirror    = ["CLAUDE.md"]        # 生成为对正本的引用
     }
 
     #[test]
-    fn project_budget_reads_only_the_budget() {
+    fn project_basics_reads_only_its_keys() {
         let root = std::env::temp_dir().join(format!("fangcun-budget-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).expect("建临时目录");
-        assert_eq!(project_budget(&root).expect("没有清单"), None);
+        assert_eq!(project_basics(&root).expect("没有清单"), None);
         let manifest = root.join(crate::paths::MANIFEST_FILE);
         std::fs::write(&manifest, "[project]\nbudget = 12000\nlater = true\n").expect("写清单");
-        assert_eq!(project_budget(&root).expect("读预算"), Some(12_000));
+        let basics = project_basics(&root).expect("读预算").expect("有清单");
+        assert_eq!(basics.budget, Some(12_000));
+        assert_eq!(basics.mode, None);
+        assert!(basics.targets.is_empty());
+        std::fs::write(
+            &manifest,
+            "[project]\ntargets = [\"claude-code\", \"codex\"]\nmode = \"vendor\"\n",
+        )
+        .expect("写清单");
+        let basics = project_basics(&root).expect("读清单").expect("有清单");
+        assert_eq!(basics.mode, Some(SyncMode::Vendor));
+        assert_eq!(basics.targets.len(), 2);
         std::fs::write(&manifest, "[project]\nbudget = \"12k\"\n").expect("写清单");
-        assert!(project_budget(&root).is_err(), "写错了要报出来");
+        assert!(project_basics(&root).is_err(), "写错了要报出来");
         let _ = std::fs::remove_dir_all(&root);
     }
 

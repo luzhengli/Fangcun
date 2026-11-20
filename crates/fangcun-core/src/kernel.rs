@@ -489,9 +489,13 @@ impl Kernel {
         let project = self.project_collected(&scan, project_root, tool)?;
         let mut context =
             crate::resolver::effective_context(&scan, adapter, &project, project_root);
-        // 项目预算写在 `fangcun.toml`，没写时用默认值（D-22）。
-        if let Some(budget) = crate::manifest::project_budget(project_root)? {
-            context.budget.limit = crate::model::TokenEstimate(budget);
+        // 项目预算写在 `fangcun.toml`，没写时用默认值（D-22）。项目卡片要物化方式与目标工具（6.3）。
+        if let Some(basics) = crate::manifest::project_basics(project_root)? {
+            if let Some(budget) = basics.budget {
+                context.budget.limit = crate::model::TokenEstimate(budget);
+            }
+            context.mode = Some(basics.mode.unwrap_or(crate::model::SyncMode::Link));
+            context.targets = basics.targets;
         }
         Ok(context)
     }

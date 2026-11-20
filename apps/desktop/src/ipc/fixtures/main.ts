@@ -233,6 +233,8 @@ export const effectiveClaude: EffectiveContext = {
   projectName: "evals_studio",
   projectPath: "~/code/evals_studio",
   hasManifest: true,
+  mode: "link",
+  targets: ["claude-code", "codex"],
   budget: { limit: 20000, instructions: 2500, skills: 7500, mcp: 4800, mcpUnestimated: 0 },
   items: [R.agents, R.claude, R.harness, R.tdd, R.fedp, R.lark, R.prrev, R.fedg, R.github],
   observed: [
@@ -288,6 +290,8 @@ export function effectiveRecent(tool: EffectiveContext["tool"]): EffectiveContex
     projectName: recentProject.name,
     projectPath: recentProject.path,
     hasManifest: false,
+    mode: null,
+    targets: [],
   };
   if (tool !== "claude-code") {
     return {
