@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>方寸 · 设置</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--add-bg:#E3F4E8;--del-bg:#FBE7E6;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
+.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--add-bg:#173020;--del-bg:#3A1D1C;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
+.fc button{font:inherit;cursor:pointer}
+.fc input{font:inherit}
+.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
+</style>
+</helmet>
+<div class="fc" style="width: 1440px; height: 560px; box-sizing: border-box; padding: 40px 48px; display: flex; flex-direction: column; gap: 24px; background: var(--bg-sidebar); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;">
+    <h1 style="margin: 0; font-size: 17px; font-weight: 600;">设置</h1>
+    <span style="color: var(--tx-2);">应用菜单「设置…」或 <span style="font-family: var(--mono); font-size: 12px;">⌘,</span> 打开的单独小窗。先只有「通用」一页。</span>
+    <span style="color: var(--tx-3);">设置存在 <span style="font-family: var(--mono); font-size: 12px;">~/.fangcun/settings.toml</span>，可以手改。</span>
+  </div>
+
+  <div style="display: flex; align-items: flex-start; gap: 40px;">
+
+    <!-- 应用菜单 -->
+    <div aria-label="应用菜单示意" style="flex: 0 0 248px; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; gap: 18px; height: 26px; padding: 0 12px; border-radius: 6px 6px 0 0; background: var(--bg); border: 1px solid var(--line); border-bottom: 0; font-size: 13px;">
+        <span style="font-weight: 600;">方寸</span><span>文件</span><span>编辑</span><span>显示</span><span>窗口</span>
+      </div>
+      <ul role="menu" aria-label="方寸" style="margin: 0; padding: 5px; list-style: none; background: var(--bg); border: 1px solid var(--line); border-radius: 0 0 8px 8px; box-shadow: var(--shadow-pop); display: flex; flex-direction: column; gap: 1px;">
+        <li role="menuitem" style="display: flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 4px;">关于方寸</li>
+        <li role="separator" style="height: 1px; margin: 4px 8px; background: var(--line);"></li>
+        <li role="menuitem" style="display: flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 4px; background: var(--accent); color: var(--on-accent);"><span style="flex: 1;">设置…</span><span style="font-family: var(--mono); font-size: 12px;">⌘,</span></li>
+        <li role="separator" style="height: 1px; margin: 4px 8px; background: var(--line);"></li>
+        <li role="menuitem" style="display: flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 4px;"><span style="flex: 1;">隐藏方寸</span><span style="font-family: var(--mono); font-size: 12px; color: var(--tx-3);">⌘H</span></li>
+        <li role="menuitem" style="display: flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 4px;"><span style="flex: 1;">隐藏其他</span><span style="font-family: var(--mono); font-size: 12px; color: var(--tx-3);">⌥⌘H</span></li>
+        <li role="separator" style="height: 1px; margin: 4px 8px; background: var(--line);"></li>
+        <li role="menuitem" style="display: flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 4px;"><span style="flex: 1;">退出方寸</span><span style="font-family: var(--mono); font-size: 12px; color: var(--tx-3);">⌘Q</span></li>
+      </ul>
+    </div>
+
+    <!-- 设置窗口：浅色、深色各一 -->
+    <sc-for list="{{wins}}" as="w" hint-placeholder-count="2">
+      <div style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 11px; font-weight: 600; color: var(--tx-3);">{{w.caption}}</span>
+        <section class="{{w.cls}}" role="dialog" aria-label="{{w.aria}}" style="width: 480px; border-radius: 12px; overflow: hidden; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; box-shadow: var(--shadow-pop);">
+          <!-- 标题栏与页签 -->
+          <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 12px 6px; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
+            <span aria-hidden="true" style="position: absolute; left: 12px; top: 10px; display: inline-flex; gap: 8px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: var(--line-strong);"></span></span>
+            <span style="font-size: 13px; font-weight: 600; line-height: 18px;">通用</span>
+            <div role="tablist" aria-label="设置页" style="display: flex; gap: 4px;">
+              <button type="button" role="tab" aria-selected="true" style="display: flex; flex-direction: column; align-items: center; gap: 2px; width: 64px; padding: 4px 0 3px; border: 0; border-radius: 6px; background: var(--bg-hover); color: var(--accent); font-size: 11px;">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2"></circle><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05"></path><circle cx="8" cy="8" r="4.5"></circle></svg>
+                <span style="color: var(--tx-1);">通用</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 20px;">
+            <!-- 只读模式 -->
+            <div style="display: flex; align-items: center; gap: 16px; padding: 12px 14px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--line);">
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span id="{{w.roId}}" style="font-weight: 500;">只读模式</span>
+                <span style="font-size: 12px; color: var(--tx-2);">打开后拒绝一切写入，只记体检。</span>
+              </div>
+              <button type="button" role="switch" aria-checked="{{w.ro}}" aria-labelledby="{{w.roId}}" onClick="{{w.toggleRo}}" style="{{w.switchStyle}}"><span aria-hidden="true" style="{{w.knobStyle}}"></span></button>
+            </div>
+            <span style="padding: 0 4px 8px; font-size: 11px; color: var(--tx-3);">命令行同款：<span style="font-family: var(--mono);">fangcun --read-only &lt;命令&gt;</span>。默认关闭。</span>
+
+            <!-- 快照保留期 -->
+            <h2 style="margin: 0; padding: 0 4px; font-size: 11px; font-weight: 600; color: var(--tx-3);">快照保留期</h2>
+            <div style="display: flex; flex-direction: column; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--line);">
+              <div style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 14px; border-bottom: 1px solid var(--line);">
+                <label for="{{w.daysId}}" style="flex: 1;">保留天数</label>
+                <input id="{{w.daysId}}" type="number" min="1" max="365" value="{{w.days}}" onChange="{{w.onDays}}" style="width: 64px; height: 24px; box-sizing: border-box; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-align: right; font-variant-numeric: tabular-nums;">
+                <span style="width: 14px; color: var(--tx-2);">天</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 14px;">
+                <label for="{{w.keepId}}" style="flex: 1;">每个项目至少保留</label>
+                <input id="{{w.keepId}}" type="number" min="1" max="500" value="{{w.keep}}" onChange="{{w.onKeep}}" style="width: 64px; height: 24px; box-sizing: border-box; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-align: right; font-variant-numeric: tabular-nums;">
+                <span style="width: 14px; color: var(--tx-2);">个</span>
+              </div>
+            </div>
+            <span style="padding: 0 4px; font-size: 11px; line-height: 1.6; color: var(--tx-3);">{{w.note}}</span>
+          </div>
+        </section>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = Object.assign({ ro: false, days: 30, keep: 20 }, this.state || {});
+    const set = (o) => this.setState(o);
+    const num = (v, d) => { const n = parseInt(v, 10); return n > 0 ? n : d; };
+    const wins = [['fc', '浅色', 'l'], ['fc dark', '深色', 'd']].map(([cls, caption, k]) => ({
+      cls, caption, aria: '设置 · 通用（' + caption + '）',
+      days: s.days, keep: s.keep, note: "快照和它的备份保留 " + s.days + " 天，并且每个项目至少保留最近 " + s.keep + " 个。过期后记录仍在，回滚按钮置灰。",
+      roId: 'ro-' + k, daysId: 'days-' + k, keepId: 'keep-' + k,
+      ro: s.ro ? 'true' : 'false',
+      toggleRo: () => set({ ro: !s.ro }),
+      onDays: (e) => set({ days: num(e.target.value, 30) }),
+      onKeep: (e) => set({ keep: num(e.target.value, 20) }),
+      switchStyle: 'flex: none; position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; transition: background .15s; background: ' + (s.ro ? 'var(--accent)' : 'var(--line-strong)') + ';',
+      knobStyle: 'position: absolute; top: 2px; left: ' + (s.ro ? '18px' : '2px') + '; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s;'
+    }));
+    return {
+      wins, days: s.days, keep: s.keep,
+      retainNote: '快照和它的备份保留 ' + s.days + ' 天，并且每个项目至少保留最近 ' + s.keep + ' 个。过期后记录仍在，回滚按钮置灰。'
+    };
+  }
+}
+</script>
+</body>
+</html>
