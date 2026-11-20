@@ -16,6 +16,7 @@
     "bindings": "cargo test --quiet -p fangcun-core export_bindings",
     "screens": "pnpm --filter @fangcun/desktop screens",
     "window-shot": "pnpm --filter @fangcun/desktop window-shot",
+    "icons": "node tools/icons/build.js",
     "prototype:preview": "python3 -m http.server 8000",
     "prototype:check": "node tools/prototype-preview/check.js",
     "workflow": "node tools/workflow/status.mjs",

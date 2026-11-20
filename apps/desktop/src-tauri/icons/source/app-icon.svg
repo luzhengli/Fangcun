@@ -1,0 +1,7 @@
+<!-- 方寸应用图标，照设计系统画板「08 应用图标」（6.10、D-29）。1024 画布，底板 824 圆角 185；外方外缘 440、线宽 40、外圆角 96；内方 160、圆角 32。 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>方寸应用图标</title>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#3552D4"/>
+  <rect x="312" y="312" width="400" height="400" rx="76" fill="none" stroke="#FFFFFF" stroke-width="40"/>
+  <rect x="432" y="432" width="160" height="160" rx="32" fill="#FFFFFF"/>
+</svg>

@@ -8,6 +8,13 @@
 
 ---
 
+## 2026-11-20 出应用图标（D-30），`.icon` 先不做
+
+- **人定**：人说「你帮我合并，隐私加固我已做，你可以按照这个出图」。Agent 合并 #32，H-07、H-08 勾掉。出图时查到 Tauri 2.12.4 的配置只认 `.icns`，没有 `.icon`。问人 `.icon` 怎么办：先不做、等 Tauri 支持（推荐）／现在让 Codex 用 Icon Composer 做好存起来／不要 `.icon` 只用 `.icns`。人选推荐项。6.10、9.3 已写；留 D-31。
+- **Agent 定，可逆**：不用 Icon Composer 和 `tauri icon`，自己写 `tools/icons/build.js`（`pnpm icons`）：用 Playwright 把源 SVG 渲染成透明底 png，`iconutil` 拼 `.icns`，`.ico` 直接内嵌 png。这样 16 px 一档能单独用加粗的 `app-icon-16.svg`（`tauri icon` 只吃一张源图）。源 SVG 的数字照设计系统画板，不另调。
+
+---
+
 ## 2026-11-20 原型 P-01 至 P-03：本地第一次改画布
 
 - **人定**：P-02 画到一半，Agent 问「在侧栏选中未登记的 luyao-skills 时，中间的列表区显示什么」，三个选项：照常显示生效上下文（推荐）、显示一段引导、列表区不变。人选「照常显示生效上下文（推荐）」。写进 6.1、9.3。
