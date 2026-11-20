@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Inspector, Section } from "@/components/Inspector";
 import { StatusDot } from "@/components/StatusDot";
 import type { Tone } from "@/components/tone";
@@ -90,7 +90,9 @@ function dayLabel(date: Date, now = new Date()) {
 export function ActivityPage() {
   const [kind, setKind] = useState<RecordKind | null>(null);
   const [project, setProject] = useState<string>("all");
-  const [selected, setSelected] = useState<string | null>(null);
+  // 项目页检查器「最近活动」点一条，带着 ?record= 过来，直接选中那条（6.3 检查器第 6 条）。
+  const [params] = useSearchParams();
+  const [selected, setSelected] = useState<string | null>(params.get("record"));
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const projects = useProjects();
   const filter = {

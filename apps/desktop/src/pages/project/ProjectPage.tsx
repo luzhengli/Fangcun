@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useParams } from "react-router";
+import { Link, Navigate, useLocation, useParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
@@ -14,7 +14,14 @@ import type { ManifestEdit } from "@/ipc/bindings/ManifestEdit";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
 import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
-import { useEffectiveContext, useHistory, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
+import {
+  useEffectiveContext,
+  useHistory,
+  useManifestView,
+  useProjects,
+  useSyncPlan,
+  useTools,
+} from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
@@ -238,7 +245,9 @@ function ProjectView({ root }: { root: string | undefined }) {
               }}
             />
           )}
-          {data && registered && tab === "manifest" && <ManifestTab context={data} />}
+          {data && registered && tab === "manifest" && root && (
+            <ManifestTab root={root} context={data} />
+          )}
           {data && registered && tab === "history" && root && <HistoryTab root={root} />}
         </section>
         {!registered && inspectorOpen && !current && data && root && (
@@ -249,15 +258,23 @@ function ProjectView({ root }: { root: string | undefined }) {
             onClose={() => setInspectorOpen(false)}
           />
         )}
-        {registered && tab === "effective" && inspectorOpen && !current && data && root && (
-          <RegisteredInspector
-            root={root}
-            context={data}
-            summary={summary}
-            onPick={setSelected}
-            onClose={() => setInspectorOpen(false)}
-          />
-        )}
+        {/* 清单页签旁边照样是项目卡片（原型 Main）；点「待处理」的一行回到生效上下文选中它。 */}
+        {registered &&
+          (tab === "manifest" || (tab === "effective" && !current)) &&
+          inspectorOpen &&
+          data &&
+          root && (
+            <RegisteredInspector
+              root={root}
+              context={data}
+              summary={summary}
+              onPick={(id) => {
+                setSelected(id);
+                setTab("effective");
+              }}
+              onClose={() => setInspectorOpen(false)}
+            />
+          )}
         {(tab === "effective" || !registered) && inspectorOpen && current && data && (
           <ItemInspector
             item={current}
@@ -442,6 +459,7 @@ function ItemInspector({
       : []),
     ...(item.version ? [{ k: "版本", v: item.version, mono: true }] : []),
     ...(item.command ? [{ k: "命令", v: item.command, mono: true, tone: "danger" as const }] : []),
+    ...(item.secrets.length > 0 ? [{ k: "密钥", v: item.secrets.join("；") }] : []),
     ...(item.kind === "skill"
       ? [
           {
@@ -512,17 +530,34 @@ function ItemInspector({
         </div>
       </Section>
       <Section title="写入了哪些文件">
-        <p className={styles.sectionNote}>下面是工具实际读取的位置。</p>
-        <ul className={styles.files}>
-          {item.files.map((f) => (
-            <li key={f} className={page.code}>
-              {f}
-            </li>
-          ))}
-        </ul>
+        {item.files.length === 0 ? (
+          <p className={styles.sectionNote}>方寸没有写过文件。</p>
+        ) : (
+          <ul className={styles.files}>
+            {item.files.map((f) => (
+              <li key={f} className={page.code}>
+                {f}
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
       <Section title="最近活动">
-        <p className={styles.sectionNote}>还没有活动。</p>
+        {item.recent.length === 0 ? (
+          <p className={styles.sectionNote}>还没有活动。</p>
+        ) : (
+          <ol className={styles.acts}>
+            {item.recent.map((a) => (
+              <li key={a.record}>
+                <Link to={`/activity?record=${encodeURIComponent(a.record)}`} title="在活动里查看">
+                  <span aria-hidden="true" className={styles.actDot} />
+                  <span className={styles.actWhen}>{ago(a.at.toString())}</span>
+                  <span className={styles.actText}>{a.text}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
       </Section>
     </Inspector>
   );
@@ -685,21 +720,135 @@ function stackText(d: { location: string | null; effective: boolean }): string {
   return `${d.effective ? "生效" : "被遮蔽"} · ${d.location}`;
 }
 
-function ManifestTab({ context }: { context: EffectiveContext }) {
-  return (
-    <div className={page.empty}>
-      <p>清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。</p>
-      {context.hasManifest ? (
-        <p>
-          这个项目有 fangcun.toml。清单的表格视图还没做，可以直接打开文件，或用 fangcun status
-          查看。
-        </p>
-      ) : (
+/** 清单页签（6.3、M1-31）：三张文件卡可切换，结构化视图按区块列表格，源文件带行号。只读。 */
+function ManifestTab({ root, context }: { root: string; context: EffectiveContext }) {
+  const view = useManifestView(root, context.hasManifest);
+  const [picked, setPicked] = useState(0);
+  const [mode, setMode] = useState<"table" | "src">("table");
+  if (!context.hasManifest) {
+    return (
+      <div className={page.empty}>
+        <p>清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。</p>
         <p>
           这个项目还没有 <span className={page.version}>fangcun.toml</span>
           。重新登记会从现状反推清单，命令行写法是{" "}
           <span className={page.version}>fangcun init --from-existing</span>。
         </p>
+      </div>
+    );
+  }
+  const files = view.data?.files ?? [];
+  const file = files[picked] ?? files[0];
+  return (
+    <div className={styles.manifest}>
+      <p className={styles.manifestIntro}>
+        清单是本项目对 Agent
+        环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。下面三个文件共同决定「生效上下文」里看到的结果。
+      </p>
+      <fieldset aria-label="清单文件" className={styles.fileCards}>
+        {files.map((f, i) => (
+          <button
+            key={f.name}
+            type="button"
+            aria-pressed={f === file}
+            className={styles.fileCard}
+            onClick={() => setPicked(i)}
+          >
+            <span className={styles.fileName}>{f.name}</span>
+            <span className={styles.fileRole}>{f.role}</span>
+            <span
+              className={styles.fileTag}
+              data-tone={f.name.endsWith(".lock") ? "info" : f.committed ? "ok" : "muted"}
+            >
+              {f.tag}
+            </span>
+          </button>
+        ))}
+      </fieldset>
+      {file && (
+        <>
+          <div className={styles.manifestBar}>
+            <span className={styles.manifestDesc}>{file.description}</span>
+            <fieldset aria-label="显示方式" className={styles.viewSwitch}>
+              {(
+                [
+                  ["table", "结构化"],
+                  ["src", "源文件"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={mode === id}
+                  onClick={() => setMode(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </fieldset>
+          </div>
+          {!file.exists ? (
+            <p className={styles.sectionNote}>还没有 {file.name}。</p>
+          ) : mode === "table" ? (
+            <div className={styles.manifestSections}>
+              {file.sections.length === 0 && <p className={styles.sectionNote}>文件里没有内容。</p>}
+              {file.sections.map((sec) => (
+                <section key={sec.title} className={styles.manifestSection}>
+                  <h3>{sec.title}</h3>
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          {sec.headers.map((h) => (
+                            <th key={h} scope="col">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sec.rows.map((r) => (
+                          <tr key={r.cells.join("\u0000")}>
+                            {r.cells.map((c, i) => (
+                              <td
+                                // biome-ignore lint/suspicious/noArrayIndexKey: 三格位置固定
+                                key={i}
+                                data-mono={r.mono[i]}
+                                data-col={i}
+                                data-warn={i === 2 && r.warn}
+                              >
+                                {c}
+                                {i === 2 && r.note && (
+                                  <span className={styles.cellNote}>{r.note}</span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.source}>
+              {file.lines.map((line, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 行号就是键
+                <div key={i} className={styles.sourceLine}>
+                  <span aria-hidden="true">{i + 1}</span>
+                  <span
+                    data-kind={
+                      line.startsWith("#") ? "comment" : line.startsWith("[") ? "table" : undefined
+                    }
+                  >
+                    {line}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -854,6 +1003,16 @@ function RegisteredInspector({
       </Section>
     </Inspector>
   );
+}
+
+/** 检查器「最近活动」的时间：「刚刚」「5 分钟前」或「11-10」，和原型的写法一样。 */
+function ago(iso: string): string {
+  const d = new Date(iso);
+  const minutes = Math.floor((Date.now() - d.getTime()) / 60_000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(d.getMonth() + 1)}-${two(d.getDate())}`;
 }
 
 /** 「刚刚」或「11-13 10:42」，和原型的写法一样。 */

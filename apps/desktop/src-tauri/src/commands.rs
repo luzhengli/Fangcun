@@ -12,7 +12,7 @@ use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
 use fangcun_core::global::GlobalOverview;
 use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
-use fangcun_core::kernel::{Overview, ProjectSummary};
+use fangcun_core::kernel::{ManifestView, Overview, ProjectSummary};
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
 use fangcun_core::resolver::{EffectiveContext, Explanation, ModeSuggestion};
@@ -213,6 +213,17 @@ pub async fn history(
     project_root: PathBuf,
 ) -> CommandResult<Vec<HistoryEntry>> {
     state.run(move |kernel| kernel.history(&project_root)).await
+}
+
+/// 项目页「清单」页签（6.3、M1-31）。没有清单时为空。
+#[tauri::command]
+pub async fn manifest_view(
+    state: State<'_, AppState>,
+    project_root: PathBuf,
+) -> CommandResult<Option<ManifestView>> {
+    state
+        .run(move |kernel| kernel.manifest_view(&project_root))
+        .await
 }
 
 /// 体检报告的一键动作（6.2、M1-26）。

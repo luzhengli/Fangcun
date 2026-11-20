@@ -23,6 +23,7 @@ export const keys = {
   syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
   settings: ["settings"] as const,
   history: (projectRoot: string) => ["history", projectRoot] as const,
+  manifestView: (projectRoot: string) => ["manifest-view", projectRoot] as const,
 };
 
 export function useTools() {
@@ -119,6 +120,15 @@ export function useHistory(projectRoot: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: keys.history(projectRoot ?? ""),
     queryFn: () => kernel.history(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && enabled,
+  });
+}
+
+/** 项目页「清单」页签：三份文件的结构化视图与源文件。 */
+export function useManifestView(projectRoot: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.manifestView(projectRoot ?? ""),
+    queryFn: () => kernel.manifestView(projectRoot ?? ""),
     enabled: projectRoot !== undefined && enabled,
   });
 }

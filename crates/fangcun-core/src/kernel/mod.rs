@@ -36,6 +36,8 @@ use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
 mod item_state;
+mod manifest_view;
+pub use manifest_view::{ManifestFile, ManifestRow, ManifestSection, ManifestView};
 
 /// 内存里最多留多少份没应用的计划。
 const PENDING_LIMIT: usize = 64;
@@ -605,6 +607,21 @@ impl Kernel {
             &self.home.library_dir(),
         );
         Ok(context)
+    }
+
+    /// 项目页的清单页签（6.3、M1-31）：三份文件的结构化视图与源文件。只读。没有清单时为空。
+    pub fn manifest_view(&self, project_root: &Path) -> Result<Option<ManifestView>> {
+        let Some(project) = crate::manifest::load_project(project_root, &self.home)? else {
+            return Ok(None);
+        };
+        let lock = Lock::load(project_root)?;
+        manifest_view::build(
+            &project,
+            lock.as_ref(),
+            self.secrets.as_ref(),
+            &self.adapters,
+        )
+        .map(Some)
     }
 
     /// `fangcun status`。

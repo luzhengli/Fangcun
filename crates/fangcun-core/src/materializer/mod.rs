@@ -144,8 +144,7 @@ pub(crate) fn secret_record(
         kind: RecordKind::Secret,
         title,
         project: project.map(|p| ProjectId(p.to_string_lossy().into_owned())),
-        project_label: project
-            .map_or_else(|| "本机".to_owned(), crate::scanner::project_name),
+        project_label: project.map_or_else(|| "本机".to_owned(), crate::scanner::project_name),
         trigger,
         snapshot: None,
         snapshots: Vec::new(),

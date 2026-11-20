@@ -801,6 +801,34 @@ fn secrets_go_to_the_personal_layer_and_never_into_plans_snapshots_or_the_journa
         tdd.recent
     );
 
+    // 清单页签：MCP 的密钥只给名称和在不在钥匙串里。
+    let view = kernel.manifest_view(&f.proj).unwrap().unwrap();
+    let names: Vec<&str> = view.files.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["fangcun.toml", "fangcun.lock", "fangcun.local.toml"]
+    );
+    let toml = &view.files[0];
+    let mcp = toml
+        .sections
+        .iter()
+        .find(|s| s.title == "MCP 服务")
+        .unwrap();
+    let secretive = mcp.rows.iter().find(|r| r.cells[0] == "secretive").unwrap();
+    assert_eq!(secretive.cells[2], "TOKEN 存在钥匙串");
+    assert!(!view.files[2].exists);
+    assert!(
+        view.files[1].sections[0]
+            .rows
+            .iter()
+            .any(|r| r.cells[0] == "tdd")
+    );
+    assert!(
+        toml.lines
+            .iter()
+            .any(|l| l.contains("secret:secretive-token"))
+    );
+
     // 个人覆盖加一个服务：写进个人层；Codex 没有个人层，写一条说明。
     let before_second = fs::read(&claude_json).unwrap();
     write(

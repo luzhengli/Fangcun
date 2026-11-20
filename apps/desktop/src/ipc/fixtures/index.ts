@@ -18,6 +18,7 @@ import { activity } from "./activity";
 import { checkup } from "./checkup";
 import { globalClaude } from "./global";
 import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProject } from "./main";
+import { manifestView } from "./manifest";
 import {
   applyPlan,
   findingPlan,
@@ -85,6 +86,8 @@ const handlers: Partial<Commands> = {
   plan_finding: () => findingPlan(),
   /** Main.dc.html 的 HIST。 */
   history: () => history(),
+  /** Main.dc.html 的 MF。未登记的目录没有清单。 */
+  manifest_view: ({ projectRoot }) => (projectRoot === recentProject.id ? null : manifestView()),
   apply_plan: ({ plan }) => applyPlan(plan),
   /** 浏览器里没有系统的选文件夹面板，当作选了 luyao-skills。 */
   pick_directory: () => recentProject.id,
