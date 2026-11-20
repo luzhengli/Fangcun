@@ -401,6 +401,19 @@ impl Kernel {
 
     // ───────────── 只读用例（M0） ─────────────
 
+    /// 设置页（6.1、M1-24）：读 `~/.fangcun/settings.toml`，没有时是默认值。
+    pub fn settings(&self) -> Result<crate::settings::SettingsForm> {
+        Ok((&crate::settings::Settings::load(&self.home)?).into())
+    }
+
+    /// 设置页保存。只读模式下也能保存（不然关不掉）；只读开关要重开内核才生效，由外壳负责。
+    pub fn save_settings(
+        &self,
+        form: &crate::settings::SettingsForm,
+    ) -> Result<crate::settings::SettingsForm> {
+        Ok((&crate::settings::Settings::save(&self.home, form)?).into())
+    }
+
     /// 已知的工具，供目标工具分段控件使用。
     pub fn tools(&self) -> Vec<ToolInfo> {
         self.adapters

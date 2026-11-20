@@ -1,8 +1,8 @@
 import { useRef } from "react";
 import { useLocation, useNavigate, useNavigationType } from "react-router";
 import { Icon } from "@/components/Icon";
-import { useUi } from "@/state/ui";
 import styles from "./AppShell.module.css";
+import { useSidebar } from "./useSidebar";
 
 /**
  * 整窗工具栏（6.1）：高 40px，贯穿窗口顶部。从左到右是窗口按钮、后退与前进、侧栏开关。
@@ -14,8 +14,7 @@ import styles from "./AppShell.module.css";
  */
 export function WindowToolbar() {
   const navigate = useNavigate();
-  const collapsed = useUi((state) => state.sidebarCollapsed);
-  const toggleSidebar = useUi((state) => state.toggleSidebar);
+  const { collapsed, toggle: toggleSidebar } = useSidebar();
   const sidebarLabel = collapsed ? "展开侧栏" : "折叠侧栏";
   const { canBack, canForward } = useHistoryPosition();
 

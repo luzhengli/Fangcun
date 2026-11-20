@@ -20,6 +20,7 @@ export const keys = {
   globalOverview: (tool: ToolId) => ["global-overview", tool] as const,
   activity: (filter: RecordFilter) => ["activity", filter] as const,
   syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
+  settings: ["settings"] as const,
 };
 
 export function useTools() {
@@ -86,5 +87,23 @@ export function useSyncPlan(projectRoot: string | undefined, registered: boolean
     enabled: projectRoot !== undefined && registered,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,
+  });
+}
+
+export function useSettings() {
+  return useQuery({ queryKey: keys.settings, queryFn: kernel.settings });
+}
+
+/** 设置页保存。只读开关一变，内核换了，别的查询都要重新取。 */
+export function useSaveSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: kernel.saveSettings,
+    onSuccess: (saved) => {
+      client.setQueryData(keys.settings, saved);
+      void client.invalidateQueries({
+        predicate: (q) => q.queryKey[0] !== "settings" && q.queryKey[0] !== "tools",
+      });
+    },
   });
 }

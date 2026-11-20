@@ -10,7 +10,7 @@ mod commands;
 mod state;
 
 use fangcun_core::Kernel;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use crate::state::AppState;
 
@@ -22,7 +22,14 @@ fn main() {
             // 默认可写；设置里开了只读模式时只读（7.5）。
             let kernel = Kernel::open_configured(false)?;
             app.manage(AppState::new(kernel));
+            add_settings_menu(app)?;
             Ok(())
+        })
+        // 应用菜单「设置…」（⌘,）：让界面切到设置页（6.1）。
+        .on_menu_event(|app, event| {
+            if event.id() == SETTINGS_MENU {
+                let _ = app.emit("open-settings", ());
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::tools,
@@ -42,7 +49,24 @@ fn main() {
             commands::plan_rollback_record,
             commands::apply_plan,
             commands::pick_directory,
+            commands::settings,
+            commands::save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");
+}
+
+const SETTINGS_MENU: &str = "settings";
+
+/// 在系统默认菜单的应用菜单里，「关于」下面加「设置…」，快捷键 ⌘,（macOS 标准位置）。
+fn add_settings_menu(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem};
+    let menu = Menu::default(app.handle())?;
+    if let Some(MenuItemKind::Submenu(app_menu)) = menu.items()?.into_iter().next() {
+        let settings = MenuItem::with_id(app, SETTINGS_MENU, "设置…", true, Some("CmdOrCtrl+,"))?;
+        app_menu.insert(&settings, 2)?;
+        app_menu.insert(&PredefinedMenuItem::separator(app)?, 3)?;
+    }
+    app.set_menu(menu)?;
+    Ok(())
 }

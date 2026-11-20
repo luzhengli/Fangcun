@@ -11,6 +11,7 @@
  * - 实现一个页面时，把那一页用到的命令补到这里。
  */
 import type { ErrorPayload } from "../bindings/ErrorPayload";
+import type { SettingsForm } from "../bindings/SettingsForm";
 import type { Transport } from "../client";
 import type { Commands } from "../commands";
 import { activity } from "./activity";
@@ -73,7 +74,16 @@ const handlers: Partial<Commands> = {
   apply_plan: ({ plan }) => applyPlan(plan),
   /** 浏览器里没有系统的选文件夹面板，当作选了 luyao-skills。 */
   pick_directory: () => recentProject.id,
+
+  /** Settings.dc.html：只读模式关，保留 30 天、每个项目至少 20 个。 */
+  settings: () => settingsState,
+  save_settings: ({ form }) => {
+    settingsState = form;
+    return form;
+  },
 };
+
+let settingsState: SettingsForm = { readOnly: false, snapshotDays: 30, snapshotKeep: 20 };
 
 export const fixtureTransport: Transport = async (command, args) => {
   const real = snapshotHandlers();

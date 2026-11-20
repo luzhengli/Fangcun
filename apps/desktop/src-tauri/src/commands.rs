@@ -17,6 +17,7 @@ use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
 use fangcun_core::resolver::{EffectiveContext, Explanation, ModeSuggestion};
 use fangcun_core::scanner::CheckupReport;
+use fangcun_core::settings::SettingsForm;
 use tauri::State;
 
 use crate::state::AppState;
@@ -179,4 +180,24 @@ pub async fn pick_directory(app: tauri::AppHandle) -> CommandResult<Option<Strin
     Ok(picked
         .and_then(|path| path.into_path().ok())
         .map(|path| path.to_string_lossy().into_owned()))
+}
+
+/// 设置页（6.1、M1-24）。
+#[tauri::command]
+pub async fn settings(state: State<'_, AppState>) -> CommandResult<SettingsForm> {
+    state.run(|kernel| kernel.settings()).await
+}
+
+/// 设置页保存。只读开关变了就按新设置重开内核，之后的命令按新的读写权限走。
+#[tauri::command]
+pub async fn save_settings(
+    state: State<'_, AppState>,
+    form: SettingsForm,
+) -> CommandResult<SettingsForm> {
+    let before = state.run(|kernel| kernel.settings()).await?;
+    let saved = state.run(move |kernel| kernel.save_settings(&form)).await?;
+    if saved.read_only != before.read_only {
+        state.reopen()?;
+    }
+    Ok(saved)
 }

@@ -5,11 +5,12 @@ import { CheckupPage } from "@/pages/checkup/CheckupPage";
 import { GlobalPage } from "@/pages/global/GlobalPage";
 import { LibraryPage } from "@/pages/library/LibraryPage";
 import { ProjectPage } from "@/pages/project/ProjectPage";
+import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { AppShell } from "@/shell/AppShell";
-import { CHECKUP_PATH } from "@/shell/nav";
+import { CHECKUP_PATH, SETTINGS_PATH } from "@/shell/nav";
 
 /**
- * 路由表。五个导航项各一页，加上体检报告。
+ * 路由表。五个导航项各一页，加上体检报告和设置。
  *
  * 首次启动先进体检报告（6.2）。M0 不落盘，记不住上次启动，所以每次启动都按首次处理。
  */
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
       { path: "bundles", element: <BundlesPage /> },
       { path: "global", element: <GlobalPage /> },
       { path: "activity", element: <ActivityPage /> },
+      { path: SETTINGS_PATH, element: <SettingsPage /> },
     ],
   },
 ];

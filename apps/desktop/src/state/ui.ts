@@ -11,6 +11,9 @@ interface UiState {
   /** 侧栏是否折叠成 56px 的图标栏。 */
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  /** 设置页里侧栏默认折成图标栏（6.1），工具栏的侧栏开关可以临时展开。 */
+  settingsNavOpen: boolean;
+  toggleSettingsNav: () => void;
   /** 项目页与全局页当前看的目标工具。两页共用，切过去不用再选。 */
   tool: ToolId;
   setTool: (tool: ToolId) => void;
@@ -19,6 +22,8 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  settingsNavOpen: false,
+  toggleSettingsNav: () => set((state) => ({ settingsNavOpen: !state.settingsNavOpen })),
   tool: "claude-code",
   setTool: (tool) => set({ tool }),
 }));

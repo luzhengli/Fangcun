@@ -15,6 +15,7 @@ import type { Overview } from "./bindings/Overview";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
 import type { Record as ActivityRecord } from "./bindings/Record";
 import type { RecordFilter } from "./bindings/RecordFilter";
+import type { SettingsForm } from "./bindings/SettingsForm";
 import type { SnapshotId } from "./bindings/SnapshotId";
 import type { SyncMode } from "./bindings/SyncMode";
 import type { ToolId } from "./bindings/ToolId";
@@ -43,6 +44,8 @@ export interface Commands {
   plan_rollback_record: (args: { recordId: string }) => ChangePlan;
   apply_plan: (args: { plan: ChangePlan }) => Applied;
   pick_directory: () => string | null;
+  settings: () => SettingsForm;
+  save_settings: (args: { form: SettingsForm }) => SettingsForm;
 }
 
 export const kernel = {
@@ -65,4 +68,6 @@ export const kernel = {
   planRollbackRecord: (recordId: string) => call("plan_rollback_record", { recordId }),
   applyPlan: (plan: ChangePlan) => call("apply_plan", { plan }),
   pickDirectory: () => call("pick_directory"),
+  settings: () => call("settings"),
+  saveSettings: (form: SettingsForm) => call("save_settings", { form }),
 };

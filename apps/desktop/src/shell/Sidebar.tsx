@@ -6,9 +6,9 @@ import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
 import { useOverview, useProjects, useRescan } from "@/ipc/queries";
 import { useRegister } from "@/state/register";
-import { useUi } from "@/state/ui";
 import styles from "./AppShell.module.css";
 import { NAV_ITEMS, projectPath, SETTINGS_PATH } from "./nav";
+import { useSidebar } from "./useSidebar";
 
 /**
  * 侧栏（6.1）：「方寸」标识、五个导航项、项目列表、底部的「设置」「重新体检」。
@@ -25,7 +25,7 @@ const PROJECT_NOTE: Partial<Record<AssetState, string>> = {
 };
 
 export function Sidebar() {
-  const collapsed = useUi((state) => state.sidebarCollapsed);
+  const { collapsed } = useSidebar();
   const overview = useOverview();
   const projects = useProjects();
   const rescan = useRescan();
