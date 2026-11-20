@@ -8,6 +8,39 @@
 
 ---
 
+## 2026-11-20 改主意：本地用 Claude Design，全局打开遥测，其余尽量关
+
+- **人定**：看过遥测调查后，人让 Agent「打开遥测试一次看能不能用画布」。试通后问遥测怎么开，人先问开源替代（Agent 列了 OpenDesign、mockup-canvas、Doop、Onlook 等，没有能完整复刻的），最后说「我力竭了，用Claude的design吧，我也不想单独开会话设置遥感，感觉以后新开会话也会忘记。但想想办法尽量保护我的隐私。」
+- **实测**（单次会话不设 `DISABLE_TELEMETRY`）：Artifact `list_types` 返回 7 种类型含 Design；读画布时附带 Design 类型的改法说明；`list` + `scope: "files"` 列出 41 个文件，`project/` 下 8 个能逐个读；改法是把改过的文件放进一个目录再 `publish`（`url`、`root`）。发布还没实测。`canvas.json`、`Main.dc.html` 与 `prototype/` 逐字节一致。
+- **全局设置**（`~/.claude/settings.json`，Agent 改）：删 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`、`DISABLE_TELEMETRY`；留 `DISABLE_ERROR_REPORTING`、`CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY`；`DISABLE_BUG_COMMAND` 换成现名 `DISABLE_FEEDBACK_COMMAND`。
+- **隐私上能做的**（Agent 读 2.1.323 代码所得，没抓包）：遥测里没有位置、时区字段，位置只能从 IP 推。打开后新增的第三方是 Datadog（`http-intake.logs.us5.datadoghq.com`），代码里没有单独关它的开关，只能在 `/etc/hosts` 挡掉，要人用 sudo 做。另外建议人在 claude.ai 隐私设置里关掉「用于改进模型」。见 BACKLOG H-07。
+- 影响：AGENTS.md「原型怎么读」、WORKFLOW「同步原型」改成在终端的本地会话里做，云端作备用；`pnpm workflow` 的提示同步改。H-06 改成本地做。
+
+---
+
+## 2026-11-20 原型不搬到本地，继续在 claude.ai web 端改和同步
+
+- **人定（三步）**：
+  1. Agent 查清原因后问「~/.claude/settings.json 怎么改」，人先选「不改，退回 web 端」。其余选项：删变量并补 `DISABLE_AUTOUPDATER=1`（推荐）；删变量也删 `DISABLE_TELEMETRY`；只删变量。
+  2. 人随后说「那你删掉这个CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC然后试下嘛」。Agent 只删了这一行，其余不动。
+  3. 试下来改不了画布，Agent 推测要拉 feature flag，提议单次不设 `DISABLE_TELEMETRY` 再试。人说「我担心泄漏个人地理位置，这个信息不应该被anthropic获取」，不试，`DISABLE_TELEMETRY` 保留。
+- **查清的事**（官方文档 env-vars、artifacts 两页，加两次本地实测）：
+  - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 设了就关 Artifacts，设成 `0` 也关，只能删。删掉后终端里的交互式 `claude` 有 Artifact 工具（`-p` 里仍没有）。
+  - 能读：画布归人所有、私有，类型 Design，最新版本 1795172034-4599（比 `prototype/` 的 1794656963-e22c 新，工具提示有共同编辑者发布过）。
+  - 不能改：`read` 只返回 Design 类型的运行时外壳，拿不到 `project/canvas.json` 和 `*.dc.html`；asset store、db 都是空的；`list_types` 返回「type catalog isn't available to it yet」；没有 `/design`。publish 只能发单个 HTML，会把画布整个换掉，不能用。
+  - `DISABLE_TELEMETRY` 也停 feature flag 拉取（文档原文）。类型目录是否靠 flag 没验证。
+- 影响：AGENTS.md「原型怎么读」、WORKFLOW「同步原型」不改，原型仍在云端会话里改画布、同步、开 PR，见 BACKLOG H-06。本地可以用 Artifact 工具 `read` 画布看版本号，判断 `prototype/` 落没落后。
+
+---
+
+## 2026-11-20 想在本地用 Claude Design 设计原型
+
+- **人定**：人问原型能不能在本地做、免得两地操作，并补充「原型设计这块我是希望用 Claude Design 的能力的」；之后说「如果可以本地设计原型，我计划下一步先把这块本地配置搞定」。
+- **Agent 查的结果**：Claude Code 的 `/design`、`/artifacts` 能在本地画、挂接 Claude Design 画布（要求 v2.1.265+，本机 2.1.323），但只在终端 CLI 和 Claude 桌面应用里，`-p` 与 VS Code 插件里没有；`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 会关掉它，本机全局设置里开着。四次只读测试（VS Code 会话、`-p`、继承插件环境的交互式终端、干净环境的交互式终端）都没有 Artifact 工具。独立的 claude.ai/design 2026-12-14 关闭。`/design-sync` 只把 React 组件库单向传上去，对「墨格」用不上。
+- 影响：STATUS「下一步」第 1 条。是否改全局设置等人定。同日人定不改，见上一条。
+
+---
+
 ## 2026-11-20 批 3 之前先改原型
 
 - **人定**：合并 #28 后人说「等合并完，下一次先把原型需要做的部分给做了」。下一次会话先在云端改画布 P-01、P-02、P-03 并同步，再开批 3。

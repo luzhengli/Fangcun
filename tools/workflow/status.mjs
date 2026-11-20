@@ -164,7 +164,7 @@ section(
   "没有（加 --fetch 先拉一次）",
 );
 section(
-  "原型待改（到云端会话里改画布）",
+  "原型待改（在终端会话里用 Artifact 工具改画布）",
   proto.map((i) => short(i)),
   "没有",
 );
