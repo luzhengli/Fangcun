@@ -10,14 +10,14 @@ M0（透视版，只读）完成，M1 进行中。第一段（地基）与第二
 
 - **能用的**：命令行 `doctor`、`status`、`why`、`log`、`init [--from-existing]`、`lock`、`export skills-lock`、`sync [--frozen]`、`rollback N`、`adopt`。桌面应用还是 M0 的只读界面，写入按钮置灰（批 3 接）。
 - **没做的写入**：用了 `secret:` 的 MCP（M1-17）、个人覆盖的 MCP（M1-27）、`[disable]`（M1-18）。同步时在计划里提示。
-- **原型**：本地终端会话第一次改画布并发布成功。P-01 应用图标、P-02 登记入口、P-03 设置窗口已画，`prototype/` 同步到 1795188646-7074（分支 `prototype-p01-p03`，PR #32）。新画板 `Settings`。人定一件：未登记的目录照常只读显示生效上下文（9.3）。
+- **原型**：本地终端会话第一次改画布并发布成功。P-01 应用图标、P-02 登记入口、P-03 设置已画；人看后把设置改成主窗口内、Codex 的样式（P-04，6.1、9.3 已改），`prototype/` 同步到 1795189539-47ed（分支 `prototype-p01-p03`，PR #32）。新画板 `Settings`。人定三件：未登记的目录照常只读显示生效上下文；设置在主窗口里打开、侧栏折成图标栏；设置只有一页「通用」，分两组（9.3）。
 - **示例数据**：Main 落后（侧栏可点、未登记视图、登记流程），实现 M1-25 时跟上再 `pnpm workflow accept Main`。其余 accept 到 1794656963-e22c，那几张画板没变。
 - **检查**：`check.js` 8 张画板全过。这次没动代码，没跑 `pnpm check`。
 
 ## 下一步
 
 1. **人**：合原型同步的 PR #32；看 H-08（网页上三张画板正常、Agent 补的细节）；H-07 隐私加固。
-2. **批 3**：W-14（截图能截非默认状态）→ M1-13 同步面板（显示 `notes`、`blocked` 置灰）、M1-14 历史与回滚（`plan_rollback_record`）、M1-26 体检一键动作、M1-25 登记界面（照 Main 画板）、M1-24 设置窗口（照 Settings 画板）。开工前 `pnpm workflow find`。
+2. **批 3**：W-14（截图能截非默认状态）→ M1-13 同步面板（显示 `notes`、`blocked` 置灰）、M1-14 历史与回滚（`plan_rollback_record`）、M1-26 体检一键动作、M1-25 登记界面（照 Main 画板）、M1-24 设置（主窗口内，照 Settings 画板）。开工前 `pnpm workflow find`。
 3. H-08 里 P-01 确认后做 D-30 出图（Icon Composer，人做或交给 Codex）。
 
 ## 卡在哪
