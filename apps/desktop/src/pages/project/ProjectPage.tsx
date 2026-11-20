@@ -11,6 +11,7 @@ import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
+import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
 import { useEffectiveContext, useHistory, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
@@ -95,7 +96,7 @@ function ProjectView({ root }: { root: string | undefined }) {
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  // 未登记的目录回到项目卡片（6.3）：检查器顶部「‹ 项目名」、点列表空白处、Esc、再点一次侧栏里同一个项目。
+  // 回到项目卡片（6.3）：点列表空白处、Esc、再点一次侧栏里同一个项目。
   const toCard = () => {
     setSelected(null);
     setInspectorOpen(true);
@@ -107,9 +108,9 @@ function ProjectView({ root }: { root: string | undefined }) {
     setSeenNavKey(navKey);
     toCard();
   }
-  const pickedUnregistered = !registered && selected !== null;
+  const picked = selected !== null;
   useEffect(() => {
-    if (!pickedUnregistered) return;
+    if (!picked) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       // 弹窗开着时 Esc 是关弹窗的。
@@ -120,14 +121,12 @@ function ProjectView({ root }: { root: string | undefined }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pickedUnregistered]);
+  }, [picked]);
 
   const data = context.data;
   const items = data?.items ?? [];
-  // 未登记的目录默认看项目本身（检查器里有「登记」）；点了某一行才看那一项。
-  const current =
-    items.find((i) => i.id === selected) ??
-    (registered ? (items.find((i) => i.state === "drifted") ?? items[0]) : undefined);
+  // 没选中任何一项时看项目卡片，已登记、未登记一样（6.3）。
+  const current = items.find((i) => i.id === selected);
   const tools = useTools();
   const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
   const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
@@ -200,13 +199,13 @@ function ProjectView({ root }: { root: string | undefined }) {
       )}
 
       <div className={page.split}>
-        {/* 点空白处回到项目卡片只是快捷方式，键盘用 Esc 或检查器里的「‹ 项目名」。 */}
+        {/* 点空白处回到项目卡片只是快捷方式，键盘用 Esc。 */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: 同上 */}
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
         <section
           className={page.list}
           onClick={(e) => {
-            if (!pickedUnregistered) return;
+            if (!picked) return;
             if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
             toCard();
           }}
@@ -243,11 +242,19 @@ function ProjectView({ root }: { root: string | undefined }) {
             onClose={() => setInspectorOpen(false)}
           />
         )}
+        {registered && tab === "effective" && inspectorOpen && !current && data && root && (
+          <RegisteredInspector
+            root={root}
+            context={data}
+            summary={summary}
+            onPick={setSelected}
+            onClose={() => setInspectorOpen(false)}
+          />
+        )}
         {(tab === "effective" || !registered) && inspectorOpen && current && data && (
           <ItemInspector
             item={current}
             context={data}
-            back={registered ? undefined : { label: data.projectName, onClick: toCard }}
             onPick={setSelected}
             onClose={() => setInspectorOpen(false)}
           />
@@ -356,13 +363,11 @@ function EffectiveList({
 function ItemInspector({
   item,
   context,
-  back,
   onPick,
   onClose,
 }: {
   item: EffectiveItem;
   context: EffectiveContext;
-  back?: { label: string; onClick: () => void };
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -431,7 +436,6 @@ function ItemInspector({
           : KIND_LABEL[item.kind]
       }
       name={item.name}
-      back={back}
       status={{ tone: item.state ? toneOfState(item.state) : "neutral", label: item.label }}
       fields={fields}
       onClose={onClose}
@@ -606,15 +610,7 @@ function UnregisteredInspector({
           v: context.hasManifest ? "fangcun.toml" : "没有 fangcun.toml",
           mono: context.hasManifest,
         },
-        {
-          k: "提交者",
-          v:
-            committers === undefined
-              ? "…"
-              : committers === 0
-                ? "不是 git 仓库"
-                : `${committers} 位（git 历史，不算 [bot]）`,
-        },
+        { k: "提交者", v: committersText(committers) },
         {
           k: "常驻",
           v: `${formatK(total)} tokens（估算）${onlyGlobal ? "· 全部来自全局层" : ""}`,
@@ -639,6 +635,96 @@ function UnregisteredInspector({
           </button>
         </div>
         <CommandHint command="fangcun init --from-existing" />
+      </Section>
+    </Inspector>
+  );
+}
+
+const PENDING: Partial<Record<NonNullable<EffectiveItem["state"]>, true>> = {
+  drifted: true,
+  updatable: true,
+  "script-changed": true,
+};
+
+/** 提交者一栏：git 历史里的人数，不算 [bot]。 */
+function committersText(n: number | undefined): string {
+  if (n === undefined) return "…";
+  return n === 0 ? "不是 git 仓库" : `${n} 位（git 历史，不算 [bot]）`;
+}
+
+/** 已登记的项目：没选中任何一项时看项目本身，「待处理」点一行选中那一项（6.3）。 */
+function RegisteredInspector({
+  root,
+  context,
+  summary,
+  onPick,
+  onClose,
+}: {
+  root: string;
+  context: EffectiveContext;
+  summary: ProjectSummary | undefined;
+  onPick: (id: string) => void;
+  onClose: () => void;
+}) {
+  const suggestion = useQuery({
+    queryKey: ["suggest-mode", root],
+    queryFn: () => kernel.suggestMode(root),
+  });
+  const tools = useTools();
+  const toolName = (id: string) => tools.data?.find((t) => t.id === id)?.name ?? id;
+  const total = context.budget.instructions + context.budget.skills + context.budget.mcp;
+  const pending = context.items.filter((i) => i.state && PENDING[i.state]);
+  const drifted = pending.filter((i) => i.state === "drifted").length;
+  const status =
+    drifted > 0
+      ? { tone: toneOfState("drifted"), label: `${drifted} 处漂移` }
+      : pending.length > 0
+        ? { tone: toneOfState(summary?.state ?? "updatable"), label: `${pending.length} 处可更新` }
+        : { tone: toneOfState("synced"), label: "已登记" };
+  return (
+    <Inspector
+      kind="项目"
+      name={context.projectName}
+      status={status}
+      fields={[
+        { k: "路径", v: context.projectPath, mono: true },
+        {
+          k: "清单",
+          v: context.hasManifest ? "fangcun.toml · fangcun.lock" : "没有 fangcun.toml",
+          mono: context.hasManifest,
+        },
+        {
+          k: "物化方式",
+          v: context.mode === "vendor" ? "入库" : context.mode === "link" ? "链接" : "—",
+        },
+        {
+          k: "目标工具",
+          v: context.targets.length > 0 ? context.targets.map(toolName).join("、") : "—",
+        },
+        { k: "提交者", v: committersText(suggestion.data?.committers) },
+        {
+          k: "常驻",
+          v: `${formatK(total)} tokens（估算）/ 项目预算 ${formatLimit(context.budget.limit)}`,
+        },
+      ]}
+      onClose={onClose}
+    >
+      <Section title="待处理">
+        {pending.length === 0 ? (
+          <p className={styles.pendingNone}>没有待处理的项</p>
+        ) : (
+          pending.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={styles.pendingRow}
+              onClick={() => onPick(item.id)}
+            >
+              <span className={styles.pendingName}>{item.name}</span>
+              <StatusDot tone={toneOfState(item.state)} label={item.label} />
+            </button>
+          ))
+        )}
       </Section>
     </Inspector>
   );

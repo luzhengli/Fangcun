@@ -3,8 +3,8 @@
   "boards": {
     "Main": {
       "fixture": "main.ts",
-      "hash": "be267943050c",
-      "version": "1795192822-7497"
+      "hash": "1ccf9e9fed59",
+      "version": "1795193620-6b7f"
     },
     "Checkup": {
       "fixture": "checkup.ts",
