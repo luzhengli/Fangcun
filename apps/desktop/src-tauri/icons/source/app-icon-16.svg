@@ -1,0 +1,7 @@
+<!-- 16 px 一档：外方线宽加到 1 px（1024 画布上是 64），外缘仍是 440。其余同 app-icon.svg。 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>方寸应用图标</title>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#3552D4"/>
+  <rect x="324" y="324" width="376" height="376" rx="64" fill="none" stroke="#FFFFFF" stroke-width="64"/>
+  <rect x="432" y="432" width="160" height="160" rx="32" fill="#FFFFFF"/>
+</svg>

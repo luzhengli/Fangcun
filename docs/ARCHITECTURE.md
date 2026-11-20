@@ -28,6 +28,7 @@ apps/desktop/src-tauri      Tauri 外壳：把内核用例暴露成命令      c
 | `tools/workflow/` | `pnpm workflow`，工作流的状态，见 `docs/WORKFLOW.md` |
 | `adapters/` | 适配器，每个工具一份 TOML。格式见 `adapters/README.md` |
 | `tools/prototype-preview/` | 原型预览器与同步检查，不属于产品代码 |
+| `tools/icons/` | `pnpm icons`，从 `apps/desktop/src-tauri/icons/source/` 的 SVG 出应用图标 |
 
 ## 不能破的规则
 
@@ -165,6 +166,7 @@ src/
 | `pnpm screens --snapshot target/ipc-snapshot.json [画板…]` | 用本机真实数据截图，写到 `screens/real-<画板>.png`。快照先用 `cargo run -p fangcun-core --example ipc_snapshot -- target/ipc-snapshot.json` 生成，只读 |
 | `pnpm screens --compare [画板…]` | 本机重渲原型，写出「原型 · 应用 · 差异」拼图 `screens/compare-<画板>.png`，打印差异占比 |
 | `pnpm window-shot [--launch]` | 给真实的桌面窗口截图（`screens/window.png`），放大左上角，量关闭按钮离工具栏按钮中心多少 pt。要终端有「屏幕录制」权限 |
+| `pnpm icons` | 从 `icons/source/app-icon.svg`（16 px 一档用 `app-icon-16.svg`）出各尺寸 png、`icon.icns`、`icon.ico`，覆盖 `apps/desktop/src-tauri/icons/`。改图标先改原型的设计系统画板，再改 SVG |
 | `pnpm workflow [--fetch]` | 工作流卡在哪：待人处理、没合并的分支、原型待改、落后的示例数据、没复盘的摩擦。`accept <画板…>` 记下示例数据已跟上 |
 | `pnpm prototype:preview` | 起本地服务器看原型，打开 http://localhost:8000/tools/prototype-preview/ |
 | `pnpm prototype:check` | 原型同步后的检查，重新生成 `prototype/screens/` |

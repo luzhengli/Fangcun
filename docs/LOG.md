@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-11-20 合并 #32，出应用图标（D-30）
+
+- 合并 #32（原型 P-01 至 P-05）；人说隐私加固已做，H-07、H-08 勾掉。
+- 照设计系统画板写源 SVG，`tools/icons/build.js`（`pnpm icons`）出各尺寸 png、`.icns`、`.ico`，替换占位图标；16 px 一档单独加粗。Tauri 编译和 `pnpm check` 通过。
+- Tauri 2.12.4 打包不认 `.icon`，人选先不做，留 D-31。下一步批 3。
+
+---
+
 ## 2026-11-20 原型 P-01 至 P-03：本地改画布并同步
 
 - 本地终端会话第一次用 Artifact 工具改画布：先读画布，内容和 `prototype/` 一致（只是版本号变了）；改 Main、DesignSystem，新增 Settings，一次发布到 1795188646-7074，再读回 `prototype/`，`check.js` 8 张全过。
