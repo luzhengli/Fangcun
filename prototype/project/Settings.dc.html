@@ -70,6 +70,10 @@ body{margin:0}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
         <span class="{{labelClass}}" style="flex: 1;">活动</span>
       </a>
+      <a href="Settings.dc.html" aria-current="page" class="fc-h" title="设置（⌘,）" style="{{settingsStyle}}">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--accent);"><circle cx="8" cy="8" r="2"></circle><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05"></path><circle cx="8" cy="8" r="4.5"></circle></svg>
+        <span class="{{labelClass}}" style="flex: 1;">设置</span>
+      </a>
       <a href="Checkup.dc.html" class="fc-h" title="重新体检" style="{{checkupStyle}}">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
         <span class="{{labelClass}}">重新体检</span>
@@ -146,7 +150,8 @@ class Component extends DCLogic {
       // 进设置时导航折成 56px 图标栏；工具栏的侧栏开关可以临时展开。
       railStyle: 'flex: 0 0 ' + (open ? '216px' : '56px') + '; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px ' + (open ? '10px' : '8px') + ' 16px; display: flex; flex-direction: column; gap: 1px;',
       navItemStyle: 'display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; color: var(--tx-1); text-decoration: none;' + (open ? '' : ' justify-content: center;'),
-      checkupStyle: 'margin-top: auto; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; color: var(--tx-1); text-decoration: none;' + (open ? '' : ' justify-content: center;'),
+      settingsStyle: 'margin-top: auto; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;' + (open ? '' : ' justify-content: center;'),
+      checkupStyle: 'margin-top: 6px; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; color: var(--tx-1); text-decoration: none;' + (open ? '' : ' justify-content: center;'),
       labelClass: open ? '' : 'fc-sr',
       navLabel: open ? '折叠侧栏' : '展开侧栏', navExpanded: open ? 'true' : 'false',
       navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (open ? 'var(--bg-hover)' : 'transparent') + ';',
