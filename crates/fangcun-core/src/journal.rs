@@ -133,6 +133,20 @@ pub struct Record {
     pub command: Option<String>,
     /// 命令的输出。
     pub output: Option<String>,
+    /// 待处理的记录（漂移、可更新）指向哪项资产。读的时候按现状判断还待不待处理，
+    /// 处理过了显示「已记录」（6.7「待处理」）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subject: Option<Subject>,
+}
+
+/// 待处理记录指向的资产。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Subject {
+    pub asset: String,
+    /// 可更新：上游那一版的提交。漂移为空。
+    pub version: Option<String>,
 }
 
 /// 记录留的一个快照：哪个范围、几号。
@@ -390,6 +404,7 @@ mod tests {
             files: Vec::new(),
             command: None,
             output: None,
+            subject: None,
         }
     }
 

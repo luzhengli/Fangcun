@@ -18,6 +18,12 @@ pub enum ManifestEdit {
     Disable { kind: AssetKind, names: Vec<String> },
     /// 撤掉本项目的停用（`[disable]` 去掉这些名字）。
     Enable { kind: AssetKind, names: Vec<String> },
+    /// 升级到上游检查查到的那一版（M1-16，6.3「可更新」）。`projects` 是一起升级的其他项目，
+    /// 每个项目各留一个快照。清单只在 `pin` 的项上改，跟随分支的只改锁。
+    Upgrade {
+        asset: String,
+        projects: Vec<crate::model::ProjectId>,
+    },
 }
 
 impl ManifestEdit {
@@ -26,6 +32,7 @@ impl ManifestEdit {
         let (verb, kind, names) = match self {
             Self::Disable { kind, names } => ("停用", kind, names),
             Self::Enable { kind, names } => ("恢复", kind, names),
+            Self::Upgrade { asset, .. } => return format!("升级 {asset}"),
         };
         let what = match kind {
             AssetKind::Skill => "skill",
@@ -53,6 +60,8 @@ pub fn apply_edits(origin: &str, text: &str, edits: &[ManifestEdit]) -> Result<S
         let (kind, names, add) = match edit {
             ManifestEdit::Disable { kind, names } => (kind, names, true),
             ManifestEdit::Enable { kind, names } => (kind, names, false),
+            // 升级改的是锁（和 pin），由内核按上游检查的结果改，不在这里。
+            ManifestEdit::Upgrade { .. } => continue,
         };
         let key = match kind {
             AssetKind::Skill => "skills",
@@ -88,6 +97,41 @@ pub fn apply_edits(origin: &str, text: &str, edits: &[ManifestEdit]) -> Result<S
     if empty {
         doc.remove("disable");
     }
+    Ok(doc.to_string())
+}
+
+fn parse_doc(origin: &str, text: &str) -> Result<DocumentMut> {
+    text.parse()
+        .map_err(|e: toml_edit::TomlError| Error::Parse {
+            origin: origin.to_owned(),
+            message: e.to_string(),
+        })
+}
+
+/// 分叉为项目专属（M1-15）：从 `[skills]` 去掉这一项。没有这一项时原样返回。
+pub fn remove_skill(origin: &str, text: &str, name: &str) -> Result<String> {
+    let mut doc = parse_doc(origin, text)?;
+    if let Some(skills) = doc.get_mut("skills").and_then(Item::as_table_like_mut) {
+        skills.remove(name);
+    }
+    Ok(doc.to_string())
+}
+
+/// 回流、升级：把一项 skill 的 `pin` 改成新的提交。没写 `pin` 的（跟随分支）不动，返回原文。
+pub fn set_skill_pin(origin: &str, text: &str, name: &str, pin: &str) -> Result<String> {
+    let mut doc = parse_doc(origin, text)?;
+    let Some(entry) = doc
+        .get_mut("skills")
+        .and_then(Item::as_table_like_mut)
+        .and_then(|t| t.get_mut(name))
+        .and_then(Item::as_table_like_mut)
+    else {
+        return Ok(text.to_owned());
+    };
+    if entry.get("pin").is_none() {
+        return Ok(text.to_owned());
+    }
+    entry.insert("pin", toml_edit::value(pin));
     Ok(doc.to_string())
 }
 
@@ -134,6 +178,17 @@ mod tests {
         )
         .unwrap();
         assert_eq!(removed, text);
+    }
+
+    #[test]
+    fn remove_and_repin_keep_the_rest() {
+        let text = "[skills]\nh = { source = \"local:x\", pin = \"4d9b1eb\" } # 注释\nt = { source = \"github:a/b\", track = \"main\" }\n";
+        let pinned = set_skill_pin("t", text, "h", "9c1f2a0").unwrap();
+        assert!(pinned.contains("pin = \"9c1f2a0\""), "{pinned}");
+        assert!(pinned.contains("# 注释"));
+        assert_eq!(set_skill_pin("t", text, "t", "abc1234").unwrap(), text);
+        let removed = remove_skill("t", text, "h").unwrap();
+        assert!(!removed.contains("local:x") && removed.contains("github:a/b"));
     }
 
     #[test]

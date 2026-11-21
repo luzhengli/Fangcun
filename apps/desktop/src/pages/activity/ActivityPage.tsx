@@ -10,6 +10,7 @@ import type { RecordStatus } from "@/ipc/bindings/RecordStatus";
 import type { Trigger } from "@/ipc/bindings/Trigger";
 import { kernel } from "@/ipc/commands";
 import { useActivity, useProjects } from "@/ipc/queries";
+import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
 import page from "../page.module.css";
 import styles from "./ActivityPage.module.css";
@@ -278,6 +279,7 @@ function RecordInspector({ record, onClose }: { record: ActivityRecord; onClose:
         </Section>
       )}
       <RollbackAction record={record} />
+      <PendingAction record={record} />
       {record.kind === "checkup" && (
         <div>
           <Link
@@ -290,6 +292,31 @@ function RecordInspector({ record, onClose }: { record: ActivityRecord; onClose:
         </div>
       )}
     </Inspector>
+  );
+}
+
+/**
+ * 待处理的记录（6.7）：活动页不处理，只带你去项目页的检查器。漂移是「去处理漂移」，
+ * 可更新是「查看差异」；涉及几个项目的去第一个。
+ */
+function PendingAction({ record }: { record: ActivityRecord }) {
+  const projects = useProjects();
+  if (record.status !== "pending" || !record.subject) return null;
+  const label = record.kind === "drift" ? "去处理漂移" : "查看差异";
+  const first =
+    record.project ??
+    projects.data?.find((p) => p.registered && record.projectLabel.startsWith(p.name))?.id;
+  if (!first) return null;
+  return (
+    <div>
+      <Link
+        to={`${projectPath(first)}?asset=${encodeURIComponent(record.subject.asset)}`}
+        className={page.buttonPrimary}
+        style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+      >
+        {label}
+      </Link>
+    </div>
   );
 }
 

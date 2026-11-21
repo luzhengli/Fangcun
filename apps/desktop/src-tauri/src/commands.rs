@@ -12,7 +12,8 @@ use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
 use fangcun_core::global::GlobalOverview;
 use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
-use fangcun_core::kernel::{ManifestView, Overview, ProjectSummary};
+use fangcun_core::kernel::{ManifestView, Overview, ProjectSummary, UpstreamReport};
+use fangcun_core::materializer::drift::DriftChoice;
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
 use fangcun_core::resolver::{EffectiveContext, Explanation, ModeSuggestion};
@@ -163,8 +164,15 @@ pub async fn plan_rollback_record(
 
 /// 应用一份计划。写入只发生在这里。
 #[tauri::command]
-pub async fn apply_plan(state: State<'_, AppState>, plan: ChangePlan) -> CommandResult<Applied> {
-    state.run(move |kernel| kernel.apply(&plan)).await
+pub async fn apply_plan(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    plan: ChangePlan,
+) -> CommandResult<Applied> {
+    let applied = state.run(move |kernel| kernel.apply(&plan)).await?;
+    // 可能登记了新项目、换了正本：按现在的目录重设监听。
+    AppState::watch(&app);
+    Ok(applied)
 }
 
 /// 侧栏「添加项目…」：弹系统的选择文件夹面板，返回选中的目录（F3、M1-25）。
@@ -235,4 +243,23 @@ pub async fn plan_finding(
     state
         .run(move |kernel| kernel.plan_finding(&finding_id))
         .await
+}
+
+/// 项目页检查器的漂移块：回流、丢弃、分叉（6.3、M1-15）。
+#[tauri::command]
+pub async fn plan_drift(
+    state: State<'_, AppState>,
+    project_root: PathBuf,
+    asset: String,
+    choice: DriftChoice,
+) -> CommandResult<ChangePlan> {
+    state
+        .run(move |kernel| kernel.plan_drift(&project_root, &asset, choice))
+        .await
+}
+
+/// 手动的上游检查（M1-16，9.3）。会联网拉 GitHub 来源。
+#[tauri::command]
+pub async fn check_upstream(state: State<'_, AppState>) -> CommandResult<UpstreamReport> {
+    state.run(|kernel| kernel.check_upstream()).await
 }

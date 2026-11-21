@@ -104,10 +104,58 @@ pub struct EffectiveItem {
     pub secrets: Vec<String>,
     /// 最近活动（6.3 检查器第 6 条）：这一项的时间线，从活动记录按资产取，新的在前。
     pub recent: Vec<ItemActivity>,
+    /// 漂移（6.3 检查器「漂移」块、M1-15）。
+    pub drift: Option<DriftInfo>,
+    /// 可更新（6.3 检查器「可更新」块、M1-16）。
+    pub update: Option<UpdateInfo>,
     /// 被谁覆盖：生效那一项的 `id`。
     pub overridden_by: Option<String>,
     /// 「在本项目停用」（6.3 全局税、7.4）。只有全局层的 skill 与 MCP 有，内核按清单和适配器填。
     pub disable: Option<DisableOption>,
+}
+
+/// 检查器的漂移块：差异和三种处理能不能用。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DriftInfo {
+    /// 锁定的版本，例如「4d9b1eb」。
+    pub locked: String,
+    /// 一句话，例如「Agent 在本项目修改了 SKILL.md，相对 4d9b1eb 多 3 行、少 1 行。」
+    pub summary: String,
+    pub files: Vec<crate::library::diff::FileDiff>,
+    /// 链接模式：改的是资产库正本，链到它的项目一起变了。
+    pub shared: bool,
+    /// 取不回原版时为假（本地来源没有提交）：只能回流或分叉，差异里每个文件都算新增。
+    pub original: bool,
+    /// 回流用不了时的原因，例如「GitHub 来源的回流还没开放」（9.3）。能用时为空。
+    pub promote_blocked: Option<String>,
+    /// 同样用这一项的其他已登记项目。
+    pub others: Vec<String>,
+}
+
+/// 检查器的可更新块：版本差异和受影响的项目。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateInfo {
+    pub from: String,
+    pub to: String,
+    pub files: Vec<crate::library::diff::FileDiff>,
+    /// 差异里有脚本变更（标红）。
+    pub scripts: bool,
+    /// 也能升到同一版的其他已登记项目，默认不勾（9.3）。
+    pub others: Vec<UpdateProject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateProject {
+    pub project: crate::model::ProjectId,
+    pub name: String,
+    /// 例如「跟随 main · 链接」。
+    pub note: String,
 }
 
 /// 检查器「最近活动」的一行，点了跳到活动页那条记录。
@@ -477,6 +525,8 @@ fn instruction_item(file: &InstructionFile, home: &Path, tool_name: &str) -> Eff
         files: Vec::new(),
         secrets: Vec::new(),
         recent: Vec::new(),
+        drift: None,
+        update: None,
         overridden_by: None,
         disable: None,
     }
@@ -641,6 +691,8 @@ fn skills(
                 files: Vec::new(),
                 secrets: Vec::new(),
                 recent: Vec::new(),
+                drift: None,
+                update: None,
             });
         }
     }
@@ -698,6 +750,8 @@ fn skills(
             files: Vec::new(),
             secrets: Vec::new(),
             recent: Vec::new(),
+            drift: None,
+            update: None,
             overridden_by: None,
             disable: None,
         });
@@ -787,6 +841,8 @@ fn single_global(copy: &SkillCopy, triggers: u32, tool_name: &str, home: &Path) 
         files: Vec::new(),
         secrets: Vec::new(),
         recent: Vec::new(),
+        drift: None,
+        update: None,
         overridden_by: None,
         disable: None,
     }
@@ -877,6 +933,8 @@ fn mcp(
                 files: Vec::new(),
                 secrets: Vec::new(),
                 recent: Vec::new(),
+                drift: None,
+                update: None,
                 overridden_by: None,
                 disable: None,
             });
@@ -1016,6 +1074,8 @@ fn mcp(
                 files: Vec::new(),
                 secrets: Vec::new(),
                 recent: Vec::new(),
+                drift: None,
+                update: None,
             });
         }
     }

@@ -10,6 +10,7 @@
 //! 写的都是方寸自己的目录，不经变更计划；由收编、同步这些写入用例在 `apply` 时调用。
 
 pub mod content;
+pub mod diff;
 mod git;
 #[doc(hidden)]
 pub mod hash_samples;
@@ -259,3 +260,17 @@ fn io(path: &Path) -> impl FnOnce(std::io::Error) -> Error {
 
 #[cfg(all(test, unix))]
 mod tests;
+
+/// 文件有没有可执行位。回流写 git 时用。
+pub(crate) fn diff_executable(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::metadata(path).is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+        false
+    }
+}

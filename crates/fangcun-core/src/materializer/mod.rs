@@ -13,6 +13,7 @@
 //! 所有权台账（`~/.fangcun/state/`）和按键合并随 M1-10 补上。
 
 pub mod adopt;
+pub mod drift;
 pub mod ledger;
 pub mod rollback;
 mod scope;
@@ -95,6 +96,10 @@ pub(crate) struct PlanBody {
     pub actions: Vec<Action>,
     /// 要存进钥匙串的密钥（M1-17：登记时把明文迁进去）。应用时先存，各记一条密钥记录。
     pub secrets: Vec<SecretWrite>,
+    /// 回流（M1-15）：文件写完后把本地来源的分支挪到出计划时造好的提交。
+    pub promotions: Vec<crate::library::source::Promotion>,
+    /// 处理的是哪项资产（漂移、升级）：记进活动记录，待处理那条据此算已处理。
+    pub subject: Option<crate::journal::Subject>,
 }
 
 /// 一个要存进钥匙串的密钥。
@@ -158,6 +163,7 @@ pub(crate) fn secret_record(
         }],
         command: Some(command),
         output: None,
+        subject: None,
     }
 }
 
@@ -246,6 +252,8 @@ impl PlanBuilder {
                 reverts: None,
                 actions: Vec::new(),
                 secrets: Vec::new(),
+                promotions: Vec::new(),
+                subject: None,
             },
             changes: Vec::new(),
             notes: Vec::new(),
@@ -303,6 +311,29 @@ impl PlanBuilder {
     /// 这份计划会登记这个项目，应用时它算在写入范围里。
     pub fn registers(&mut self, root: impl Into<PathBuf>) {
         self.body.registers.push(root.into());
+    }
+
+    /// 这份计划处理的是哪项资产（漂移、升级），记进活动记录。
+    pub fn subject(&mut self, asset: impl Into<String>, version: Option<String>) {
+        self.body.subject = Some(crate::journal::Subject {
+            asset: asset.into(),
+            version,
+        });
+    }
+
+    /// 回流（9.3）：写本地来源目录（它这次算在写入范围里，快照单独一个范围），应用后挪分支。
+    pub fn promotes(&mut self, promotion: crate::library::source::Promotion) {
+        self.body.registers.push(promotion.repo.clone());
+        self.changes.push(Change {
+            op: ChangeOp::Modify,
+            path: promotion.repo.join(".git"),
+            detail: format!(
+                "在 {} 分支上提交 {}（应用后挪分支；回滚不撤销这个提交）",
+                promotion.branch,
+                &promotion.commit[..promotion.commit.len().min(7)]
+            ),
+        });
+        self.body.promotions.push(promotion);
     }
 
     pub fn write_file(
@@ -555,6 +586,17 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
             return Err(error);
         }
     }
+    // 回流：文件写完再挪分支。挪不动（分支被别人动过）时按快照还原，一个都不算写过。
+    for promotion in &body.promotions {
+        if let Err(error) = crate::library::source::Sources::finish_promote(promotion) {
+            for undo in body.actions.iter().rev() {
+                if let Some(entry) = saved.iter().find(|e| e.path == undo.path) {
+                    let _ = snapshot::restore(ctx.home, entry, ctx.secrets);
+                }
+            }
+            return Err(error);
+        }
+    }
     for entry in secret_records {
         let _ = ctx.journal.record(entry);
     }
@@ -693,6 +735,7 @@ fn record(
             .collect(),
         command: body.command.clone(),
         output: None,
+        subject: body.subject.clone(),
     }
 }
 

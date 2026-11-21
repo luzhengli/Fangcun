@@ -16,16 +16,17 @@ interface StagedState {
   clear: (root: string) => void;
 }
 
-const same = (a: ManifestEdit, b: ManifestEdit) =>
-  a.op === b.op && a.kind === b.kind && a.names.join("\n") === b.names.join("\n");
+/** 改的是哪一项：停用 / 恢复按种类和名字，升级按资产。同一项后暂存的替换先暂存的。 */
+const target = (e: ManifestEdit) =>
+  e.op === "upgrade" ? `upgrade:${e.asset}` : `${e.kind}:${e.names.join("\n")}`;
+
+const same = (a: ManifestEdit, b: ManifestEdit) => a.op === b.op && target(a) === target(b);
 
 export const useStaged = create<StagedState>((set) => ({
   edits: {},
   stage: (root, edit) =>
     set((s) => {
-      const list = (s.edits[root] ?? []).filter(
-        (e) => !(e.kind === edit.kind && e.names.join("\n") === edit.names.join("\n")),
-      );
+      const list = (s.edits[root] ?? []).filter((e) => target(e) !== target(edit));
       return { edits: { ...s.edits, [root]: [...list, edit] } };
     }),
   unstage: (root, edit) =>

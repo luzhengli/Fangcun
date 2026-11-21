@@ -882,3 +882,245 @@ fn secrets_go_to_the_personal_layer_and_never_into_plans_snapshots_or_the_journa
         undo.notes
     );
 }
+
+// ───────────── 漂移与更新（M1-15、M1-16） ─────────────
+
+/// 在上游仓库提交一版新的 tdd，推到冒充 GitHub 的裸仓库。返回新提交。
+fn push_new_tdd(f: &Fixture, text: &str, script: bool) -> String {
+    let work = f.base.join("work");
+    write(&work.join("skills/tdd/SKILL.md"), text);
+    if script {
+        write(&work.join("skills/tdd/scripts/new.sh"), "rm -rf /tmp/x\n");
+    }
+    git(&work, &["add", "-A"]);
+    git(&work, &["commit", "-q", "-m", "two"]);
+    let bare = f.base.join("github/acme/skills.git");
+    git(&work, &["push", "-q", bare.to_str().unwrap(), "main"]);
+    git(&work, &["rev-parse", "HEAD"])
+}
+
+fn claude() -> crate::model::ToolId {
+    crate::model::ToolId::from(crate::model::ToolId::CLAUDE_CODE)
+}
+
+#[test]
+fn upstream_check_finds_a_new_version_and_upgrade_settles_the_pending_record() {
+    let f = fixture("upgrade");
+    let kernel = kernel(&f);
+    lock_and_sync(&kernel, &f, &manifest("link", TDD_DECL, false));
+    assert!(kernel.check_upstream().unwrap().items.is_empty());
+
+    let new = push_new_tdd(&f, "---\nname: tdd\n---\nv2\n", true);
+    let report = kernel.check_upstream().unwrap();
+    assert_eq!(report.items.len(), 1, "{report:?}");
+    let item = &report.items[0];
+    assert_eq!(item.to, &new[..7]);
+    assert!(item.scripts, "{item:?}");
+    // 待处理一条，再查一次不重复记。
+    kernel.check_upstream().unwrap();
+    let pending = |k: &Kernel| {
+        k.log(&RecordFilter::default())
+            .unwrap()
+            .into_iter()
+            .filter(|r| r.kind == RecordKind::Updatable && r.status == RecordStatus::Pending)
+            .count()
+    };
+    assert_eq!(pending(&kernel), 1);
+    assert_eq!(kernel.status(&f.proj).unwrap().updatable.len(), 1);
+
+    kernel.rescan().unwrap();
+    let context = kernel.effective_context(&f.proj, &claude()).unwrap();
+    let tdd = context.items.iter().find(|i| i.name == "tdd").unwrap();
+    assert_eq!(tdd.label, format!("可更新 ↑ {}", &new[..7]));
+    let update = tdd.update.as_ref().unwrap();
+    assert!(update.scripts && update.files.iter().any(|f| f.path == "scripts/new.sh"));
+
+    // 从同步面板暂存升级：锁换到新版，软链指向新正本。
+    let plan = kernel
+        .plan_sync_with(
+            &f.proj,
+            &[crate::manifest::ManifestEdit::Upgrade {
+                asset: "tdd".to_owned(),
+                projects: Vec::new(),
+            }],
+        )
+        .unwrap();
+    kernel.apply(&plan).unwrap();
+    let lock = crate::manifest::Lock::load(&f.proj).unwrap().unwrap();
+    assert_eq!(lock.skills["tdd"].commit.as_deref(), Some(new.as_str()));
+    assert_eq!(
+        fs::read_to_string(f.proj.join(".agents/skills/tdd/SKILL.md")).unwrap(),
+        "---\nname: tdd\n---\nv2\n"
+    );
+    assert_eq!(pending(&kernel), 0);
+    assert!(kernel.status(&f.proj).unwrap().updatable.is_empty());
+}
+
+#[test]
+fn link_mode_drift_is_reported_discarded_and_recoverable_by_rollback() {
+    let f = fixture("drift-link");
+    let kernel = kernel(&f);
+    lock_and_sync(&kernel, &f, &manifest("link", TDD_DECL, false));
+    assert!(kernel.drifts(&f.proj).unwrap().is_empty());
+
+    // Agent 经 Claude Code 的目录改 skill：改到的是资产库正本。
+    let skill = f.proj.join(".claude/skills/tdd/SKILL.md");
+    fs::write(&skill, "---\nname: tdd\n---\nv1\n多一行\n").unwrap();
+    let found = kernel.drifts(&f.proj).unwrap();
+    assert_eq!(found.len(), 1);
+    assert!(found[0].object.is_some());
+
+    // 活动页：一条待处理，不重复记。
+    let pending = |k: &Kernel| {
+        k.log(&RecordFilter::default())
+            .unwrap()
+            .into_iter()
+            .filter(|r| r.kind == RecordKind::Drift && r.status == RecordStatus::Pending)
+            .count()
+    };
+    assert_eq!(pending(&kernel), 1);
+    assert_eq!(pending(&kernel), 1);
+
+    kernel.rescan().unwrap();
+    let context = kernel.effective_context(&f.proj, &claude()).unwrap();
+    let tdd = context.items.iter().find(|i| i.name == "tdd").unwrap();
+    assert_eq!(tdd.label, "已漂移");
+    let drift = tdd.drift.as_ref().unwrap();
+    assert!(drift.original && drift.shared);
+    assert!(drift.summary.contains("多 1 行"), "{}", drift.summary);
+    assert!(drift.promote_blocked.is_some());
+    assert!(
+        drift.files[0]
+            .lines
+            .iter()
+            .any(|l| l.kind == crate::library::diff::DiffKind::Add && l.text == "多一行")
+    );
+
+    // 丢弃：正本从来源取回原版。
+    let plan = kernel
+        .plan_drift(
+            &f.proj,
+            "tdd",
+            crate::materializer::drift::DriftChoice::Discard,
+        )
+        .unwrap();
+    let applied = kernel.apply(&plan).unwrap();
+    assert_eq!(fs::read_to_string(&skill).unwrap(), TDD);
+    assert!(kernel.drifts(&f.proj).unwrap().is_empty());
+    assert_eq!(pending(&kernel), 0);
+
+    // 丢弃的修改能靠回滚找回（6.7 回滚规则第 4 条）。
+    let undo = kernel.plan_rollback_record(&applied.record).unwrap();
+    kernel.apply(&undo).unwrap();
+    assert!(fs::read_to_string(&skill).unwrap().contains("多一行"));
+}
+
+#[test]
+fn fork_turns_a_vendored_copy_into_a_project_file() {
+    let f = fixture("drift-fork");
+    let kernel = kernel(&f);
+    lock_and_sync(&kernel, &f, &manifest("vendor", TDD_DECL, false));
+    let dir = f.proj.join(".agents/skills/tdd");
+    fs::write(dir.join("SKILL.md"), "改过的\n").unwrap();
+    let drift = kernel.drifts(&f.proj).unwrap();
+    assert_eq!(drift.len(), 1);
+    assert!(drift[0].object.is_none());
+
+    let plan = kernel
+        .plan_drift(
+            &f.proj,
+            "tdd",
+            crate::materializer::drift::DriftChoice::Fork,
+        )
+        .unwrap();
+    kernel.apply(&plan).unwrap();
+    assert_eq!(
+        fs::read_to_string(dir.join("SKILL.md")).unwrap(),
+        "改过的\n"
+    );
+    let manifest = fs::read_to_string(f.proj.join("fangcun.toml")).unwrap();
+    assert!(!manifest.contains("tdd ="), "{manifest}");
+    let lock = crate::manifest::Lock::load(&f.proj).unwrap().unwrap();
+    assert!(!lock.skills.contains_key("tdd"));
+    assert!(kernel.drifts(&f.proj).unwrap().is_empty());
+    // 之后同步不再碰它。
+    let again = kernel.plan_sync(&f.proj).unwrap();
+    assert!(
+        again.changes.iter().all(|c| !c.path.starts_with(&dir)),
+        "{:?}",
+        again.changes
+    );
+}
+
+#[test]
+fn promote_commits_to_the_local_source_and_repins_the_project() {
+    let f = fixture("drift-promote");
+    // 本地来源：一个有 git 历史的 skill 仓库。
+    let mine = f.base.join("mine");
+    write(
+        &mine.join("harness/SKILL.md"),
+        "---\nname: harness\n---\nh1\n",
+    );
+    git(&mine, &["init", "-q", "-b", "main"]);
+    // 回流的提交用来源仓库的 git 身份（CI 上没有全局的）。
+    git(&mine, &["config", "user.name", "t"]);
+    git(&mine, &["config", "user.email", "t@example.com"]);
+    git(&mine, &["add", "-A"]);
+    git(&mine, &["commit", "-q", "-m", "h1"]);
+    let first = git(&mine, &["rev-parse", "HEAD"]);
+    crate::library::source::Sources::open(&f.home)
+        .remember_local("mine", &mine)
+        .unwrap();
+    let kernel = kernel(&f);
+    let decl = format!(
+        "harness = {{ source = \"local:mine\", pin = \"{}\" }}",
+        &first[..7]
+    );
+    lock_and_sync(&kernel, &f, &manifest("link", &decl, false));
+
+    fs::write(
+        f.proj.join(".claude/skills/harness/SKILL.md"),
+        "---\nname: harness\n---\nh2\n",
+    )
+    .unwrap();
+    kernel.rescan().unwrap();
+    let context = kernel.effective_context(&f.proj, &claude()).unwrap();
+    let item = context.items.iter().find(|i| i.name == "harness").unwrap();
+    assert!(item.drift.as_ref().unwrap().promote_blocked.is_none());
+
+    let plan = kernel
+        .plan_drift(
+            &f.proj,
+            "harness",
+            crate::materializer::drift::DriftChoice::Promote,
+        )
+        .unwrap();
+    assert!(!plan.blocked, "{:?}", plan.notes);
+    // 出计划时分支还没动。
+    assert_eq!(git(&mine, &["rev-parse", "HEAD"]), first);
+    kernel.apply(&plan).unwrap();
+
+    let head = git(&mine, &["rev-parse", "HEAD"]);
+    assert_ne!(head, first);
+    assert_eq!(
+        fs::read_to_string(mine.join("harness/SKILL.md")).unwrap(),
+        "---\nname: harness\n---\nh2\n"
+    );
+    assert_eq!(git(&mine, &["status", "--porcelain"]), "");
+    let manifest = fs::read_to_string(f.proj.join("fangcun.toml")).unwrap();
+    assert!(
+        manifest.contains(&format!("pin = \"{}\"", &head[..7])),
+        "{manifest}"
+    );
+    let lock = crate::manifest::Lock::load(&f.proj).unwrap().unwrap();
+    assert_eq!(
+        lock.skills["harness"].commit.as_deref(),
+        Some(head.as_str())
+    );
+    assert!(kernel.drifts(&f.proj).unwrap().is_empty());
+    // 项目里看到的是新版，锁定 h1 的旧正本还原了。
+    assert_eq!(
+        fs::read_to_string(f.proj.join(".claude/skills/harness/SKILL.md")).unwrap(),
+        "---\nname: harness\n---\nh2\n"
+    );
+}

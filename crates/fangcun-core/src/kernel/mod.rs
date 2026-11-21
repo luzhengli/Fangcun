@@ -35,7 +35,10 @@ use crate::scanner::fsutil::display_path;
 use crate::scanner::{CheckupReport, Collected, Reach, Scan, ScanOptions};
 use crate::{Error, Result};
 
+mod drift;
 mod item_state;
+mod upstream;
+pub use upstream::{Updatable, UpstreamReport};
 mod manifest_view;
 pub use manifest_view::{ManifestFile, ManifestRow, ManifestSection, ManifestView};
 
@@ -431,6 +434,7 @@ impl Kernel {
             files,
             command: Some("fangcun doctor".to_owned()),
             output: Some(format!("{} 条发现 · 只读", report.findings.len())),
+            subject: None,
         }
     }
 
@@ -542,7 +546,7 @@ impl Kernel {
             library: 0,
             bundles: 0,
             global: u32::try_from(global.len()).unwrap_or(u32::MAX),
-            pending: self.journal.pending_count()?,
+            pending: self.pending_count()?,
         })
     }
 
@@ -606,6 +610,7 @@ impl Kernel {
             &records,
             &self.home.library_dir(),
         );
+        self.attach_drift_update(&mut context, project_root);
         Ok(context)
     }
 
@@ -626,10 +631,35 @@ impl Kernel {
 
     /// `fangcun status`。
     pub fn status(&self, project_root: &Path) -> Result<ProjectStatus> {
+        let _ = self.refresh_drift();
+        let drifted = self
+            .drifts(project_root)
+            .map(|d| d.into_iter().map(|d| d.asset).collect())
+            .unwrap_or_default();
+        let state = upstream::UpstreamState::load(&self.home).unwrap_or_default();
+        let updatable = Lock::load(project_root)
+            .ok()
+            .flatten()
+            .map(|lock| {
+                lock.skills
+                    .keys()
+                    .filter_map(|asset| {
+                        let e = state.for_project(project_root, asset)?;
+                        Some(format!(
+                            "{asset} {} → {}",
+                            crate::scanner::short_hash(
+                                e.from_commit.as_deref().unwrap_or_default()
+                            ),
+                            crate::scanner::short_hash(&e.to_commit)
+                        ))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         Ok(ProjectStatus {
             has_manifest: project_root.join(crate::paths::MANIFEST_FILE).is_file(),
-            drifted: Vec::new(),
-            updatable: Vec::new(),
+            drifted,
+            updatable,
         })
     }
 
@@ -663,8 +693,22 @@ impl Kernel {
     }
 
     /// `fangcun log`、活动页。
+    /// 活动记录。先重新检测漂移（新的记成待处理），待处理的按现状结算（6.7）。
     pub fn log(&self, filter: &RecordFilter) -> Result<Vec<Record>> {
-        self.journal.read(filter)
+        let _ = self.refresh_drift();
+        let mut records = self.journal.read(filter)?;
+        self.settle_pending(&mut records);
+        Ok(records)
+    }
+
+    /// 侧栏「活动」旁的待处理数，不受筛选影响（6.7）。
+    fn pending_count(&self) -> Result<u32> {
+        let records = self.log(&RecordFilter::default())?;
+        let n = records
+            .iter()
+            .filter(|r| r.status == crate::journal::RecordStatus::Pending)
+            .count();
+        Ok(u32::try_from(n).unwrap_or(u32::MAX))
     }
 
     /// 体检报告的一键动作（6.2、M1-26）：按发现的编号分派到对应的写入用例。
@@ -742,6 +786,7 @@ impl Kernel {
             } else {
                 format!("{} 处不一致", mismatches.len())
             }),
+            subject: None,
         };
         let _ = self.journal.record(record);
         if ok {
@@ -1200,7 +1245,7 @@ impl Kernel {
         edits: &[crate::manifest::ManifestEdit],
     ) -> Result<ChangePlan> {
         self.require_write("sync")?;
-        let (mut project, lock) = self.manifest_and_lock(project_root)?;
+        let (mut project, mut lock) = self.manifest_and_lock(project_root)?;
         let library = Library::open(&self.home)?;
         let sources = self.sources();
         let mut builder = PlanBuilder::new(
@@ -1209,6 +1254,15 @@ impl Kernel {
             SnapshotScope::Project(project_root.to_path_buf()),
         )
         .command("fangcun sync");
+        let upgrades: Vec<(&String, &Vec<ProjectId>)> = edits
+            .iter()
+            .filter_map(|e| match e {
+                crate::manifest::ManifestEdit::Upgrade { asset, projects } => {
+                    Some((asset, projects))
+                }
+                _ => None,
+            })
+            .collect();
         if !edits.is_empty() {
             let file = project_root.join(crate::paths::MANIFEST_FILE);
             let text = std::fs::read_to_string(&file).map_err(|source| Error::Io {
@@ -1216,7 +1270,24 @@ impl Kernel {
                 source,
             })?;
             let origin = crate::paths::MANIFEST_FILE;
-            let edited = crate::manifest::apply_edits(origin, &text, edits)?;
+            let mut edited = crate::manifest::apply_edits(origin, &text, edits)?;
+            // 升级（6.3「可更新」）：pin 的项改清单，锁换到上游那一版。
+            let assets: Vec<String> = upgrades.iter().map(|(a, _)| (*a).clone()).collect();
+            let rows = self.apply_upgrades(
+                &mut builder,
+                project_root,
+                &project,
+                &mut edited,
+                &mut lock,
+                &assets,
+            )?;
+            if !rows.is_empty() {
+                builder.write_file(
+                    &project_root.join(crate::paths::LOCK_FILE),
+                    lock.to_toml()?.into_bytes(),
+                    format!("升级 {}", rows.join("、")),
+                )?;
+            }
             if edited != text {
                 project.manifest = crate::manifest::parse_manifest(origin, &edited)?;
                 let detail = edits
@@ -1227,29 +1298,52 @@ impl Kernel {
                 builder.write_file(&file, edited.into_bytes(), detail)?;
             }
         }
-        let visible = self.visible_names(project_root, &project.manifest.project.targets);
+        self.sync_into(&mut builder, &project, &lock, &library, &sources, &[])?;
+        // 一起升级的其他项目：各自的清单、锁、同步，各留一个快照。
+        let wanted = crate::scanner::fsutil::canonical(project_root);
+        for (asset, others) in &upgrades {
+            for other in *others {
+                let root = PathBuf::from(&other.0);
+                if crate::scanner::fsutil::canonical(&root) == wanted {
+                    continue;
+                }
+                self.upgrade_into(&mut builder, &root, &[(*asset).clone()], &library, &sources)?;
+            }
+        }
+        if let [(asset, _)] = upgrades.as_slice() {
+            builder.subject((*asset).clone(), None);
+        }
+        Ok(self.issue(builder))
+    }
+
+    /// 按（可能改过的）清单与锁把同步填进计划。漂移处理、升级也用它（M1-15、M1-16）。
+    pub(crate) fn sync_into(
+        &self,
+        builder: &mut PlanBuilder,
+        project: &crate::manifest::Project,
+        lock: &Lock,
+        library: &Library,
+        sources: &Sources,
+        forked: &[String],
+    ) -> Result<()> {
+        let root = project.root.as_path();
+        let visible = self.visible_names(root, &project.manifest.project.targets);
         crate::materializer::sync::plan(
             &crate::materializer::sync::SyncInput {
-                root: project_root,
+                root,
                 visible: &visible,
                 home: &self.home,
                 user_home: &self.user_home,
                 adapters: &self.adapters,
-                project: &project,
-                lock: &lock,
-                library: &library,
-                sources: &sources,
+                project,
+                lock,
+                library,
+                sources,
                 secrets: self.secrets.as_ref(),
+                forked,
             },
-            &mut builder,
-        )?;
-        Ok(self.issue(builder))
-    }
-
-    /// `fangcun update [资产]`。`asset` 为空表示全部；`projects` 为空表示当前项目。
-    pub fn plan_update(&self, _asset: Option<&str>, _projects: &[ProjectId]) -> Result<ChangePlan> {
-        self.require_write("update")?;
-        Err(Error::NotImplemented("Kernel::plan_update"))
+            builder,
+        )
     }
 
     /// `fangcun rollback <快照>`：把项目回滚到快照 #N，也就是撤销留下快照 #N+1 的那条记录
