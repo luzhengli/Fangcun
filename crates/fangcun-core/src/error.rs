@@ -63,6 +63,10 @@ pub enum Error {
 
     #[error("解析 {origin} 失败：{message}")]
     Parse { origin: String, message: String },
+
+    /// 钥匙串出错（F6、M1-17）。信息里只有名称，从不带值。
+    #[error("{0}")]
+    Secret(String),
 }
 
 impl Error {
@@ -83,6 +87,7 @@ impl Error {
             Error::NoHomeDir => "no-home-dir",
             Error::Io { .. } => "io",
             Error::Parse { .. } => "parse",
+            Error::Secret(_) => "secret",
         }
     }
 }

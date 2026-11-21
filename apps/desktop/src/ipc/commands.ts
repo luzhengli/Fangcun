@@ -11,6 +11,8 @@ import type { EffectiveContext } from "./bindings/EffectiveContext";
 import type { Explanation } from "./bindings/Explanation";
 import type { GlobalOverview } from "./bindings/GlobalOverview";
 import type { HistoryEntry } from "./bindings/HistoryEntry";
+import type { ManifestEdit } from "./bindings/ManifestEdit";
+import type { ManifestView } from "./bindings/ManifestView";
 import type { ModeSuggestion } from "./bindings/ModeSuggestion";
 import type { Overview } from "./bindings/Overview";
 import type { ProjectSummary } from "./bindings/ProjectSummary";
@@ -37,7 +39,7 @@ export interface Commands {
   why: (args: { projectRoot: string | null; asset: string }) => Explanation[];
   global_overview: (args: { tool: ToolId }) => GlobalOverview;
   activity: (args: { filter: RecordFilter }) => ActivityRecord[];
-  plan_sync: (args: { projectRoot: string }) => ChangePlan;
+  plan_sync: (args: { projectRoot: string; edits: ManifestEdit[] }) => ChangePlan;
   suggest_mode: (args: { projectRoot: string }) => ModeSuggestion;
   plan_init: (args: { projectRoot: string; mode: SyncMode }) => ChangePlan;
   plan_adopt: (args: { asset: string }) => ChangePlan;
@@ -48,6 +50,7 @@ export interface Commands {
   settings: () => SettingsForm;
   save_settings: (args: { form: SettingsForm }) => SettingsForm;
   history: (args: { projectRoot: string }) => HistoryEntry[];
+  manifest_view: (args: { projectRoot: string }) => ManifestView | null;
   plan_finding: (args: { findingId: string }) => ChangePlan;
 }
 
@@ -62,7 +65,8 @@ export const kernel = {
   why: (projectRoot: string | null, asset: string) => call("why", { projectRoot, asset }),
   globalOverview: (tool: ToolId) => call("global_overview", { tool }),
   activity: (filter: RecordFilter) => call("activity", { filter }),
-  planSync: (projectRoot: string) => call("plan_sync", { projectRoot }),
+  planSync: (projectRoot: string, edits: ManifestEdit[] = []) =>
+    call("plan_sync", { projectRoot, edits }),
   suggestMode: (projectRoot: string) => call("suggest_mode", { projectRoot }),
   planInit: (projectRoot: string, mode: SyncMode) => call("plan_init", { projectRoot, mode }),
   planAdopt: (asset: string) => call("plan_adopt", { asset }),
@@ -74,5 +78,6 @@ export const kernel = {
   settings: () => call("settings"),
   saveSettings: (form: SettingsForm) => call("save_settings", { form }),
   history: (projectRoot: string) => call("history", { projectRoot }),
+  manifestView: (projectRoot: string) => call("manifest_view", { projectRoot }),
   planFinding: (findingId: string) => call("plan_finding", { findingId }),
 };

@@ -23,7 +23,9 @@ follows-symlinks = true
 # mcp 文档：项目层是项目根目录的 .mcp.json。
 project-mcp = true
 # skills 文档：项目的 .claude/settings.json（个人用 settings.local.json）里 skillOverrides 把某个 skill 设 "off"，
-# 名称与描述都不进上下文。只按名字匹配，同名的项目 skill 会不会一起关掉，文档没说，M1-02 实测。
+# 名称与描述都不进上下文。只按名字匹配：2026-11-21 实测（H-11，claude 2.1.329），全局与项目同名时
+# 项目 settings.json 设 off，两份一起消失，项目那份不会顶上来。
+# 开关的位置见下面「skill 开关」「MCP 开关」。
 per-project-disable = true
 
 # ── Skills ──
@@ -97,6 +99,9 @@ command = "command"
 args = "args"
 env = "env"
 url = "url"
+# mcp 文档（2026-11-21 核实）：command、args、env、url、headers 里可以写 ${VAR} 或 ${VAR:-default}，
+# 变量没设又没有默认值时照原样传。用了 secret: 的服务，.mcp.json 的 env 写成 ${变量名}（M1-17）。
+env-reference = { prefix = "${", suffix = "}" }
 
 [precedence]
 # skills 文档：「Enterprise over personal, and personal over project」。全局盖过项目。
@@ -158,6 +163,47 @@ dir = "~/.claude/agents"
 kind = "subagent"
 scope = "project"
 dir = ".claude/agents"
+
+# ── skill 开关 ──
+# skills 文档（2026-11-21 核实）：skillOverrides 可以写在任何设置文件里，值是 on、name-only、
+# user-invocable-only、off；用户、项目、本地设置里只按名字匹配，不在表里的算 on。
+# off 和 user-invocable-only 都不让 Claude 看到，按不进上下文算。按项目停用（7.4）写 off。
+
+[[skill-switches]]
+scope = "global"
+file = "~/.claude/settings.json"
+format = "json"
+key = ["skillOverrides"]
+shape = "map"
+off-values = ["off", "user-invocable-only"]
+
+[[skill-switches]]
+scope = "project"
+file = ".claude/settings.json"
+format = "json"
+key = ["skillOverrides"]
+shape = "map"
+off-values = ["off", "user-invocable-only"]
+
+[[skill-switches]]
+scope = "personal"
+file = ".claude/settings.local.json"
+format = "json"
+key = ["skillOverrides"]
+shape = "map"
+off-values = ["off", "user-invocable-only"]
+
+# ── MCP 开关 ──
+# mcp 文档（2026-11-21 核实）：/mcp 里的开关按项目记在 ~/.claude.json 的 disabledMcpServers，
+# 管用户层、本地层的服务；项目 .mcp.json 里的服务另用 disabledMcpjsonServers，这里不写。
+# 能提交的按项目开关文档里没有，按项目停用全局 MCP 写这里，只在本机生效（9.3）。
+
+[[mcp-switches]]
+scope = "personal"
+file = "~/.claude.json"
+format = "json"
+key = ["projects", "{project}", "disabledMcpServers"]
+applies-to = ["global", "personal"]
 
 # ── 会话记录 ──
 

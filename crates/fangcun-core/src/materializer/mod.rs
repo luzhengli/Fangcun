@@ -93,6 +93,72 @@ pub(crate) struct PlanBody {
     /// 回滚计划撤销的是哪条记录。
     pub reverts: Option<String>,
     pub actions: Vec<Action>,
+    /// 要存进钥匙串的密钥（M1-17：登记时把明文迁进去）。应用时先存，各记一条密钥记录。
+    pub secrets: Vec<SecretWrite>,
+}
+
+/// 一个要存进钥匙串的密钥。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SecretWrite {
+    pub name: String,
+    pub value: crate::secrets::SecretValue,
+}
+
+/// 钥匙串里一个条目在计划和记录里的写法，例如「钥匙串 · fangcun / github-token」。
+pub fn keychain_label(name: &str) -> String {
+    format!("钥匙串 · {} / {name}", crate::secrets::KEYCHAIN_SERVICE)
+}
+
+/// 密钥的操作：存入、替换、删除（9.3）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecretOp {
+    Store,
+    Replace,
+    Delete,
+}
+
+/// 一条密钥记录。只记名称和位置，从不记值，不能回滚（9.3）。
+pub(crate) fn secret_record(
+    op: SecretOp,
+    name: &str,
+    title: String,
+    project: Option<&Path>,
+    trigger: Trigger,
+) -> Record {
+    let at = Timestamp::now();
+    let (file_op, note) = match op {
+        SecretOp::Store => (FileOp::Add, "存入 · 值不记录"),
+        SecretOp::Replace => (FileOp::Modify, "替换 · 值不记录"),
+        SecretOp::Delete => (FileOp::Remove, "删除"),
+    };
+    let command = match op {
+        SecretOp::Delete => format!("fangcun secret rm {name}"),
+        _ => format!("fangcun secret set {name}"),
+    };
+    // 同一秒里对同一个密钥做几次操作（存入再替换）时编号也不重。
+    static SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    Record {
+        id: format!("secret-{}-{}-{seq}-{name}", at.0, std::process::id()),
+        at,
+        kind: RecordKind::Secret,
+        title,
+        project: project.map(|p| ProjectId(p.to_string_lossy().into_owned())),
+        project_label: project.map_or_else(|| "本机".to_owned(), crate::scanner::project_name),
+        trigger,
+        snapshot: None,
+        snapshots: Vec::new(),
+        reverts: None,
+        status: RecordStatus::Applied,
+        summary: "只记名称和位置，不记值。钥匙串条目不留快照，不能回滚".to_owned(),
+        files: vec![RecordFile {
+            op: file_op,
+            path: keychain_label(name),
+            note: Some(note.to_owned()),
+        }],
+        command: Some(command),
+        output: None,
+    }
 }
 
 /// 一个路径从什么样变成什么样。
@@ -179,6 +245,7 @@ impl PlanBuilder {
                 command: None,
                 reverts: None,
                 actions: Vec::new(),
+                secrets: Vec::new(),
             },
             changes: Vec::new(),
             notes: Vec::new(),
@@ -269,6 +336,19 @@ impl PlanBuilder {
 
     pub fn symlink(&mut self, path: &Path, target: &Path, detail: impl Into<String>) -> Result<()> {
         self.push(path, After::Symlink(target.to_path_buf()), detail.into())
+    }
+
+    /// 应用时把一个密钥存进钥匙串（登记时迁移明文）。计划里列一行，值不列。
+    pub fn store_secret(&mut self, name: &str, value: crate::secrets::SecretValue) {
+        self.changes.push(Change {
+            op: ChangeOp::Add,
+            path: PathBuf::from(keychain_label(name)),
+            detail: "存入 · 值不记录".to_owned(),
+        });
+        self.body.secrets.push(SecretWrite {
+            name: name.to_owned(),
+            value,
+        });
     }
 
     /// 删一个文件、软链或空目录。删整棵目录树时，由调用方先逐个删里面的。
@@ -373,9 +453,11 @@ pub struct Applied {
 /// 应用时要用到的内核状态。
 pub(crate) struct ApplyContext<'a> {
     pub home: &'a FangcunHome,
+    pub user_home: &'a Path,
     pub scope: &'a WriteScope,
     pub journal: &'a Journal,
     pub trigger: Trigger,
+    pub secrets: &'a dyn crate::secrets::SecretStore,
 }
 
 /// 应用计划：查范围、核对磁盘、留快照、写入、记活动。
@@ -427,34 +509,62 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
         }
     }
 
-    // 3. 快照：每个范围一个。
+    // 3. 快照：每个范围一个。方寸写在个人层的明文换成占位（规则 9）。
+    let all: Vec<&Path> = body.actions.iter().map(|a| a.path.as_path()).collect();
+    let redactions = ledger::redactions(ctx.home, ctx.user_home, &all);
     let mut snapshots = Vec::new();
     let mut saved = Vec::new();
     for (group, actions) in &groups {
         let paths: Vec<&Path> = actions.iter().map(|a| a.path.as_path()).collect();
-        let id = snapshot::capture(ctx.home, group, &plan.title, &paths)?;
+        let id = snapshot::capture(ctx.home, group, &plan.title, &paths, &redactions)?;
         saved.extend(snapshot::load(ctx.home, group, id)?.entries);
         snapshots.push((group.clone(), id));
     }
 
-    // 4. 写入。出错时倒着还原已经动过的。
+    // 4. 钥匙串：先存密钥。钥匙串条目不留快照、不回滚（9.3），存不进去时一个文件都不写。
+    let mut secret_records = Vec::new();
+    for write in &body.secrets {
+        let existed = ctx.secrets.get(&write.name)?;
+        if existed.as_ref() == Some(&write.value) {
+            continue;
+        }
+        ctx.secrets.set(&write.name, &write.value)?;
+        let (op, title) = if existed.is_some() {
+            (SecretOp::Replace, format!("替换钥匙串里的 {}", write.name))
+        } else {
+            (SecretOp::Store, format!("{} 迁入钥匙串", write.name))
+        };
+        let project = match &body.primary {
+            SnapshotScope::Project(root) => Some(root.as_path()),
+            SnapshotScope::Global => None,
+        };
+        secret_records.push(secret_record(op, &write.name, title, project, ctx.trigger));
+    }
+
+    // 5. 写入。出错时倒着还原已经动过的。
     for (done, action) in body.actions.iter().enumerate() {
         if let Err(error) = execute(action) {
             for undo in body.actions[..=done].iter().rev() {
                 if let Some(entry) = saved.iter().find(|e| e.path == undo.path) {
-                    let _ = snapshot::restore(ctx.home, entry);
+                    let _ = snapshot::restore(ctx.home, entry, ctx.secrets);
                 }
+            }
+            for entry in secret_records {
+                let _ = ctx.journal.record(entry);
             }
             return Err(error);
         }
     }
+    for entry in secret_records {
+        let _ = ctx.journal.record(entry);
+    }
 
-    // 5. 把写入后的样子补进快照：回滚时据此判断后来有没有别的变更动过（6.7 回滚规则第 6 条）。
+    // 6. 把写入后的样子补进快照：回滚时据此判断后来有没有别的变更动过（6.7 回滚规则第 6 条）。
     for (group, id) in &snapshots {
         let _ = snapshot::record_after(ctx.home, group, *id);
     }
 
-    // 6. 活动记录。写不进去时留在内存里，文件已经写了，不算失败。
+    // 7. 活动记录。写不进去时留在内存里，文件已经写了，不算失败。
     let entry = record(plan, body, &snapshots, ctx.trigger);
     let record_id = entry.id.clone();
     let _ = ctx.journal.record(entry);

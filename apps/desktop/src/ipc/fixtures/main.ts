@@ -4,7 +4,9 @@
 import type { Declaration } from "../bindings/Declaration";
 import type { EffectiveContext } from "../bindings/EffectiveContext";
 import type { EffectiveItem } from "../bindings/EffectiveItem";
+import type { ItemActivity } from "../bindings/ItemActivity";
 import type { ProjectSummary } from "../bindings/ProjectSummary";
+import type { RecordKind } from "../bindings/RecordKind";
 import type { Scope } from "../bindings/Scope";
 
 /** 侧栏六个项目。Main.dc.html 的 PROJ；路径原型只给了 evals_studio 的，其余按同一目录写。 */
@@ -28,6 +30,23 @@ export const projects: ProjectSummary[] = [
 }));
 
 const SCOPES: Scope[] = ["global", "bundle", "project", "personal"];
+
+/**
+ * 检查器「最近活动」的一行。Main.dc.html 的 ACT：「11-10」写成那天的本地时间，「5 分钟前」按现在算。
+ * 记录编号能对上活动页示例数据（Activity.dc.html 的 EV）的用那条，对不上的活动页选中第一条。
+ */
+function act(
+  when: string,
+  text: string,
+  kind: RecordKind,
+  record = `main-${when}-${text}`,
+): ItemActivity {
+  const at =
+    when === "5 分钟前"
+      ? new Date(Date.now() - 5 * 60_000).toISOString()
+      : new Date(`2026-${when}T12:00:00`).toISOString();
+  return { record, at, kind, text };
+}
 
 /** STK：四层各一句，「生效」那层标绿。 */
 function stack(values: [string, string, string, string]): Declaration[] {
@@ -57,7 +76,10 @@ function item(
     reason: "",
     triggers: null,
     files: [],
+    secrets: [],
+    recent: [],
     overriddenBy: null,
+    disable: null,
     ...x,
   };
 }
@@ -65,6 +87,10 @@ function item(
 const R = {
   agents: item({
     id: "agents",
+    recent: [
+      act("11-13", "同步 · 内容未变", "sync", "e127"),
+      act("11-01", "正本更新到 5e2a7c1", "sync"),
+    ],
     name: "AGENTS.md",
     kind: "instruction",
     scope: "project",
@@ -77,6 +103,7 @@ const R = {
   }),
   claude: item({
     id: "claude",
+    recent: [act("11-10", "由方寸生成镜像", "sync")],
     name: "CLAUDE.md",
     kind: "instruction",
     scope: "project",
@@ -90,6 +117,11 @@ const R = {
   }),
   harness: item({
     id: "harness",
+    recent: [
+      act("5 分钟前", "检测到漂移 · 多 3 行、少 1 行", "drift", "drift1"),
+      act("11-11", "收编进资产库", "adopt"),
+      act("07-02", "固定到 4d9b1eb", "sync"),
+    ],
     name: "project-harness",
     kind: "skill",
     scope: "project",
@@ -109,6 +141,10 @@ const R = {
   }),
   tdd: item({
     id: "tdd",
+    recent: [
+      act("11-12", "上游新提交 b7e9f0", "updatable"),
+      act("10-28", "升级到 a1b2c3", "upgrade"),
+    ],
     name: "tdd",
     kind: "skill",
     scope: "bundle",
@@ -127,6 +163,10 @@ const R = {
   }),
   fedp: item({
     id: "fedp",
+    recent: [
+      act("11-12", "升级 v1.1.0 → v1.3.0", "upgrade"),
+      act("11-12", "全局层有同名 v1.1.0，Claude Code 仍加载全局那一份", "sync", "g1"),
+    ],
     name: "frontend-design",
     kind: "skill",
     scope: "project",
@@ -148,6 +188,7 @@ const R = {
   }),
   lark: item({
     id: "lark",
+    recent: [act("07-05", "装入全局", "sync")],
     name: "lark-doc …等 16 项",
     kind: "skill",
     scope: "global",
@@ -157,6 +198,8 @@ const R = {
     source: "~/.agents/skills",
     triggers: 0,
     members: ["lark-doc"],
+    // 原型的「在本项目停用」：清单写 7.4 示例里的 lark-*。
+    disable: { names: ["lark-*"], active: false, idle: true, unsupported: null, note: null },
     declared: stack(["生效 · 16 项", "", "", ""]),
     files: ["~/.claude/skills/lark-*（16 个链接，全局）"],
     reason:
@@ -164,6 +207,7 @@ const R = {
   }),
   prrev: item({
     id: "prrev",
+    recent: [act("11-11", "体检发现 · 来源未知", "checkup", "chk1")],
     name: "pr-review",
     kind: "skill",
     scope: "global",
@@ -178,6 +222,10 @@ const R = {
   }),
   fedg: item({
     id: "fedg",
+    recent: [
+      act("11-12", "项目层同名项升级到 v1.3.0，这一份仍生效", "upgrade"),
+      act("09-20", "装入全局", "sync"),
+    ],
     name: "frontend-design",
     kind: "skill",
     scope: "global",
@@ -192,6 +240,11 @@ const R = {
   }),
   github: item({
     id: "github",
+    secrets: ["GITHUB_TOKEN → 钥匙串"],
+    recent: [
+      act("11-10", "密钥迁入钥匙串", "secret", "k1"),
+      act("11-10", "写入 .mcp.json", "sync"),
+    ],
     name: "github",
     kind: "mcp",
     scope: "project",
@@ -210,6 +263,7 @@ const R = {
 /** Codex 不读 Claude Code 的全局目录，没有同名项，项目层的 frontend-design 照常生效。 */
 const fedpCodex = item({
   id: "fedp",
+  recent: [act("11-12", "升级 v1.1.0 → v1.3.0", "upgrade")],
   name: "frontend-design",
   kind: "skill",
   scope: "project",

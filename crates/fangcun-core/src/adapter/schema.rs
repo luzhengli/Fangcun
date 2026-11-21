@@ -45,13 +45,22 @@ pub struct Adapter {
     /// 路径里的变量：`$名称/…` 先取同名环境变量，没有就用这里的默认值。例如 `CODEX_HOME`。
     #[serde(default)]
     pub path_vars: std::collections::BTreeMap<String, String>,
-    /// 配置里按名称或路径停用 skill 的开关，例如 Codex 的 `[[skills.config]]`。
+    /// 配置里按名称或路径停用 skill 的开关，例如 Codex 的 `[[skills.config]]`、
+    /// Claude Code 的 `skillOverrides`。按项目停用（7.4）写的也是这里。
     #[serde(default)]
     pub skill_switches: Vec<SkillSwitches>,
+    /// 配置里按名字停用 MCP 服务的列表，例如 Claude Code `~/.claude.json` 按项目的
+    /// `disabledMcpServers`。没有这种列表、但服务表里有停用字段的工具（Codex），按项目停用写那个字段。
+    #[serde(default)]
+    pub mcp_switches: Vec<McpSwitches>,
 }
 
-/// 一份配置里的 skill 开关表：数组里每一项按 `path`（SKILL.md 的绝对路径）或 `name` 匹配，
-/// 带一个布尔开关。多项匹配时后面的赢。
+/// 一份配置里的 skill 开关。多项匹配时后面的赢。
+///
+/// - `list`：键下是数组，每一项按 `path-field`（SKILL.md 的绝对路径）或 `name-field` 匹配，
+///   `enabled-field` 为 `false` 时停用。例如 Codex 的 `[[skills.config]]`。
+/// - `map`：键下是对象，名字到值；值是 `off-values` 之一时停用，第一个是写入时用的值。
+///   例如 Claude Code 的 `skillOverrides`。
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SkillSwitches {
@@ -59,10 +68,34 @@ pub struct SkillSwitches {
     pub file: String,
     pub format: FileFormat,
     pub key: Vec<String>,
-    pub path_field: String,
-    pub name_field: String,
-    pub enabled_field: String,
+    #[serde(default)]
+    pub shape: SwitchShape,
+    pub path_field: Option<String>,
+    pub name_field: Option<String>,
+    pub enabled_field: Option<String>,
+    #[serde(default)]
+    pub off_values: Vec<String>,
     pub requires: Option<Requirement>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SwitchShape {
+    #[default]
+    List,
+    Map,
+}
+
+/// 一份配置里按名字停用 MCP 服务的字符串数组。键路径里的 `{project}` 换成项目根目录。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct McpSwitches {
+    pub scope: Scope,
+    pub file: String,
+    pub format: FileFormat,
+    pub key: Vec<String>,
+    /// 管哪几层的服务。例如 Claude Code 的这张表不管项目 `.mcp.json` 里的。
+    pub applies_to: Vec<Scope>,
 }
 
 /// 另一份配置里的一个字符串数组，例如 Codex 的 `project_doc_fallback_filenames`。
@@ -250,6 +283,24 @@ pub struct McpFields {
     pub url: String,
     /// 停用开关的字段名，值为 `false` 时不加载。没有这个开关的工具不写。
     pub enabled: Option<String>,
+    /// 提交进仓库的配置怎么在 `env` 里引用环境变量（M1-17），例如 Claude Code 的 `${NAME}`。
+    pub env_reference: Option<EnvReference>,
+    /// 没有 `env-reference` 的工具：按名字从启动它的环境里转发变量的列表字段，例如 Codex 的 `env_vars`。
+    pub env_forward: Option<String>,
+}
+
+/// `env` 的值写成「前缀 + 变量名 + 后缀」，例如 `${` `GITHUB_TOKEN` `}`。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct EnvReference {
+    pub prefix: String,
+    pub suffix: String,
+}
+
+impl EnvReference {
+    pub fn render(&self, var: &str) -> String {
+        format!("{}{var}{}", self.prefix, self.suffix)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Deserialize)]

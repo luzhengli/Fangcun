@@ -97,6 +97,29 @@ pub enum Command {
         #[arg(long)]
         global: bool,
     },
+
+    /// 管理钥匙串里的密钥（F6）。值只在终端里输入，不回显、不记录
+    Secret {
+        #[command(subcommand)]
+        action: SecretAction,
+    },
+}
+
+/// `fangcun secret` 的三个动作。
+#[derive(Debug, Subcommand)]
+pub enum SecretAction {
+    /// 存入或替换。终端里输入，不回显；不在终端里时从标准输入读一行
+    Set {
+        /// 名称，即清单里 secret:<名称> 的那个
+        name: String,
+    },
+    /// 删除
+    Rm {
+        /// 名称
+        name: String,
+    },
+    /// 列出已登记项目引用的密钥和钥匙串里存着的，不显示值
+    Ls,
 }
 
 /// `fangcun export` 能导出的格式。
@@ -116,7 +139,7 @@ mod tests {
         Cli::command().debug_assert();
     }
 
-    /// 设计文档第 5 节列出的十二个命令，顺序一致。
+    /// 设计文档第 5 节列出的十三个命令，顺序一致。
     #[test]
     fn subcommands_match_the_design_doc() {
         let names: Vec<String> = Cli::command()
@@ -127,7 +150,7 @@ mod tests {
             names,
             [
                 "doctor", "init", "status", "add", "adopt", "lock", "export", "sync", "update",
-                "rollback", "log", "why"
+                "rollback", "log", "why", "secret"
             ]
         );
     }
@@ -150,6 +173,9 @@ mod tests {
             "fangcun log",
             "fangcun why tdd",
             "fangcun why lark-doc --global",
+            "fangcun secret set github-token",
+            "fangcun secret rm github-token",
+            "fangcun secret ls",
         ] {
             Cli::try_parse_from(line.split_whitespace())
                 .unwrap_or_else(|e| panic!("`{line}` 应能解析：{e}"));

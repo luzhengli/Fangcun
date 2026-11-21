@@ -76,6 +76,77 @@ pub struct Entry {
     /// 写入后的样子。文件只记哈希和权限，内容不另存。旧快照没有这一项。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub after: Option<Saved>,
+    /// 文件里有方寸写的明文密钥时，存的是换成占位的那一份（规则 9），还原时从钥匙串取回。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub redacted: Option<Redacted>,
+}
+
+/// 存进快照前换掉了明文的文件：存在哪个对象里、换掉了哪些密钥。`hash` 仍是原文的哈希。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Redacted {
+    pub object: String,
+    pub secrets: Vec<String>,
+}
+
+/// 一个密钥的明文和名称：存快照时把明文换成 [`crate::secrets::marker`]。
+pub type Redaction = (String, crate::secrets::SecretValue);
+
+/// 把明文换成占位。返回换掉的密钥名称。短于 8 个字符的值不换，免得误伤普通文本。
+fn redact(bytes: &[u8], redactions: &[Redaction]) -> (Vec<u8>, Vec<String>) {
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return (bytes.to_vec(), Vec::new());
+    };
+    let mut text = text.to_owned();
+    let mut names = Vec::new();
+    for (name, value) in redactions {
+        let plain = value.expose();
+        if plain.len() < 8 {
+            continue;
+        }
+        let escaped = serde_json::to_string(plain).unwrap_or_default();
+        let escaped = escaped.trim_matches('"');
+        let mut hit = false;
+        for form in [plain, escaped] {
+            if text.contains(form) {
+                text = text.replace(form, &crate::secrets::marker(name));
+                hit = true;
+            }
+        }
+        if hit && !names.contains(name) {
+            names.push(name.clone());
+        }
+    }
+    (text.into_bytes(), names)
+}
+
+/// 快照里一个文件写入前的内容。换过明文的从钥匙串取回；钥匙串里没有时报错。
+pub fn content(
+    home: &FangcunHome,
+    entry: &Entry,
+    secrets: &dyn crate::secrets::SecretStore,
+) -> Result<Vec<u8>> {
+    let Saved::File { hash, .. } = &entry.state else {
+        return Ok(Vec::new());
+    };
+    let Some(redacted) = &entry.redacted else {
+        return object(home, hash);
+    };
+    let bytes = object(home, &redacted.object)?;
+    let mut text = String::from_utf8(bytes).map_err(|_| Error::Parse {
+        origin: entry.path.display().to_string(),
+        message: "快照不是文本".to_owned(),
+    })?;
+    for name in &redacted.secrets {
+        let value = secrets.get(name)?.ok_or_else(|| {
+            Error::Blocked(format!(
+                "钥匙串里没有 {name}，{} 还原不了。先运行 fangcun secret set {name}",
+                entry.path.display()
+            ))
+        })?;
+        text = text.replace(&crate::secrets::marker(name), value.expose());
+    }
+    Ok(text.into_bytes())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -93,11 +164,13 @@ pub fn capture(
     scope: &SnapshotScope,
     title: &str,
     paths: &[&Path],
+    redactions: &[Redaction],
 ) -> Result<SnapshotId> {
     let scope = &scope.normalized();
     let objects = home.snapshots_dir().join("objects");
     let mut entries = Vec::new();
     for path in paths {
+        let mut redacted = None;
         let state = match State::read(path)? {
             State::Absent => Saved::Absent,
             State::Dir => Saved::Dir,
@@ -105,9 +178,20 @@ pub fn capture(
             State::File(_) => {
                 let bytes = fs::read(path).map_err(io(path))?;
                 let hash = sha256_hex(&bytes);
-                let object = objects.join(&hash);
+                let (stored, names) = redact(&bytes, redactions);
+                let name = if names.is_empty() {
+                    hash.clone()
+                } else {
+                    let name = sha256_hex(&stored);
+                    redacted = Some(Redacted {
+                        object: name.clone(),
+                        secrets: names,
+                    });
+                    name
+                };
+                let object = objects.join(&name);
                 if !object.exists() {
-                    write_new(&objects, &object, &bytes)?;
+                    write_new(&objects, &object, &stored)?;
                 }
                 Saved::File {
                     hash,
@@ -119,6 +203,7 @@ pub fn capture(
             path: path.to_path_buf(),
             state,
             after: None,
+            redacted,
         });
     }
 
@@ -244,7 +329,9 @@ pub fn prune(home: &FangcunHome, days: u32, keep: usize) -> Result<usize> {
                 continue;
             }
             for entry in &snapshot.entries {
-                if let Saved::File { hash, .. } = &entry.state {
+                if let Some(redacted) = &entry.redacted {
+                    referenced.insert(redacted.object.clone());
+                } else if let Saved::File { hash, .. } = &entry.state {
                     referenced.insert(hash.clone());
                 }
             }
@@ -270,7 +357,11 @@ pub fn object(home: &FangcunHome, hash: &str) -> Result<Vec<u8>> {
 
 /// 把一个路径还原成快照里的样子。只在应用到一半失败时用：这时路径上要是一个目录，
 /// 就是这次计划刚建的（里面的文件是推出来的路径，没有单独的快照），整个删掉。
-pub fn restore(home: &FangcunHome, entry: &Entry) -> Result<()> {
+pub fn restore(
+    home: &FangcunHome,
+    entry: &Entry,
+    secrets: &dyn crate::secrets::SecretStore,
+) -> Result<()> {
     let path = &entry.path;
     if !matches!(entry.state, Saved::Dir) && State::read(path)? == State::Dir {
         fs::remove_dir_all(path).map_err(io(path))?;
@@ -287,9 +378,8 @@ pub fn restore(home: &FangcunHome, entry: &Entry) -> Result<()> {
             remove(path)?;
             symlink(target, path)
         }
-        Saved::File { hash, mode } => {
-            let bytes =
-                fs::read(home.snapshots_dir().join("objects").join(hash)).map_err(io(path))?;
+        Saved::File { mode, .. } => {
+            let bytes = content(home, entry, secrets)?;
             if matches!(State::read(path)?, State::Dir | State::Symlink(_)) {
                 remove(path)?;
             }

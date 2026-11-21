@@ -97,10 +97,119 @@ pub struct EffectiveItem {
     pub reason: String,
     /// 近 30 天在本项目被触发的次数。指令文件不统计，为空。
     pub triggers: Option<u32>,
-    /// 写入了哪些文件：这里是工具实际读的文件。
+    /// 写入了哪些文件（6.3 检查器第 5 条）：方寸实际物化的路径与软链指向、按键合并的配置项，
+    /// 从台账取。方寸没写过的为空。
     pub files: Vec<String>,
+    /// 用到的密钥，例如「GITHUB_TOKEN → 钥匙串 github-token」。只有名称，没有值。
+    pub secrets: Vec<String>,
+    /// 最近活动（6.3 检查器第 6 条）：这一项的时间线，从活动记录按资产取，新的在前。
+    pub recent: Vec<ItemActivity>,
     /// 被谁覆盖：生效那一项的 `id`。
     pub overridden_by: Option<String>,
+    /// 「在本项目停用」（6.3 全局税、7.4）。只有全局层的 skill 与 MCP 有，内核按清单和适配器填。
+    pub disable: Option<DisableOption>,
+}
+
+/// 检查器「最近活动」的一行，点了跳到活动页那条记录。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ItemActivity {
+    pub record: String,
+    pub at: crate::model::Timestamp,
+    pub kind: crate::journal::RecordKind,
+    /// 这条记录里和这一项有关的那一行，没有时是记录的标题。
+    pub text: String,
+}
+
+/// 一项全局的 skill 或 MCP 能不能在本项目停用、停没停。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DisableOption {
+    /// 写进 `[disable]` 的名字。合成一行的写全部成员。
+    pub names: Vec<String>,
+    /// 清单的 `[disable]` 已经停用了它们。
+    pub active: bool,
+    /// 近 30 天在本项目一次没用过：检查器出「全局税」块（6.3）。
+    pub idle: bool,
+    /// 工具不支持按项目停用时的说明，按钮置灰（9.3）。
+    pub unsupported: Option<String>,
+    /// 补充说明，例如 Claude Code 的 MCP 只在本机生效。
+    pub note: Option<String>,
+}
+
+/// 给全局层的 skill 与 MCP 填上「在本项目停用」（7.4）。`disable` 是清单的 `[disable]`。
+pub fn attach_disable(
+    context: &mut EffectiveContext,
+    adapter: &Adapter,
+    disable: &crate::manifest::DisableSection,
+) {
+    let supported = adapter
+        .capabilities
+        .as_ref()
+        .and_then(|c| c.per_project_disable)
+        == Some(true);
+    let tool_name = adapter.tool.name.as_str();
+    // 项目层、个人层也有的同名 skill：开关只按名字匹配，停用全局那份会把它们一起关掉（H-11 实测）。
+    let below: Vec<String> = context
+        .items
+        .iter()
+        .filter(|i| i.kind == AssetKind::Skill && i.scope != Scope::Global)
+        .map(|i| i.name.clone())
+        .collect();
+    for item in &mut context.items {
+        if item.scope != Scope::Global
+            || item.kind == AssetKind::Instruction
+            || item.overridden_by.is_some()
+        {
+            continue;
+        }
+        let names = if item.members.is_empty() {
+            vec![item.name.clone()]
+        } else {
+            item.members.clone()
+        };
+        let active = names.iter().all(|n| disable.covers(item.kind, n));
+        let mcp_unsupported = item.kind == AssetKind::Mcp
+            && adapter.mcp_switches.is_empty()
+            && !(adapter.precedence.mcp_merge == MergeMode::Fields
+                && adapter
+                    .mcp_fields
+                    .as_ref()
+                    .and_then(|f| f.enabled.as_ref())
+                    .is_some());
+        let unsupported =
+            (!supported || mcp_unsupported).then(|| format!("{tool_name} 不支持按项目停用"));
+        let same_name: Vec<&String> = if item.kind == AssetKind::Skill {
+            names.iter().filter(|n| below.contains(n)).collect()
+        } else {
+            Vec::new()
+        };
+        let note = if !same_name.is_empty() {
+            Some(format!(
+                "项目里也有同名的 {}。{tool_name} 的开关只按名字匹配，停用会把两份一起关掉，项目那份不会顶上来",
+                same_name
+                    .iter()
+                    .map(|n| n.as_str())
+                    .collect::<Vec<_>>()
+                    .join("、")
+            ))
+        } else if item.kind == AssetKind::Mcp && !adapter.mcp_switches.is_empty() {
+            Some(format!(
+                "{tool_name} 没有能提交的按项目开关，停用写在本机，每台机器同步时各自写"
+            ))
+        } else {
+            None
+        };
+        item.disable = Some(DisableOption {
+            names,
+            active,
+            idle: item.triggers == Some(0),
+            unsupported,
+            note,
+        });
+    }
 }
 
 /// 「其他加载项」里的一行，只看不管。
@@ -207,6 +316,14 @@ pub fn effective_context(
     let tool_name = adapter.tool.name.as_str();
     let empty = Collected::default();
     let global = scan.global.get(tool).unwrap_or(&empty);
+    // 项目里按项目停用的全局项（7.4）：全局层这份按项目的开关改过再用。
+    let switched;
+    let global = if project.project_switches.is_empty() && project.mcp_off.is_empty() {
+        global
+    } else {
+        switched = global.with_project_switches(project);
+        &switched
+    };
     let home = scan.home.as_path();
     let mut items = Vec::new();
 
@@ -330,12 +447,11 @@ fn instruction_item(file: &InstructionFile, home: &Path, tool_name: &str) -> Eff
         )
     };
     let location = display_path(&file.path, home);
-    let mut files = vec![location.clone()];
-    files.extend(
-        file.imports
-            .iter()
-            .map(|p| format!("{} · 经 @ 引用带入", display_path(p, home))),
-    );
+    let mut reason = reason;
+    if !file.imports.is_empty() {
+        let imports: Vec<String> = file.imports.iter().map(|p| display_path(p, home)).collect();
+        reason.push_str(&format!("\n经 @ 引用一起带入：{}。", imports.join("、")));
+    }
     let mut present = BTreeMap::new();
     present.insert(file.scope, location.clone());
     EffectiveItem {
@@ -358,8 +474,11 @@ fn instruction_item(file: &InstructionFile, home: &Path, tool_name: &str) -> Eff
         declared: declarations(&present, Some(file.scope)),
         reason,
         triggers: None,
-        files,
+        files: Vec::new(),
+        secrets: Vec::new(),
+        recent: Vec::new(),
         overridden_by: None,
+        disable: None,
     }
 }
 
@@ -499,6 +618,7 @@ fn skills(
             let id = skill_id(copy);
             rows.push(EffectiveItem {
                 overridden_by: if overridden { winner_id.clone() } else { None },
+                disable: None,
                 id,
                 name: copy.name.clone(),
                 kind: AssetKind::Skill,
@@ -518,7 +638,9 @@ fn skills(
                 declared: declarations(&present, if both { Some(copy.scope) } else { win }),
                 reason,
                 triggers: Some(triggers),
-                files: vec![display_path(&copy.dir.join("SKILL.md"), home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
             });
         }
     }
@@ -573,12 +695,11 @@ fn skills(
                 trigger_sentence(triggers)
             ),
             triggers: Some(triggers),
-            files: group
-                .members
-                .iter()
-                .map(|m| display_path(&m.dir, home))
-                .collect(),
+            files: Vec::new(),
+            secrets: Vec::new(),
+            recent: Vec::new(),
             overridden_by: None,
+            disable: None,
         });
     }
 
@@ -663,8 +784,11 @@ fn single_global(copy: &SkillCopy, triggers: u32, tool_name: &str, home: &Path) 
         declared: Vec::new(),
         reason,
         triggers: Some(triggers),
-        files: vec![display_path(&copy.dir.join("SKILL.md"), home)],
+        files: Vec::new(),
+        secrets: Vec::new(),
+        recent: Vec::new(),
         overridden_by: None,
+        disable: None,
     }
 }
 
@@ -698,10 +822,29 @@ fn mcp(
         by_name.entry(entry.name.as_str()).or_default().push(entry);
     }
     let fields_merge = adapter.precedence.mcp_merge == MergeMode::Fields;
+    let mut folded: Vec<McpEntry> = Vec::new();
     for (name, all) in by_name {
         // 工具不读的那份（例如未受信任项目的配置）单独出一行，不参与谁覆盖谁。
-        let (entries, inactive): (Vec<&McpEntry>, Vec<&McpEntry>) =
+        let (mut entries, inactive): (Vec<&McpEntry>, Vec<&McpEntry>) =
             all.into_iter().partition(|e| e.inactive.is_none());
+        // 按字段合并时，只写了停用字段的那条是开关，不是一个服务（按项目停用，7.4）：
+        // 折到下面那份上，显示成它被停用，不另出一行。
+        if fields_merge
+            && entries.len() > 1
+            && let Some(at) = entries.iter().position(|e| e.defines == ["enabled"])
+        {
+            let switch = entries.remove(at);
+            folded.clear();
+            folded.extend(entries.iter().map(|e| {
+                let mut e = (*e).clone();
+                if !switch.enabled {
+                    e.enabled = false;
+                    e.disabled_by = Some(display_path(&switch.file, home));
+                }
+                e
+            }));
+            entries = folded.iter().collect();
+        }
         for entry in &inactive {
             let mut present = BTreeMap::new();
             present.insert(
@@ -731,8 +874,11 @@ fn mcp(
                     entry.inactive.clone().unwrap_or_default()
                 ),
                 triggers: None,
-                files: vec![display_path(&entry.file, home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
                 overridden_by: None,
+                disable: None,
             });
         }
         if entries.is_empty() {
@@ -817,11 +963,11 @@ fn mcp(
                     ),
                 )
             } else if !effective.enabled {
-                (
-                    None,
-                    "已停用".to_owned(),
-                    "配置里把它标成了停用，工具不会启动它。".to_owned(),
-                )
+                let reason = match &effective.disabled_by {
+                    Some(by) => format!("{by} 里把它在本项目停用了，{tool_name} 不会启动它。"),
+                    None => "配置里把它标成了停用，工具不会启动它。".to_owned(),
+                };
+                (None, "已停用".to_owned(), reason)
             } else {
                 let label = if secret {
                     "配置里有明文密钥".to_owned()
@@ -847,6 +993,7 @@ fn mcp(
             };
             items.push(EffectiveItem {
                 overridden_by: if overridden { winner_id.clone() } else { None },
+                disable: None,
                 id: mcp_id(entry),
                 name: entry.name.clone(),
                 kind: AssetKind::Mcp,
@@ -866,7 +1013,9 @@ fn mcp(
                 declared: declarations(&present, win),
                 reason,
                 triggers: Some(calls),
-                files: vec![display_path(&entry.file, home)],
+                files: Vec::new(),
+                secrets: Vec::new(),
+                recent: Vec::new(),
             });
         }
     }

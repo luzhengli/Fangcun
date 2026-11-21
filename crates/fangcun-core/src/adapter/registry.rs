@@ -173,6 +173,9 @@ fn apply_path_vars(adapter: &mut Adapter, env: impl Fn(&str) -> Option<String>) 
             fix(&mut req.file);
         }
     }
+    for switches in &mut adapter.mcp_switches {
+        fix(&mut switches.file);
+    }
     if let Some(sessions) = &mut adapter.sessions {
         fix(&mut sessions.dir);
     }

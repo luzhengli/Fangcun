@@ -73,7 +73,7 @@ model  paths  error                        纯类型，不做 IO
 | `library` | 内容寻址的正本、索引、来源；`content` 是内容哈希（扫描也用它） | 正本与索引（M1-05）、来源与市场搜索（M1-06）已有，上游检查 M1-16 |
 | `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | 骨架已有（M1-04）：`PlanBuilder`、`WriteScope`、`apply`、`snapshot`。所有权与按键合并 M1-10，回滚 M1-11 |
 | `watcher` | 监听漂移，向外壳推事件 | M1 |
-| `secrets` | 钥匙串 | M1 |
+| `secrets` | 钥匙串（`security-framework`，服务名 `fangcun`），测试用 `MemoryStore` | 已有（M1-17） |
 
 内核是同步的，不依赖异步运行时。桌面外壳用 `AppState::run` 把每次调用放到阻塞线程。
 
@@ -215,6 +215,11 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **体检的一键动作**按发现编号分派（`Kernel::plan_finding`），能用的由 `scanner::finding_ready` 决定，界面只看 `Finding.ready`。
 - **设置**存在 `~/.fangcun/settings.toml`，`Settings::save` 不经变更计划（方寸自己的文件），只读模式下也能存。
 - **快照按范围各自编号**，跨项目操作每个项目各留一个快照（M1）。
+- **按项目停用**（M1-18，`materializer/sync/disable.rs`）：写哪儿全看适配器，`[[skill-switches]]`（`list` 数组或 `map` 对象两种形状）和 `[[mcp-switches]]`（名字表）；都没有时 MCP 写项目层服务表的 `enabled` 字段（要按字段合并）。台账的 `OwnedKey.kind` 区分 MCP 服务表的键和开关，撤销只撤值还是方寸写的那个。读的一侧：项目层、个人层的开关存在 `Collected.project_switches`、`mcp_off`，`Collected::with_project_switches` 再作用到全局层；按字段合并时只写了 `enabled` 的那条是开关，折到下面那份上。
+- **同一个配置文件只写一次**：同步里 MCP 和停用都会改 `.codex/config.toml`，`PlanBuilder` 同一路径写两次会互相覆盖。改动先攒在 `Run.docs`（`take_doc`/`put_doc`），`flush_docs` 统一写。
+- **界面暂存的清单改动**（6.8）：`state/staged.ts` 按项目存 `ManifestEdit`，「同步 · N」把它们交给 `plan_sync`（内核 `plan_sync_with`），清单用 `toml_edit` 改（`manifest::apply_edits`），和同步一份计划。能不能停用由内核填 `EffectiveItem.disable`，界面不判断。
+- **密钥**（M1-17）：内核的测试构建默认用内存存放处，不碰真实钥匙串；要指定用 `Kernel::with_secret_store`。同步时提交的配置按适配器 `env-reference` / `env-forward` 写引用，明文只写个人层（台账 `mcp-personal` 记位置和「变量 → 密钥」）。`apply` 存快照前按全部台账把这些明文换成 `secrets::marker`，回滚用 `snapshot::content` 从钥匙串补回。计划里存钥匙串用 `PlanBuilder::store_secret`，应用时先存再写文件，各记一条密钥记录。
+- **检查器的台账数据**（M1-31 至 33）：`kernel/item_state.rs` 给生效上下文填 `files`（台账）、`recent`（活动记录）、`secrets`；`kernel/manifest_view.rs` 出清单页签。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型
@@ -226,7 +231,7 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 | SQLite 的库 | `library` 的索引 |
 | git 的库，或直接调 `git` | `library` 的来源缓存 |
 | 文件监听的库 | `watcher` |
-| 钥匙串的库 | `secrets` |
+| ~~钥匙串的库~~ | 已定：`security-framework`，见 DECISIONS 2026-11-21 批 4 |
 | ~~token 估算的口径~~ | 已定：ASCII 每 4 字符 1 个，其余每字符 1 个，见 `estimator` |
 | ~~内容哈希的算法~~ | 已定：SHA-256 十六进制，见 `scanner::fsutil::hash_dir` |
 | 保留注释地改写 TOML 的库 | `manifest` 的写回 |

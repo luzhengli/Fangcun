@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useParams } from "react-router";
+import { Link, Navigate, useLocation, useParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
@@ -10,13 +10,22 @@ import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
+import type { ManifestEdit } from "@/ipc/bindings/ManifestEdit";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
 import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
-import { useEffectiveContext, useHistory, useProjects, useSyncPlan, useTools } from "@/ipc/queries";
+import {
+  useEffectiveContext,
+  useHistory,
+  useManifestView,
+  useProjects,
+  useSyncPlan,
+  useTools,
+} from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
+import { useStaged, useStagedEdits } from "@/state/staged";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
 import styles from "./ProjectPage.module.css";
@@ -84,14 +93,18 @@ function ProjectView({ root }: { root: string | undefined }) {
   const context = useEffectiveContext(root, tool);
   const summary = useProjects().data?.find((p) => p.id === root);
   const registered = summary?.registered ?? false;
-  const syncPlan = useSyncPlan(root, registered);
+  // 检查器里「加入同步计划」的清单改动（6.8），点「同步 · N」时一起出计划。
+  const staged = useStagedEdits(root);
+  const clearStaged = useStaged((s) => s.clear);
+  const syncPlan = useSyncPlan(root, registered, staged);
   const preview = usePlan((s) => s.preview);
   const openSync = () =>
     root &&
     preview({
-      load: () => kernel.planSync(root),
+      load: () => kernel.planSync(root, staged),
       done: (applied, plan) =>
         `已同步 ${plan.changes.length} 处变更 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
+      after: () => clearStaged(root),
     });
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
@@ -224,6 +237,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           {data && (tab === "effective" || !registered) && (
             <EffectiveList
               context={data}
+              staged={staged}
               selectedId={current?.id}
               onPick={(id) => {
                 setSelected(id);
@@ -231,7 +245,9 @@ function ProjectView({ root }: { root: string | undefined }) {
               }}
             />
           )}
-          {data && registered && tab === "manifest" && <ManifestTab context={data} />}
+          {data && registered && tab === "manifest" && root && (
+            <ManifestTab root={root} context={data} />
+          )}
           {data && registered && tab === "history" && root && <HistoryTab root={root} />}
         </section>
         {!registered && inspectorOpen && !current && data && root && (
@@ -242,19 +258,29 @@ function ProjectView({ root }: { root: string | undefined }) {
             onClose={() => setInspectorOpen(false)}
           />
         )}
-        {registered && tab === "effective" && inspectorOpen && !current && data && root && (
-          <RegisteredInspector
-            root={root}
-            context={data}
-            summary={summary}
-            onPick={setSelected}
-            onClose={() => setInspectorOpen(false)}
-          />
-        )}
+        {/* 清单页签旁边照样是项目卡片（原型 Main）；点「待处理」的一行回到生效上下文选中它。 */}
+        {registered &&
+          (tab === "manifest" || (tab === "effective" && !current)) &&
+          inspectorOpen &&
+          data &&
+          root && (
+            <RegisteredInspector
+              root={root}
+              context={data}
+              summary={summary}
+              onPick={(id) => {
+                setSelected(id);
+                setTab("effective");
+              }}
+              onClose={() => setInspectorOpen(false)}
+            />
+          )}
         {(tab === "effective" || !registered) && inspectorOpen && current && data && (
           <ItemInspector
             item={current}
             context={data}
+            root={registered ? root : undefined}
+            staged={staged}
             onPick={setSelected}
             onClose={() => setInspectorOpen(false)}
           />
@@ -266,10 +292,12 @@ function ProjectView({ root }: { root: string | undefined }) {
 
 function EffectiveList({
   context,
+  staged,
   selectedId,
   onPick,
 }: {
   context: EffectiveContext;
+  staged: ManifestEdit[];
   selectedId: string | undefined;
   onPick: (id: string) => void;
 }) {
@@ -296,37 +324,47 @@ function EffectiveList({
                 常驻 {unestimated && cost === 0 ? "未估算" : formatK(cost)}
               </span>
             </h2>
-            {rows.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={page.row}
-                aria-pressed={item.id === selectedId}
-                onClick={() => onPick(item.id)}
-              >
-                <span className={styles.colName}>
-                  <span
-                    className={`${page.name} ${item.state === "overridden" ? page.struck : ""}`}
-                  >
-                    {item.name}
+            {rows.map((raw) => {
+              const pending = stagedOp(staged, raw);
+              // 暂存了停用的项：照原型写「已停用（待同步）」，划线，常驻写「—」。
+              const item: EffectiveItem =
+                pending === "disable"
+                  ? { ...raw, label: "已停用（待同步）", state: null, resident: null }
+                  : pending === "enable"
+                    ? { ...raw, label: "恢复（待同步）" }
+                    : raw;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={page.row}
+                  aria-pressed={item.id === selectedId}
+                  onClick={() => onPick(item.id)}
+                >
+                  <span className={styles.colName}>
+                    <span
+                      className={`${page.name} ${item.state === "overridden" || pending === "disable" ? page.struck : ""}`}
+                    >
+                      {item.name}
+                    </span>
+                    {item.version && <span className={page.version}>{item.version}</span>}
                   </span>
-                  {item.version && <span className={page.version}>{item.version}</span>}
-                </span>
-                <span className={styles.colLayer}>
-                  <ScopeTicks scope={item.scope} />
-                  <span>{SCOPE_NAMES[item.scope]}</span>
-                </span>
-                <span className={styles.colStatus}>
-                  <StatusDot
-                    tone={item.state ? toneOfState(item.state) : "neutral"}
-                    label={item.label}
-                  />
-                </span>
-                <span className={`${styles.colCost} ${page.cost}`}>
-                  {!item.counted ? "–" : item.resident === null ? "—" : formatK(item.resident)}
-                </span>
-              </button>
-            ))}
+                  <span className={styles.colLayer}>
+                    <ScopeTicks scope={item.scope} />
+                    <span>{SCOPE_NAMES[item.scope]}</span>
+                  </span>
+                  <span className={styles.colStatus}>
+                    <StatusDot
+                      tone={item.state ? toneOfState(item.state) : "neutral"}
+                      label={item.label}
+                    />
+                  </span>
+                  <span className={`${styles.colCost} ${page.cost}`}>
+                    {!item.counted ? "–" : item.resident === null ? "—" : formatK(item.resident)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         );
       })}
@@ -363,11 +401,16 @@ function EffectiveList({
 function ItemInspector({
   item,
   context,
+  root,
+  staged,
   onPick,
   onClose,
 }: {
   item: EffectiveItem;
   context: EffectiveContext;
+  /** 已登记的项目才给：没有清单的不能在本项目停用。 */
+  root: string | undefined;
+  staged: ManifestEdit[];
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -416,6 +459,7 @@ function ItemInspector({
       : []),
     ...(item.version ? [{ k: "版本", v: item.version, mono: true }] : []),
     ...(item.command ? [{ k: "命令", v: item.command, mono: true, tone: "danger" as const }] : []),
+    ...(item.secrets.length > 0 ? [{ k: "密钥", v: item.secrets.join("；") }] : []),
     ...(item.kind === "skill"
       ? [
           {
@@ -444,6 +488,9 @@ function ItemInspector({
         <p className={page.why}>{item.reason}</p>
         <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
       </Section>
+      {root && item.disable && (
+        <DisableBox item={item} root={root} staged={staged} toolName={toolName} />
+      )}
       {item.overriddenBy && (
         <OverriddenBox
           item={item}
@@ -483,19 +530,133 @@ function ItemInspector({
         </div>
       </Section>
       <Section title="写入了哪些文件">
-        <p className={styles.sectionNote}>下面是工具实际读取的位置。</p>
-        <ul className={styles.files}>
-          {item.files.map((f) => (
-            <li key={f} className={page.code}>
-              {f}
-            </li>
-          ))}
-        </ul>
+        {item.files.length === 0 ? (
+          <p className={styles.sectionNote}>方寸没有写过文件。</p>
+        ) : (
+          <ul className={styles.files}>
+            {item.files.map((f) => (
+              <li key={f} className={page.code}>
+                {f}
+              </li>
+            ))}
+          </ul>
+        )}
       </Section>
       <Section title="最近活动">
-        <p className={styles.sectionNote}>还没有活动。</p>
+        {item.recent.length === 0 ? (
+          <p className={styles.sectionNote}>还没有活动。</p>
+        ) : (
+          <ol className={styles.acts}>
+            {item.recent.map((a) => (
+              <li key={a.record}>
+                <Link to={`/activity?record=${encodeURIComponent(a.record)}`} title="在活动里查看">
+                  <span aria-hidden="true" className={styles.actDot} />
+                  <span className={styles.actWhen}>{ago(a.at.toString())}</span>
+                  <span className={styles.actText}>{a.text}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
       </Section>
     </Inspector>
+  );
+}
+
+/** 这一项在暂存里是要停用还是要恢复。 */
+function stagedOp(staged: ManifestEdit[], item: EffectiveItem): ManifestEdit["op"] | null {
+  const names = item.disable?.names;
+  if (!names) return null;
+  const hit = staged.find((e) => e.kind === item.kind && e.names.join("\n") === names.join("\n"));
+  return hit?.op ?? null;
+}
+
+/**
+ * 全局的 skill 与 MCP「在本项目停用」（6.3 检查器「全局税」、7.4）。点了先加入同步计划（6.8），
+ * 由「同步 · N」统一预览和应用。清单里已经停用的给「恢复」。
+ */
+function DisableBox({
+  item,
+  root,
+  staged,
+  toolName,
+}: {
+  item: EffectiveItem;
+  root: string;
+  staged: ManifestEdit[];
+  toolName: string;
+}) {
+  const stage = useStaged((s) => s.stage);
+  const unstage = useStaged((s) => s.unstage);
+  const option = item.disable;
+  if (!option) return null;
+  const pending = stagedOp(staged, item);
+  if (!option.idle && !option.active && !pending) return null;
+  if (item.kind === "instruction") return null;
+  const kind = item.kind;
+  const edit = (op: ManifestEdit["op"]): ManifestEdit => ({ op, kind, names: option.names });
+  const what =
+    item.kind === "mcp"
+      ? "这个 MCP 服务每次会话都会启动，本项目从未调用。"
+      : option.names.length > 1 || item.members.length > 1
+        ? `${item.members.length || option.names.length} 个 skill 的名称与描述常驻上下文，本项目从未触发。`
+        : "它的名称与描述常驻上下文，本项目从未触发。";
+  const saving =
+    item.resident && item.resident > 0 ? ` · 预计常驻减少 ${formatK(item.resident)}` : "";
+
+  if (pending) {
+    return (
+      <div className={styles.stateBox}>
+        <div className={styles.staged}>
+          {pending === "disable" ? `已加入同步计划${saving}` : "已加入同步计划 · 恢复后重新加载"}
+          <button
+            type="button"
+            className={styles.linkButton}
+            onClick={() => unstage(root, edit(pending))}
+          >
+            撤回
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (option.active) {
+    return (
+      <div className={styles.stateBox}>
+        <h3 className={styles.stateTitle}>已在本项目停用</h3>
+        <p className={styles.stateText}>
+          清单的 [disable] 写了它，同步时写进 {toolName} 自己的开关，其他项目照常加载。
+        </p>
+        {option.note && <span className={styles.sectionNote}>{option.note}</span>}
+        <div className={styles.stateActions}>
+          <button type="button" className={page.button} onClick={() => stage(root, edit("enable"))}>
+            在本项目恢复
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.stateBox}>
+      <h3 className={styles.stateTitle}>全局税：每个项目都在缴</h3>
+      <p className={styles.stateText}>{what}停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+      {option.unsupported && <span className={styles.sectionNote}>{option.unsupported}</span>}
+      {option.note && <span className={styles.sectionNote}>{option.note}</span>}
+      <div className={styles.stateActions}>
+        <button
+          type="button"
+          className={page.buttonPrimary}
+          disabled={option.unsupported !== null}
+          title={option.unsupported ?? "加入同步计划，点「同步」时一起预览和应用"}
+          onClick={() => stage(root, edit("disable"))}
+        >
+          在本项目停用
+        </button>
+        <button type="button" className={page.button} disabled title="还没开放，见 M1-19">
+          改为套装…
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -559,21 +720,135 @@ function stackText(d: { location: string | null; effective: boolean }): string {
   return `${d.effective ? "生效" : "被遮蔽"} · ${d.location}`;
 }
 
-function ManifestTab({ context }: { context: EffectiveContext }) {
-  return (
-    <div className={page.empty}>
-      <p>清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。</p>
-      {context.hasManifest ? (
-        <p>
-          这个项目有 fangcun.toml。清单的表格视图还没做，可以直接打开文件，或用 fangcun status
-          查看。
-        </p>
-      ) : (
+/** 清单页签（6.3、M1-31）：三张文件卡可切换，结构化视图按区块列表格，源文件带行号。只读。 */
+function ManifestTab({ root, context }: { root: string; context: EffectiveContext }) {
+  const view = useManifestView(root, context.hasManifest);
+  const [picked, setPicked] = useState(0);
+  const [mode, setMode] = useState<"table" | "src">("table");
+  if (!context.hasManifest) {
+    return (
+      <div className={page.empty}>
+        <p>清单是本项目对 Agent 环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。</p>
         <p>
           这个项目还没有 <span className={page.version}>fangcun.toml</span>
           。重新登记会从现状反推清单，命令行写法是{" "}
           <span className={page.version}>fangcun init --from-existing</span>。
         </p>
+      </div>
+    );
+  }
+  const files = view.data?.files ?? [];
+  const file = files[picked] ?? files[0];
+  return (
+    <div className={styles.manifest}>
+      <p className={styles.manifestIntro}>
+        清单是本项目对 Agent
+        环境的声明：面向哪些工具、装哪些资产、各锁到哪个版本。下面三个文件共同决定「生效上下文」里看到的结果。
+      </p>
+      <fieldset aria-label="清单文件" className={styles.fileCards}>
+        {files.map((f, i) => (
+          <button
+            key={f.name}
+            type="button"
+            aria-pressed={f === file}
+            className={styles.fileCard}
+            onClick={() => setPicked(i)}
+          >
+            <span className={styles.fileName}>{f.name}</span>
+            <span className={styles.fileRole}>{f.role}</span>
+            <span
+              className={styles.fileTag}
+              data-tone={f.name.endsWith(".lock") ? "info" : f.committed ? "ok" : "muted"}
+            >
+              {f.tag}
+            </span>
+          </button>
+        ))}
+      </fieldset>
+      {file && (
+        <>
+          <div className={styles.manifestBar}>
+            <span className={styles.manifestDesc}>{file.description}</span>
+            <fieldset aria-label="显示方式" className={styles.viewSwitch}>
+              {(
+                [
+                  ["table", "结构化"],
+                  ["src", "源文件"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={mode === id}
+                  onClick={() => setMode(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </fieldset>
+          </div>
+          {!file.exists ? (
+            <p className={styles.sectionNote}>还没有 {file.name}。</p>
+          ) : mode === "table" ? (
+            <div className={styles.manifestSections}>
+              {file.sections.length === 0 && <p className={styles.sectionNote}>文件里没有内容。</p>}
+              {file.sections.map((sec) => (
+                <section key={sec.title} className={styles.manifestSection}>
+                  <h3>{sec.title}</h3>
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          {sec.headers.map((h) => (
+                            <th key={h} scope="col">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sec.rows.map((r) => (
+                          <tr key={r.cells.join("\u0000")}>
+                            {r.cells.map((c, i) => (
+                              <td
+                                // biome-ignore lint/suspicious/noArrayIndexKey: 三格位置固定
+                                key={i}
+                                data-mono={r.mono[i]}
+                                data-col={i}
+                                data-warn={i === 2 && r.warn}
+                              >
+                                {c}
+                                {i === 2 && r.note && (
+                                  <span className={styles.cellNote}>{r.note}</span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.source}>
+              {file.lines.map((line, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 行号就是键
+                <div key={i} className={styles.sourceLine}>
+                  <span aria-hidden="true">{i + 1}</span>
+                  <span
+                    data-kind={
+                      line.startsWith("#") ? "comment" : line.startsWith("[") ? "table" : undefined
+                    }
+                  >
+                    {line}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -728,6 +1003,16 @@ function RegisteredInspector({
       </Section>
     </Inspector>
   );
+}
+
+/** 检查器「最近活动」的时间：「刚刚」「5 分钟前」或「11-10」，和原型的写法一样。 */
+function ago(iso: string): string {
+  const d = new Date(iso);
+  const minutes = Math.floor((Date.now() - d.getTime()) / 60_000);
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${two(d.getMonth() + 1)}-${two(d.getDate())}`;
 }
 
 /** 「刚刚」或「11-13 10:42」，和原型的写法一样。 */

@@ -52,6 +52,7 @@ fn main() {
             commands::settings,
             commands::save_settings,
             commands::history,
+            commands::manifest_view,
             commands::plan_finding,
         ])
         .run(tauri::generate_context!())

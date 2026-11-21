@@ -18,6 +18,7 @@ import { activity } from "./activity";
 import { checkup } from "./checkup";
 import { globalClaude } from "./global";
 import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProject } from "./main";
+import { manifestView } from "./manifest";
 import {
   applyPlan,
   findingPlan,
@@ -75,7 +76,7 @@ const handlers: Partial<Commands> = {
     ),
 
   /** Main.dc.html 的 plan、regPlan，以及提示条的撤销。 */
-  plan_sync: ({ projectRoot }) => syncPlan(projectRoot),
+  plan_sync: ({ projectRoot, edits }) => syncPlan(projectRoot, edits),
   plan_init: ({ projectRoot, mode }) => initPlan(projectRoot, mode),
   /** Main.dc.html 的 REG_OPTS 依据：git 历史里有 1 位提交者，建议链接。 */
   suggest_mode: () => ({ mode: "link", committers: 1 }),
@@ -85,6 +86,8 @@ const handlers: Partial<Commands> = {
   plan_finding: () => findingPlan(),
   /** Main.dc.html 的 HIST。 */
   history: () => history(),
+  /** Main.dc.html 的 MF。未登记的目录没有清单。 */
+  manifest_view: ({ projectRoot }) => (projectRoot === recentProject.id ? null : manifestView()),
   apply_plan: ({ plan }) => applyPlan(plan),
   /** 浏览器里没有系统的选文件夹面板，当作选了 luyao-skills。 */
   pick_directory: () => recentProject.id,

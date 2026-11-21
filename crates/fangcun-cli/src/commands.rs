@@ -13,7 +13,7 @@ use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
 use fangcun_core::{Error, Kernel, Result};
 
-use crate::cli::{Cli, Command, ExportFormat};
+use crate::cli::{Cli, Command, ExportFormat, SecretAction};
 
 pub fn run(cli: Cli) -> Result<()> {
     let cwd = current_project()?;
@@ -76,9 +76,105 @@ pub fn run(cli: Cli) -> Result<()> {
             let project = if global { None } else { Some(root.as_path()) };
             print_why(&kernel.why(project, &asset)?);
         }
+        Command::Secret { action } => secret(&kernel, action, cli.yes)?,
     }
 
     Ok(())
+}
+
+/// `fangcun secret`（F6、9.3）：值只从终端或标准输入读，不打印、不进记录。
+fn secret(kernel: &Kernel, action: SecretAction, yes: bool) -> Result<()> {
+    use fangcun_core::materializer::SecretOp;
+    use std::io::{BufRead, IsTerminal, Write};
+
+    match action {
+        SecretAction::Set { name } => {
+            fangcun_core::secrets::check_name(&name)?;
+            let value = read_secret(&name)?;
+            let op = kernel.secret_set(&name, &value)?;
+            match op {
+                SecretOp::Store => println!("已存入钥匙串：{name}。值不记录。"),
+                _ => println!("已替换钥匙串里的 {name}。值不记录。"),
+            }
+            println!("用到它的项目运行 fangcun sync 后生效。");
+        }
+        SecretAction::Rm { name } => {
+            fangcun_core::secrets::check_name(&name)?;
+            if !yes {
+                if !std::io::stdin().is_terminal() {
+                    println!("没有删除：不在终端里运行。确认后加 --yes 再运行一次。");
+                    return Ok(());
+                }
+                print!("删除钥匙串里的 {name}？用到它的服务下次同步时不再写明文。[y/N] ");
+                let _ = std::io::stdout().flush();
+                let mut answer = String::new();
+                let _ = std::io::stdin().lock().read_line(&mut answer);
+                if !matches!(answer.trim(), "y" | "Y" | "yes") {
+                    println!("没有删除。");
+                    return Ok(());
+                }
+            }
+            if kernel.secret_remove(&name)? {
+                println!("已删除钥匙串里的 {name}。");
+            } else {
+                println!("钥匙串里本来就没有 {name}。");
+            }
+        }
+        SecretAction::Ls => {
+            let all = kernel.secrets()?;
+            if all.is_empty() {
+                println!(
+                    "没有密钥：已登记项目的清单里没有 secret: 引用，钥匙串里也没有方寸的条目。"
+                );
+            }
+            for info in all {
+                let state = if info.stored {
+                    "● 在钥匙串"
+                } else {
+                    "○ 钥匙串里没有"
+                };
+                println!("{}  {state}", info.name);
+                for used in &info.used_by {
+                    println!("  {} · {} 的 {}", used.project_name, used.server, used.var);
+                }
+                if !info.stored {
+                    println!("  存入：fangcun secret set {}", info.name);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 读密钥的值。终端里关掉回显再读；不在终端里时读标准输入的第一行。
+fn read_secret(name: &str) -> Result<fangcun_core::secrets::SecretValue> {
+    use std::io::{BufRead, IsTerminal, Write};
+    use std::process::{Command as Process, Stdio};
+
+    let tty = std::io::stdin().is_terminal();
+    let stty = |arg: &str| {
+        let _ = Process::new("stty")
+            .arg(arg)
+            .stdin(Stdio::inherit())
+            .status();
+    };
+    if tty {
+        print!("{name} 的值（输入不回显）：");
+        let _ = std::io::stdout().flush();
+        stty("-echo");
+    }
+    let mut line = String::new();
+    let read = std::io::stdin().lock().read_line(&mut line);
+    if tty {
+        stty("echo");
+        println!();
+    }
+    read.map_err(|source| Error::Io {
+        path: PathBuf::from("<stdin>"),
+        source,
+    })?;
+    let value = line.trim_end_matches(['\n', '\r']).to_owned();
+    Ok(fangcun_core::secrets::SecretValue::new(value))
 }
 
 /// 登记时问一次物化方式（9.2），回车取建议的那个。已有清单、`--yes`、不在终端里时不问，

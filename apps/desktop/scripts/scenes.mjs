@@ -50,6 +50,20 @@ export const SCENES = {
     board: "Main",
     steps: [{ click: "历史" }],
   },
+  "Main@manifest": {
+    board: "Main",
+    steps: [{ click: "清单" }],
+    focus: "main",
+  },
+  "Main@manifest-source": {
+    board: "Main",
+    steps: [{ click: "清单" }, { click: "fangcun.lock" }, { click: "源文件" }],
+    focus: "main",
+  },
+  "Main@github": {
+    board: "Main",
+    steps: [{ click: "github" }],
+  },
   "Settings@read-only": {
     board: "Settings",
     steps: [{ click: "只读模式" }],

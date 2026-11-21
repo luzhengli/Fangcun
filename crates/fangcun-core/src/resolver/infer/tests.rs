@@ -145,7 +145,8 @@ fn kernel(f: &Fixture, access: Access) -> Kernel {
 #[test]
 fn init_from_existing_writes_manifest_lock_and_registry() {
     let f = fixture("full");
-    let kernel = kernel(&f, Access::ReadWrite);
+    let store = std::sync::Arc::new(crate::secrets::MemoryStore::default());
+    let kernel = kernel(&f, Access::ReadWrite).with_secret_store(store.clone());
     let plan = kernel.plan_init(&f.proj, true, None).unwrap();
 
     assert_eq!(plan.title, "登记 proj");
@@ -155,7 +156,8 @@ fn init_from_existing_writes_manifest_lock_and_registry() {
         [
             f.proj.join("fangcun.toml"),
             f.proj.join("fangcun.lock"),
-            f.home.projects_file()
+            f.home.projects_file(),
+            std::path::PathBuf::from("钥匙串 · fangcun / github-token"),
         ]
     );
     assert!(plan.changes.iter().all(|c| c.op == ChangeOp::Add));
@@ -174,6 +176,22 @@ fn init_from_existing_writes_manifest_lock_and_registry() {
     assert!(!format!("{plan:?}").contains("ghp_"));
 
     kernel.apply(&plan).unwrap();
+
+    // 明文迁进钥匙串，记一条密钥记录，记录里没有值（9.3）。
+    use crate::secrets::SecretStore as _;
+    assert_eq!(
+        store.get("github-token").unwrap().unwrap().expose(),
+        "ghp_abcdefghijklmnop1234"
+    );
+    let records = kernel
+        .log(&crate::journal::RecordFilter::default())
+        .unwrap();
+    let secret = records
+        .iter()
+        .find(|r| r.kind == crate::journal::RecordKind::Secret)
+        .unwrap();
+    assert_eq!(secret.title, "github-token 迁入钥匙串");
+    assert!(!serde_json::to_string(&records).unwrap().contains("ghp_"));
 
     let project = load_project(&f.proj, &f.home).unwrap().unwrap();
     let manifest = &project.manifest;

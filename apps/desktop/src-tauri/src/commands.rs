@@ -12,7 +12,7 @@ use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
 use fangcun_core::global::GlobalOverview;
 use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
-use fangcun_core::kernel::{Overview, ProjectSummary};
+use fangcun_core::kernel::{ManifestView, Overview, ProjectSummary};
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
 use fangcun_core::resolver::{EffectiveContext, Explanation, ModeSuggestion};
@@ -96,14 +96,16 @@ pub async fn activity(
     state.run(move |kernel| kernel.log(&filter)).await
 }
 
-/// 「同步 · N」：按清单与锁物化这个项目（6.8、M1-13）。
+/// 「同步 · N」：按清单与锁物化这个项目（6.8、M1-13）。`edits` 是界面暂存的清单改动，例如在本项目停用。
 #[tauri::command]
 pub async fn plan_sync(
     state: State<'_, AppState>,
     project_root: PathBuf,
+    edits: Option<Vec<fangcun_core::manifest::ManifestEdit>>,
 ) -> CommandResult<ChangePlan> {
+    let edits = edits.unwrap_or_default();
     state
-        .run(move |kernel| kernel.plan_sync(&project_root))
+        .run(move |kernel| kernel.plan_sync_with(&project_root, &edits))
         .await
 }
 
@@ -211,6 +213,17 @@ pub async fn history(
     project_root: PathBuf,
 ) -> CommandResult<Vec<HistoryEntry>> {
     state.run(move |kernel| kernel.history(&project_root)).await
+}
+
+/// 项目页「清单」页签（6.3、M1-31）。没有清单时为空。
+#[tauri::command]
+pub async fn manifest_view(
+    state: State<'_, AppState>,
+    project_root: PathBuf,
+) -> CommandResult<Option<ManifestView>> {
+    state
+        .run(move |kernel| kernel.manifest_view(&project_root))
+        .await
 }
 
 /// 体检报告的一键动作（6.2、M1-26）。

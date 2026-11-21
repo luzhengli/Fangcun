@@ -154,7 +154,7 @@ fn applies_with_a_snapshot_and_restores_byte_for_byte() {
     )
     .unwrap();
     for entry in saved.entries.iter().rev() {
-        snapshot::restore(&home, entry).unwrap();
+        snapshot::restore(&home, entry, &crate::secrets::MemoryStore::default()).unwrap();
     }
     assert_eq!(tree(&f.home), before);
 }

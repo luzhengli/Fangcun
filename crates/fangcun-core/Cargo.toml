@@ -17,5 +17,8 @@ toml.workspace = true
 toml_edit.workspace = true
 ts-rs.workspace = true
 
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework.workspace = true
+
 [lints]
 workspace = true

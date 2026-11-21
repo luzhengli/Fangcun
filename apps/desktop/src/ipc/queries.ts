@@ -5,6 +5,7 @@
  * 按键让对应的查询失效，界面自动重新取数。
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ManifestEdit } from "./bindings/ManifestEdit";
 import type { RecordFilter } from "./bindings/RecordFilter";
 import type { ToolId } from "./bindings/ToolId";
 import { kernel } from "./commands";
@@ -22,6 +23,7 @@ export const keys = {
   syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
   settings: ["settings"] as const,
   history: (projectRoot: string) => ["history", projectRoot] as const,
+  manifestView: (projectRoot: string) => ["manifest-view", projectRoot] as const,
 };
 
 export function useTools() {
@@ -81,10 +83,14 @@ export function useRescan() {
  * 「同步 · N」里的 N：这个项目现在的同步计划有几处变更。只对已登记的项目取。
  * 每次取都会在内核里出一份计划（内核只留最近 64 份），所以不自动重取，写入后才失效。
  */
-export function useSyncPlan(projectRoot: string | undefined, registered: boolean) {
+export function useSyncPlan(
+  projectRoot: string | undefined,
+  registered: boolean,
+  edits: ManifestEdit[] = [],
+) {
   return useQuery({
-    queryKey: keys.syncPlan(projectRoot ?? ""),
-    queryFn: () => kernel.planSync(projectRoot ?? ""),
+    queryKey: [...keys.syncPlan(projectRoot ?? ""), edits],
+    queryFn: () => kernel.planSync(projectRoot ?? "", edits),
     enabled: projectRoot !== undefined && registered,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,
@@ -114,6 +120,15 @@ export function useHistory(projectRoot: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: keys.history(projectRoot ?? ""),
     queryFn: () => kernel.history(projectRoot ?? ""),
+    enabled: projectRoot !== undefined && enabled,
+  });
+}
+
+/** 项目页「清单」页签：三份文件的结构化视图与源文件。 */
+export function useManifestView(projectRoot: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.manifestView(projectRoot ?? ""),
+    queryFn: () => kernel.manifestView(projectRoot ?? ""),
     enabled: projectRoot !== undefined && enabled,
   });
 }

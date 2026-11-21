@@ -6,7 +6,7 @@
 //! - **校验**（7.5）：正本的内容哈希必须等于锁里的；资产库里没有时按锁里的提交重新取，取到的
 //!   对不上就不同步这一项。
 //! - **MCP**：写进目标工具的项目配置，按键合并、按字段合并，别的键和字段不动（4.6 第 5 条）。
-//!   用了 `secret:` 的服务等钥匙串（M1-17）接上再同步。
+//!   `secret:` 引用写成环境变量引用；明文、个人覆盖加的服务写进工具的个人层（M1-17、M1-27）。
 //! - **指令**：镜像写成对正本的引用（`@AGENTS.md`）。正本是项目自己的文件，不动。
 //! - **`.gitignore`**：维护一段带起止标记的「方寸管理」块（人定，9.3）：链接模式的受管路径、
 //!   个人覆盖与开发模式的项、`fangcun.local.toml`。块外的行不动。
@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use super::ledger::{Ledger, OwnedKey, OwnedPath, PathKind};
+use super::ledger::{KeyKind, Ledger, OwnedKey, OwnedPath, PathKind};
 use super::{PlanBuilder, State};
 use crate::adapter::{AdapterRegistry, FileFormat, SupportLevel};
 use crate::library::Library;
@@ -29,6 +29,7 @@ use crate::library::source::Sources;
 use crate::manifest::{Lock, LockedSkill, McpDecl, Project};
 use crate::model::{ContentHash, PlanNote, Scope, SourceRef, SyncMode, VersionPolicy};
 use crate::paths::FangcunHome;
+use crate::secrets::{self, SecretStore, SecretValue};
 use crate::{Error, Result};
 
 /// 所有工具共读的 skill 目录（F4）：实体只放这里一份。
@@ -40,6 +41,8 @@ const IGNORE_END: &str = "# <<< fangcun";
 
 pub struct SyncInput<'a> {
     pub root: &'a Path,
+    /// 每个目标工具在这个项目实际读到的 skill 与 MCP 名字，展开 `[disable]` 的通配用。
+    pub visible: &'a BTreeMap<crate::model::ToolId, disable::Visible>,
     pub home: &'a FangcunHome,
     pub user_home: &'a Path,
     pub adapters: &'a AdapterRegistry,
@@ -47,6 +50,8 @@ pub struct SyncInput<'a> {
     pub lock: &'a Lock,
     pub library: &'a Library,
     pub sources: &'a Sources,
+    /// 钥匙串：用了 `secret:` 的服务同步时取明文写进个人层（M1-17）。
+    pub secrets: &'a dyn SecretStore,
 }
 
 /// 一项要放进 `.agents/skills` 的 skill。
@@ -94,6 +99,8 @@ pub fn plan(input: &SyncInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         notes: Vec::new(),
         replaced: Vec::new(),
         ignored: BTreeSet::from(["/fangcun.local.toml".to_owned()]),
+        docs: BTreeMap::new(),
+        bad_docs: BTreeSet::new(),
     };
 
     let placed = state.collect_skills(mode)?;
@@ -101,15 +108,12 @@ pub fn plan(input: &SyncInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         state.place_skill(skill, mode)?;
     }
     state.sync_mcp()?;
+    state.sync_disable()?;
+    state.flush_docs()?;
     state.sync_instructions()?;
     state.remove_dropped()?;
     state.sync_gitignore()?;
 
-    if !project.local_declarations().disable.is_empty() {
-        state.notes.push(PlanNote::info(
-            "按项目停用（[disable]）在 M1-18 实现，这次没有写",
-        ));
-    }
     if !state.replaced.is_empty() {
         state.notes.push(PlanNote::warning(format!(
             "{} 处本机原有的内容和锁定版本不同，替换前已备份，回滚能找回：{}",
@@ -157,6 +161,17 @@ struct Run<'a, 'b> {
     replaced: Vec<String>,
     /// `.gitignore` 方寸那一段的行。
     ignored: BTreeSet<String>,
+    /// 改在内存里、还没写进计划的配置文件。
+    docs: BTreeMap<PathBuf, PendingDoc>,
+    bad_docs: BTreeSet<PathBuf>,
+}
+
+/// 一份改在内存里的配置，和改之前的原文。
+struct PendingDoc {
+    doc: ConfigDoc,
+    original: Option<String>,
+    /// 计划里这一行的说明，例如「新增键 mcpServers.github」。
+    rows: Vec<String>,
 }
 
 impl Run<'_, '_> {
@@ -502,34 +517,67 @@ impl Run<'_, '_> {
 
     // ───────────── MCP ─────────────
 
+    /// MCP 写两处（4.6 第 5 条按键合并，M1-17、M1-27）：
+    ///
+    /// - 项目层（提交）：全队的服务。`secret:` 引用按适配器写成环境变量引用（Claude Code 的
+    ///   `${NAME}`，Codex 的 `env_vars`），不写明文。
+    /// - 个人层（不提交，只在本机）：个人覆盖加的、改过的服务，以及用了密钥的服务带明文的那一条
+    ///   （Claude Code 个人层优先、整条取用）。工具没有个人层时（Codex）写一条说明。
+    ///
+    /// 钥匙串里缺密钥的服务不同步，已经写过的不删。
     fn sync_mcp(&mut self) -> Result<()> {
         let input = self.input;
         let team = input.project.team_declarations();
         let local = input.project.local_declarations();
-        if local.mcp.keys().any(|k| !team.mcp.contains_key(k)) {
-            self.notes.push(PlanNote::info(
-                "个人覆盖里加的 MCP 要写进工具的个人配置，还不同步",
-            ));
-        }
-        let mut desired: BTreeMap<&String, &McpDecl> = BTreeMap::new();
-        let mut waiting = Vec::new();
-        for (name, item) in &team.mcp {
-            if item.decl.env.values().any(|v| v.starts_with("secret:")) {
+
+        // 1. 钥匙串：每个用到的密钥取一次。
+        let mut values: BTreeMap<String, SecretValue> = BTreeMap::new();
+        let mut missing: BTreeSet<String> = BTreeSet::new();
+        let mut waiting: Vec<String> = Vec::new();
+        for (name, item) in &local.mcp {
+            let mut lacks = false;
+            for secret in item.decl.env.values().filter_map(|v| secrets::reference(v)) {
+                if values.contains_key(secret) || missing.contains(secret) {
+                    lacks |= missing.contains(secret);
+                    continue;
+                }
+                match input.secrets.get(secret) {
+                    Ok(Some(value)) => {
+                        values.insert(secret.to_owned(), value);
+                    }
+                    Ok(None) => {
+                        missing.insert(secret.to_owned());
+                        lacks = true;
+                    }
+                    Err(e) => {
+                        self.notes.push(PlanNote::warning(e.to_string()));
+                        missing.insert(secret.to_owned());
+                        lacks = true;
+                    }
+                }
+            }
+            if lacks {
                 waiting.push(name.clone());
-            } else {
-                desired.insert(name, &item.decl);
             }
         }
         if !waiting.is_empty() {
+            let names: Vec<&str> = missing.iter().map(String::as_str).collect();
             self.notes.push(PlanNote::warning(format!(
-                "{} 用了钥匙串里的密钥，钥匙串接上之前（M1-17）不同步：{}",
-                waiting.len(),
-                waiting.join("、")
+                "钥匙串里没有 {}，用到它的 {} 没有同步。先运行 fangcun secret set {}",
+                names.join("、"),
+                waiting.join("、"),
+                names.first().copied().unwrap_or_default()
             )));
         }
 
-        // 目标工具的项目层 MCP 配置，加上台账里写过、现在不是目标的。
-        let mut files: Vec<(String, FileFormat, Vec<String>, bool)> = Vec::new();
+        // 2. 项目层：全队的服务，密钥只写引用。
+        let desired: BTreeMap<&String, &McpDecl> = team
+            .mcp
+            .iter()
+            .filter(|(name, _)| !waiting.contains(name))
+            .map(|(name, item)| (name, &item.decl))
+            .collect();
+        let mut files: Vec<ProjectMcpFile> = Vec::new();
         for tool in &input.project.manifest.project.targets {
             let Some(adapter) = input.adapters.get(tool) else {
                 continue;
@@ -537,51 +585,65 @@ impl Run<'_, '_> {
             for location in adapter.mcp.iter().filter(|l| l.scope == Scope::Project) {
                 let relative = !location.file.starts_with(['/', '~', '$']);
                 let plain = location.key.iter().all(|k| !k.contains('{'));
-                if relative && plain && !files.iter().any(|f| f.0 == location.file) {
-                    files.push((
-                        location.file.clone(),
-                        location.format,
-                        location.key.clone(),
-                        true,
-                    ));
+                if relative && plain && !files.iter().any(|f| f.file == location.file) {
+                    files.push(ProjectMcpFile {
+                        file: location.file.clone(),
+                        format: location.format,
+                        key_path: location.key.clone(),
+                        fields: adapter.mcp_fields.clone(),
+                        tool_name: Some(adapter.tool.name.clone()),
+                    });
                 }
             }
         }
-        for key in &self.old.keys {
-            if !files.iter().any(|f| f.0 == key.file) {
+        for key in self.old.keys.iter().filter(|k| k.kind.is_mcp()) {
+            if !files.iter().any(|f| f.file == key.file) {
                 let format = if key.file.ends_with(".toml") {
                     FileFormat::Toml
                 } else {
                     FileFormat::Json
                 };
-                let prefix: Vec<String> = key
+                let key_path: Vec<String> = key
                     .key
                     .rsplit_once('.')
                     .map(|(p, _)| p.split('.').map(str::to_owned).collect())
                     .unwrap_or_default();
-                files.push((key.file.clone(), format, prefix, false));
+                files.push(ProjectMcpFile {
+                    file: key.file.clone(),
+                    format,
+                    key_path,
+                    fields: None,
+                    tool_name: None,
+                });
             }
         }
 
-        for (file, format, key_path, target) in files {
+        for target in files {
+            let file = target.file.clone();
             let path = input.root.join(&file);
-            let text = std::fs::read_to_string(&path).ok();
-            let mut doc = match ConfigDoc::parse(format, text.as_deref()) {
-                Ok(doc) => doc,
-                Err(e) => {
-                    self.notes
-                        .push(PlanNote::warning(format!("{file} 读不懂（{e}），没有改")));
-                    continue;
-                }
+            let Some(mut pending) = self.take_doc(&path, target.format, &file) else {
+                continue;
             };
+            let key_path = &target.key_path;
+            let forward = target.forward_field();
             let prefix = key_path.join(".");
             let mut rows = Vec::new();
-            if target {
+            if let Some(tool_name) = &target.tool_name {
+                let mut forwarded = Vec::new();
                 for (name, decl) in &desired {
+                    let (server, dropped) = target.committed(decl);
+                    forwarded.extend(server.forward.iter().cloned());
+                    if !dropped.is_empty() {
+                        self.notes.push(PlanNote::warning(format!(
+                            "{tool_name} 的配置没有引用环境变量的写法，{name} 的 {} 没有写进去",
+                            dropped.join("、")
+                        )));
+                    }
                     let key = format!("{prefix}.{name}");
                     let owned = self.old.key(&file, &key).is_some();
-                    match doc.get(&key_path, name) {
-                        Some(existing) if existing == **decl => {}
+                    let doc = &mut pending.doc;
+                    match doc.get(key_path, name, forward) {
+                        Some(existing) if existing == server => {}
                         Some(_) if !owned => {
                             self.replaced.push(format!("{file} 的 {key}"));
                             rows.push(format!("替换键 {key}"));
@@ -589,17 +651,42 @@ impl Run<'_, '_> {
                         Some(_) => rows.push(format!("更新键 {key}")),
                         None => rows.push(format!("新增键 {key}")),
                     }
-                    doc.set(&key_path, name, decl);
+                    doc.set(key_path, name, &server, forward);
+                    let refs = decl
+                        .env
+                        .iter()
+                        .filter_map(|(var, v)| {
+                            Some((var.clone(), secrets::reference(v)?.to_owned()))
+                        })
+                        .collect();
                     self.new.keys.push(OwnedKey {
                         file: file.clone(),
                         key,
                         asset: (*name).clone(),
+                        kind: KeyKind::Mcp,
+                        tool: None,
+                        path: Vec::new(),
+                        secrets: refs,
                     });
                 }
+                if !forwarded.is_empty() {
+                    forwarded.sort();
+                    forwarded.dedup();
+                    self.notes.push(PlanNote::info(format!(
+                        "{tool_name} 从启动它的环境里读 {}：方寸不替它写明文（项目里没有不提交的配置），启动 {tool_name} 前在环境里设好",
+                        forwarded.join("、")
+                    )));
+                }
             }
-            for owned in self.old.keys.iter().filter(|k| k.file == file) {
+            for owned in self
+                .old
+                .keys
+                .iter()
+                .filter(|k| k.kind.is_mcp() && k.file == file)
+            {
                 let name = owned.key.rsplit('.').next().unwrap_or_default();
-                let still = target && desired.keys().any(|n| n.as_str() == name);
+                let still =
+                    target.tool_name.is_some() && desired.keys().any(|n| n.as_str() == name);
                 if still {
                     continue;
                 }
@@ -607,17 +694,215 @@ impl Run<'_, '_> {
                     self.new.keys.push(owned.clone());
                     continue;
                 }
-                if doc.remove(&key_path, name) {
+                if pending.doc.remove(key_path, name) {
                     rows.push(format!("删除键 {}", owned.key));
                 }
             }
-            if rows.is_empty() {
+            pending.rows.extend(rows);
+            self.put_doc(path, pending);
+        }
+
+        // 3. 个人层：只在本机。
+        let personal: Vec<(&String, &McpDecl)> = local
+            .mcp
+            .iter()
+            .filter(|(name, _)| !waiting.contains(name))
+            .filter(|(name, item)| {
+                let changed = team.mcp.get(*name).is_none_or(|t| t.decl != item.decl);
+                changed
+                    || item
+                        .decl
+                        .env
+                        .values()
+                        .any(|v| secrets::reference(v).is_some())
+            })
+            .map(|(name, item)| (name, &item.decl))
+            .collect();
+        let project = input.root.to_string_lossy().into_owned();
+        let mut no_personal: Vec<(String, Vec<String>)> = Vec::new();
+        let mut handled: BTreeSet<crate::model::ToolId> = BTreeSet::new();
+        let old_tools: BTreeSet<crate::model::ToolId> = self
+            .old
+            .keys
+            .iter()
+            .filter(|k| k.kind == KeyKind::McpPersonal)
+            .filter_map(|k| k.tool.clone())
+            .collect();
+        let targets = &input.project.manifest.project.targets;
+        for tool in targets.iter().chain(old_tools.iter()) {
+            if !handled.insert(tool.clone()) {
                 continue;
             }
-            let new_text = doc.render();
-            if text.as_deref() == Some(new_text.as_str()) {
+            let Some(adapter) = input.adapters.get(tool) else {
+                continue;
+            };
+            let is_target = targets.contains(tool);
+            let Some(location) = adapter.mcp.iter().find(|l| l.scope == Scope::Personal) else {
+                // 只写个人覆盖里加的、改过的：用了密钥的全队服务在项目层已经写了引用。
+                let only_personal: Vec<String> = personal
+                    .iter()
+                    .filter(|(name, decl)| team.mcp.get(*name).is_none_or(|t| t.decl != **decl))
+                    .map(|(name, _)| (*name).clone())
+                    .collect();
+                if is_target && !only_personal.is_empty() {
+                    no_personal.push((adapter.tool.name.clone(), only_personal));
+                }
+                continue;
+            };
+            let Some(path) =
+                crate::adapter::expand(&location.file, input.user_home, Some(input.root))
+            else {
+                continue;
+            };
+            let Some(mut pending) = self.take_doc(&path, location.format, &location.file) else {
+                continue;
+            };
+            let key_path = project_key(&location.key, &project);
+            let shown: Vec<&str> = location
+                .key
+                .iter()
+                .map(|k| {
+                    if k.contains("{project}") {
+                        "<本项目>"
+                    } else {
+                        k.as_str()
+                    }
+                })
+                .collect();
+            let shown = shown.join(".");
+            let mut rows = Vec::new();
+            let wanted: Vec<&(&String, &McpDecl)> = if is_target {
+                personal.iter().collect()
+            } else {
+                Vec::new()
+            };
+            for (name, decl) in &wanted {
+                let mut env = BTreeMap::new();
+                let mut refs = BTreeMap::new();
+                for (var, value) in &decl.env {
+                    match secrets::reference(value) {
+                        Some(secret) => {
+                            let Some(plain) = values.get(secret) else {
+                                continue;
+                            };
+                            env.insert(var.clone(), plain.expose().to_owned());
+                            refs.insert(var.clone(), secret.to_owned());
+                        }
+                        None => {
+                            env.insert(var.clone(), value.clone());
+                        }
+                    }
+                }
+                let server = Server {
+                    command: decl.command.clone(),
+                    args: decl.args.clone(),
+                    env,
+                    forward: Vec::new(),
+                };
+                let key = format!("{}.{name}", location.key.join("."));
+                let label = format!("{shown}.{name}");
+                let owned = self.old.keys.iter().any(|k| {
+                    k.kind == KeyKind::McpPersonal && k.file == location.file && k.key == key
+                });
+                let tail = if refs.is_empty() {
+                    "（本机个人层）"
+                } else {
+                    "（本机个人层，密钥取自钥匙串）"
+                };
+                let doc = &mut pending.doc;
+                match doc.get(&key_path, name, None) {
+                    Some(existing) if existing == server => {}
+                    Some(_) if !owned => {
+                        self.replaced.push(format!("{} 的 {label}", location.file));
+                        rows.push(format!("替换键 {label}{tail}"));
+                    }
+                    Some(_) => rows.push(format!("更新键 {label}{tail}")),
+                    None => rows.push(format!("新增键 {label}{tail}")),
+                }
+                doc.set(&key_path, name, &server, None);
+                let mut full = location.key.clone();
+                full.push((*name).clone());
+                self.new.keys.push(OwnedKey {
+                    file: location.file.clone(),
+                    key,
+                    asset: (*name).clone(),
+                    kind: KeyKind::McpPersonal,
+                    tool: Some(tool.clone()),
+                    path: full,
+                    secrets: refs,
+                });
+            }
+            for owned in self.old.keys.iter().filter(|k| {
+                k.kind == KeyKind::McpPersonal
+                    && k.tool.as_ref() == Some(tool)
+                    && k.file == location.file
+            }) {
+                let name = owned.asset.as_str();
+                if wanted.iter().any(|(n, _)| n.as_str() == name) {
+                    continue;
+                }
+                if waiting.iter().any(|w| w == name) {
+                    self.new.keys.push(owned.clone());
+                    continue;
+                }
+                if pending.doc.remove(&key_path, name) {
+                    rows.push(format!("删除键 {shown}.{name}（本机个人层）"));
+                }
+            }
+            pending.rows.extend(rows);
+            self.put_doc(path, pending);
+        }
+        for (tool_name, names) in no_personal {
+            self.notes.push(PlanNote::info(format!(
+                "{tool_name} 项目里没有不提交的配置，个人覆盖里的 MCP 对它不生效：{}",
+                names.join("、")
+            )));
+        }
+        Ok(())
+    }
+
+    // ───────────── 配置文件：先改在内存里，最后每个文件写一次 ─────────────
+
+    /// 取出一份要改的配置。同一个文件 MCP 和按项目停用都会改（例如 `.codex/config.toml`），
+    /// 计划里只能写一次，所以改动都攒在这里。读不懂的文件记一条提示，不改。
+    fn take_doc(&mut self, path: &Path, format: FileFormat, label: &str) -> Option<PendingDoc> {
+        if let Some(pending) = self.docs.remove(path) {
+            return Some(pending);
+        }
+        if self.bad_docs.contains(path) {
+            return None;
+        }
+        let original = std::fs::read_to_string(path).ok();
+        match ConfigDoc::parse(format, original.as_deref()) {
+            Ok(doc) => Some(PendingDoc {
+                doc,
+                original,
+                rows: Vec::new(),
+            }),
+            Err(e) => {
+                self.notes
+                    .push(PlanNote::warning(format!("{label} 读不懂（{e}），没有改")));
+                self.bad_docs.insert(path.to_path_buf());
+                None
+            }
+        }
+    }
+
+    fn put_doc(&mut self, path: PathBuf, pending: PendingDoc) {
+        self.docs.insert(path, pending);
+    }
+
+    /// 把攒下的配置改动写进计划。
+    fn flush_docs(&mut self) -> Result<()> {
+        for (path, pending) in std::mem::take(&mut self.docs) {
+            if pending.rows.is_empty() {
                 continue;
             }
+            let new_text = pending.doc.render();
+            if pending.original.as_deref() == Some(new_text.as_str()) {
+                continue;
+            }
+            let rows = &pending.rows;
             let detail = if rows.len() <= 2 {
                 format!("{}，其余键不动", rows.join("、"))
             } else {
@@ -809,6 +1094,66 @@ fn file_mode(path: &Path) -> u32 {
 
 // ───────────── 配置文件按键合并 ─────────────
 
+/// 写进工具配置的一条 MCP 服务：方寸只管这几个字段。
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Server {
+    command: String,
+    args: Vec<String>,
+    env: BTreeMap<String, String>,
+    /// 按名字从环境里转发的变量（Codex 的 `env_vars`）。
+    forward: Vec<String>,
+}
+
+/// 一份项目层的 MCP 配置，和它属于哪个目标工具。不再是目标的（只剩台账里的键要删）没有工具。
+struct ProjectMcpFile {
+    file: String,
+    format: FileFormat,
+    key_path: Vec<String>,
+    fields: Option<crate::adapter::McpFields>,
+    tool_name: Option<String>,
+}
+
+impl ProjectMcpFile {
+    fn forward_field(&self) -> Option<&str> {
+        self.fields.as_ref()?.env_forward.as_deref()
+    }
+
+    /// 提交进仓库的写法：`secret:` 引用换成环境变量引用（7.5、9.3）。
+    /// 返回服务和没法引用、只好不写的变量。
+    fn committed(&self, decl: &McpDecl) -> (Server, Vec<String>) {
+        let reference = self.fields.as_ref().and_then(|f| f.env_reference.as_ref());
+        let forward = self.forward_field();
+        let mut env = BTreeMap::new();
+        let mut forwarded = Vec::new();
+        let mut dropped = Vec::new();
+        for (var, value) in &decl.env {
+            if secrets::reference(value).is_none() {
+                env.insert(var.clone(), value.clone());
+            } else if let Some(reference) = reference {
+                env.insert(var.clone(), reference.render(var));
+            } else if forward.is_some() {
+                forwarded.push(var.clone());
+            } else {
+                dropped.push(var.clone());
+            }
+        }
+        let server = Server {
+            command: decl.command.clone(),
+            args: decl.args.clone(),
+            env,
+            forward: forwarded,
+        };
+        (server, dropped)
+    }
+}
+
+/// 键路径里的 `{project}` 换成项目根目录。
+fn project_key(key: &[String], project: &str) -> Vec<String> {
+    key.iter()
+        .map(|segment| segment.replace("{project}", project))
+        .collect()
+}
+
 /// 一份 MCP 配置。JSON 用保序的 `serde_json`，TOML 用 `toml_edit`，都保住别的键和顺序。
 enum ConfigDoc {
     Json(Value),
@@ -832,8 +1177,11 @@ impl ConfigDoc {
         }
     }
 
-    /// 服务现在的启动配置（只看 command、args、env 三个字段）。
-    fn get(&self, key_path: &[String], name: &str) -> Option<McpDecl> {
+    /// 服务现在的启动配置（只看 command、args、env 和转发列表 `forward` 四个字段）。
+    fn get(&self, key_path: &[String], name: &str, forward: Option<&str>) -> Option<Server> {
+        let strings = |items: Vec<Option<&str>>| -> Vec<String> {
+            items.into_iter().flatten().map(str::to_owned).collect()
+        };
         match self {
             Self::Json(root) => {
                 let mut node = root;
@@ -841,17 +1189,16 @@ impl ConfigDoc {
                     node = node.get(key)?;
                 }
                 let entry = node.get(name)?;
-                Some(McpDecl {
-                    command: entry.get("command")?.as_str()?.to_owned(),
-                    args: entry
-                        .get("args")
+                let list = |field: &str| {
+                    entry
+                        .get(field)
                         .and_then(Value::as_array)
-                        .map(|a| {
-                            a.iter()
-                                .filter_map(|v| v.as_str().map(str::to_owned))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
+                        .map(|a| strings(a.iter().map(Value::as_str).collect()))
+                        .unwrap_or_default()
+                };
+                Some(Server {
+                    command: entry.get("command")?.as_str()?.to_owned(),
+                    args: list("args"),
                     env: entry
                         .get("env")
                         .and_then(Value::as_object)
@@ -861,6 +1208,7 @@ impl ConfigDoc {
                                 .collect()
                         })
                         .unwrap_or_default(),
+                    forward: forward.map(list).unwrap_or_default(),
                 })
             }
             Self::Toml(doc) => {
@@ -869,17 +1217,16 @@ impl ConfigDoc {
                     item = item.get(key)?;
                 }
                 let entry = item.get(name)?;
-                Some(McpDecl {
-                    command: entry.get("command")?.as_str()?.to_owned(),
-                    args: entry
-                        .get("args")
+                let list = |field: &str| {
+                    entry
+                        .get(field)
                         .and_then(|a| a.as_array())
-                        .map(|a| {
-                            a.iter()
-                                .filter_map(|v| v.as_str().map(str::to_owned))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
+                        .map(|a| strings(a.iter().map(|v| v.as_str()).collect()))
+                        .unwrap_or_default()
+                };
+                Some(Server {
+                    command: entry.get("command")?.as_str()?.to_owned(),
+                    args: list("args"),
                     env: entry
                         .get("env")
                         .and_then(|e| e.as_table_like())
@@ -889,13 +1236,14 @@ impl ConfigDoc {
                                 .collect()
                         })
                         .unwrap_or_default(),
+                    forward: forward.map(list).unwrap_or_default(),
                 })
             }
         }
     }
 
-    /// 写入服务的 command、args、env，别的字段不动。
-    fn set(&mut self, key_path: &[String], name: &str, decl: &McpDecl) {
+    /// 写入服务的 command、args、env（和转发列表），别的字段不动。
+    fn set(&mut self, key_path: &[String], name: &str, server: &Server, forward: Option<&str>) {
         match self {
             Self::Json(root) => {
                 let mut node = root;
@@ -925,24 +1273,31 @@ impl ConfigDoc {
                 let Some(fields) = entry.as_object_mut() else {
                     return;
                 };
-                fields.insert("command".to_owned(), Value::String(decl.command.clone()));
-                if decl.args.is_empty() {
+                let list = |items: &[String]| {
+                    Value::Array(items.iter().cloned().map(Value::String).collect())
+                };
+                fields.insert("command".to_owned(), Value::String(server.command.clone()));
+                if server.args.is_empty() {
                     fields.remove("args");
                 } else {
-                    fields.insert(
-                        "args".to_owned(),
-                        Value::Array(decl.args.iter().cloned().map(Value::String).collect()),
-                    );
+                    fields.insert("args".to_owned(), list(&server.args));
                 }
-                if decl.env.is_empty() {
+                if server.env.is_empty() {
                     fields.remove("env");
                 } else {
-                    let env = decl
+                    let env = server
                         .env
                         .iter()
                         .map(|(k, v)| (k.clone(), Value::String(v.clone())))
                         .collect();
                     fields.insert("env".to_owned(), Value::Object(env));
+                }
+                if let Some(field) = forward {
+                    if server.forward.is_empty() {
+                        fields.remove(field);
+                    } else {
+                        fields.insert(field.to_owned(), list(&server.forward));
+                    }
                 }
             }
             Self::Toml(doc) => {
@@ -972,21 +1327,30 @@ impl ConfigDoc {
                 let Some(fields) = item.as_table_like_mut() else {
                     return;
                 };
-                fields.insert("command", toml_edit::value(decl.command.clone()));
-                if decl.args.is_empty() {
+                let list = |items: &[String]| -> toml_edit::Array {
+                    items.iter().map(String::as_str).collect()
+                };
+                fields.insert("command", toml_edit::value(server.command.clone()));
+                if server.args.is_empty() {
                     fields.remove("args");
                 } else {
-                    let args: toml_edit::Array = decl.args.iter().map(String::as_str).collect();
-                    fields.insert("args", toml_edit::value(args));
+                    fields.insert("args", toml_edit::value(list(&server.args)));
                 }
-                if decl.env.is_empty() {
+                if server.env.is_empty() {
                     fields.remove("env");
                 } else {
                     let mut env = toml_edit::InlineTable::new();
-                    for (k, v) in &decl.env {
+                    for (k, v) in &server.env {
                         env.insert(k, v.as_str().into());
                     }
                     fields.insert("env", toml_edit::value(env));
+                }
+                if let Some(field) = forward {
+                    if server.forward.is_empty() {
+                        fields.remove(field);
+                    } else {
+                        fields.insert(field, toml_edit::value(list(&server.forward)));
+                    }
                 }
             }
         }
@@ -1030,6 +1394,10 @@ impl ConfigDoc {
         }
     }
 }
+
+mod disable;
+
+pub use disable::Visible;
 
 #[cfg(all(test, unix))]
 mod tests;

@@ -2,6 +2,8 @@
 import type { AssetKind } from "./AssetKind";
 import type { AssetState } from "./AssetState";
 import type { Declaration } from "./Declaration";
+import type { DisableOption } from "./DisableOption";
+import type { ItemActivity } from "./ItemActivity";
 import type { Scope } from "./Scope";
 import type { TokenEstimate } from "./TokenEstimate";
 
@@ -62,10 +64,23 @@ reason: string,
  */
 triggers: number | null, 
 /**
- * 写入了哪些文件：这里是工具实际读的文件。
+ * 写入了哪些文件（6.3 检查器第 5 条）：方寸实际物化的路径与软链指向、按键合并的配置项，
+ * 从台账取。方寸没写过的为空。
  */
 files: Array<string>, 
 /**
+ * 用到的密钥，例如「GITHUB_TOKEN → 钥匙串 github-token」。只有名称，没有值。
+ */
+secrets: Array<string>, 
+/**
+ * 最近活动（6.3 检查器第 6 条）：这一项的时间线，从活动记录按资产取，新的在前。
+ */
+recent: Array<ItemActivity>, 
+/**
  * 被谁覆盖：生效那一项的 `id`。
  */
-overriddenBy: string | null, };
+overriddenBy: string | null, 
+/**
+ * 「在本项目停用」（6.3 全局税、7.4）。只有全局层的 skill 与 MCP 有，内核按清单和适配器填。
+ */
+disable: DisableOption | null, };
