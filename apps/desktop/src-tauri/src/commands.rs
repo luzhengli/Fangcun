@@ -10,9 +10,9 @@ use std::path::PathBuf;
 
 use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
-use fangcun_core::global::GlobalOverview;
+use fangcun_core::global::{GlobalItemRef, GlobalOverview};
 use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
-use fangcun_core::kernel::{ManifestView, Overview, ProjectSummary, UpstreamReport};
+use fangcun_core::kernel::{AssetHit, ManifestView, Overview, ProjectSummary, UpstreamReport};
 use fangcun_core::materializer::drift::DriftChoice;
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
@@ -262,4 +262,41 @@ pub async fn plan_drift(
 #[tauri::command]
 pub async fn check_upstream(state: State<'_, AppState>) -> CommandResult<UpstreamReport> {
     state.run(|kernel| kernel.check_upstream()).await
+}
+
+/// 全局页、检查器被覆盖块与同名冲突的「从全局移除…」（6.6、6.3、M1-34、M1-02）。
+/// `tool` 是当前选中的目标工具。没收编的项返回 `not-adopted`，界面改给「去资产库收编」。
+#[tauri::command]
+pub async fn plan_remove_global(
+    state: State<'_, AppState>,
+    tool: ToolId,
+    items: Vec<GlobalItemRef>,
+) -> CommandResult<ChangePlan> {
+    state
+        .run(move |kernel| kernel.plan_remove_global(Some(&tool), &items))
+        .await
+}
+
+/// 命令面板 `⌘K` 的搜索（6.9、M1-22）。`market` 为真时联网搜 skills.sh，只发搜索词。
+#[tauri::command]
+pub async fn search_assets(
+    state: State<'_, AppState>,
+    query: String,
+    market: bool,
+) -> CommandResult<Vec<AssetHit>> {
+    state
+        .run(move |kernel| kernel.search_assets(&query, market))
+        .await
+}
+
+/// 命令面板回车：加进项目清单，更新锁并同步，一份计划（6.9、M1-22）。
+#[tauri::command]
+pub async fn plan_add(
+    state: State<'_, AppState>,
+    project_root: PathBuf,
+    asset: String,
+) -> CommandResult<ChangePlan> {
+    state
+        .run(move |kernel| kernel.plan_add(&project_root, &asset))
+        .await
 }

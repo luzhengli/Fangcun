@@ -117,6 +117,72 @@ pub fn remove_skill(origin: &str, text: &str, name: &str) -> Result<String> {
     Ok(doc.to_string())
 }
 
+/// `fangcun add`（M1-22）：在 `[skills]` 里加一行行内表，写法和 `fangcun init` 生成的一样（7.4）。
+/// 已有同名的一项时原样返回。
+pub fn add_skill(origin: &str, text: &str, name: &str, decl: &super::SkillDecl) -> Result<String> {
+    let mut doc = parse_doc(origin, text)?;
+    if doc.get("skills").is_none() {
+        doc.insert("skills", Item::Table(Table::new()));
+    }
+    let Some(skills) = doc.get_mut("skills").and_then(Item::as_table_like_mut) else {
+        return Err(Error::Parse {
+            origin: origin.to_owned(),
+            message: "skills 不是表".to_owned(),
+        });
+    };
+    if skills.get(name).is_some() {
+        return Ok(text.to_owned());
+    }
+    let mut entry = toml_edit::InlineTable::new();
+    entry.insert("source", decl.source.as_str().into());
+    for (label, value) in [
+        ("pin", &decl.pin),
+        ("track", &decl.track),
+        ("path", &decl.path),
+    ] {
+        if let Some(value) = value {
+            entry.insert(label, value.as_str().into());
+        }
+    }
+    skills.insert(name, toml_edit::value(entry));
+    Ok(doc.to_string())
+}
+
+/// `fangcun add`（M1-22）：加一节 `[mcp.<名称>]`。`env` 里的密钥是 `secret:` 引用。
+/// 已有同名的一项时原样返回。
+pub fn add_mcp(origin: &str, text: &str, name: &str, decl: &super::McpDecl) -> Result<String> {
+    let mut doc = parse_doc(origin, text)?;
+    if doc.get("mcp").is_none() {
+        let mut table = Table::new();
+        table.set_implicit(true);
+        doc.insert("mcp", Item::Table(table));
+    }
+    let Some(servers) = doc.get_mut("mcp").and_then(Item::as_table_like_mut) else {
+        return Err(Error::Parse {
+            origin: origin.to_owned(),
+            message: "mcp 不是表".to_owned(),
+        });
+    };
+    if servers.get(name).is_some() {
+        return Ok(text.to_owned());
+    }
+    let mut table = Table::new();
+    table.insert("command", toml_edit::value(decl.command.as_str()));
+    if !decl.args.is_empty() {
+        let args: Array = decl.args.iter().map(String::as_str).collect();
+        table.insert("args", toml_edit::value(args));
+    }
+    if !decl.env.is_empty() {
+        let mut env = toml_edit::InlineTable::new();
+        for (k, v) in &decl.env {
+            env.insert(k, v.as_str().into());
+        }
+        table.insert("env", toml_edit::value(env));
+    }
+    servers.insert(name, Item::Table(table));
+    Ok(doc.to_string())
+}
+
 /// 回流、升级：把一项 skill 的 `pin` 改成新的提交。没写 `pin` 的（跟随分支）不动，返回原文。
 pub fn set_skill_pin(origin: &str, text: &str, name: &str, pin: &str) -> Result<String> {
     let mut doc = parse_doc(origin, text)?;
@@ -189,6 +255,37 @@ mod tests {
         assert_eq!(set_skill_pin("t", text, "t", "abc1234").unwrap(), text);
         let removed = remove_skill("t", text, "h").unwrap();
         assert!(!removed.contains("local:x") && removed.contains("github:a/b"));
+    }
+
+    #[test]
+    fn add_keeps_the_rest_and_reads_back() {
+        let text = "# 团队清单\n[project]\ntargets = [\"claude-code\"]\n\n[skills]\ntdd = { source = \"github:a/b\" } # 测试\n";
+        let decl = crate::manifest::SkillDecl {
+            source: "github:obra/superpowers".to_owned(),
+            pin: None,
+            track: None,
+            path: Some("skills/brainstorming".to_owned()),
+        };
+        let added = add_skill("t", text, "brainstorming", &decl).unwrap();
+        assert!(added.starts_with(text), "{added}");
+        assert_eq!(
+            add_skill("t", &added, "brainstorming", &decl).unwrap(),
+            added
+        );
+        let mcp = crate::manifest::McpDecl {
+            command: "npx".to_owned(),
+            args: vec![
+                "-y".to_owned(),
+                "@modelcontextprotocol/server-github".to_owned(),
+            ],
+            env: [("GITHUB_TOKEN".to_owned(), "secret:github-token".to_owned())].into(),
+        };
+        let both = add_mcp("t", &added, "github", &mcp).unwrap();
+        assert!(both.contains("[mcp.github]"), "{both}");
+        let parsed = crate::manifest::parse_manifest("t", &both).unwrap();
+        assert_eq!(parsed.skills["brainstorming"], decl);
+        assert_eq!(parsed.mcp["github"], mcp);
+        assert!(both.contains("# 测试"));
     }
 
     #[test]

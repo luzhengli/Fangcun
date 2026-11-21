@@ -16,6 +16,7 @@ mod git;
 pub mod hash_samples;
 mod index;
 pub mod market;
+pub mod mcp;
 pub mod source;
 
 use std::fs;
@@ -105,7 +106,7 @@ impl Library {
     ///   `metadata.json` 不存），软链按内容存成普通文件，保留可执行权限。存完再算一遍哈希，
     ///   对不上（存的时候源目录在变）就不收。
     /// - 指令：`from` 是文件，原样存。
-    /// - MCP：配置里可能有明文密钥，等 M1-17 接上钥匙串再存。
+    /// - MCP：`from` 是 [`mcp::McpSpec`] 的 TOML 文件，见 [`Library::ingest_mcp`]。
     ///
     /// 内容已经在库里时不再复制；索引里同名、同类、同来源的资产已有这个版本时不重复记。
     pub fn ingest(
@@ -119,7 +120,9 @@ impl Library {
             AssetKind::Skill => self.store_dir(from)?,
             AssetKind::Instruction => (self.store_file(from)?, false),
             AssetKind::Mcp => {
-                return Err(Error::NotImplemented("library::ingest（MCP，随 M1-17）"));
+                let bytes = fs::read(from).map_err(io(from))?;
+                let spec = mcp::McpSpec::parse(&from.display().to_string(), &bytes)?;
+                return self.ingest_mcp(name, &spec, origin);
             }
         };
         let version = Version {
@@ -136,6 +139,43 @@ impl Library {
             &version,
         )?;
         Ok(version)
+    }
+
+    /// 把一个 MCP 服务存进库（M1-20）。`env` 里还有明文密钥就不收：调用方先用
+    /// [`mcp::McpSpec::from_config`] 换成 `secret:` 引用，明文在应用时存进钥匙串。
+    /// 存的是 [`mcp::McpSpec::to_bytes`] 的字节；带启动命令，算「含脚本」（6.4、6.6 标红）。
+    pub fn ingest_mcp(&self, name: &str, spec: &mcp::McpSpec, origin: &Origin) -> Result<Version> {
+        let plain = spec.plaintext_vars();
+        if !plain.is_empty() {
+            return Err(Error::Secret(format!(
+                "{name} 的 {} 还是明文，先换成 secret: 引用再存进资产库",
+                plain.join("、")
+            )));
+        }
+        let hash = self.store_bytes(&spec.to_bytes()?)?;
+        let version = Version {
+            hash,
+            commit: origin.commit.clone(),
+            tag: origin.tag.clone(),
+        };
+        index::record(
+            &self.index,
+            name,
+            AssetKind::Mcp,
+            origin.source.as_ref(),
+            true,
+            &version,
+        )?;
+        Ok(version)
+    }
+
+    /// 资产库里一个 MCP 版本的启动配置。没有这一版时为空。
+    pub fn read_mcp(&self, hash: &ContentHash) -> Result<Option<mcp::McpSpec>> {
+        let Some(path) = self.locate(hash)? else {
+            return Ok(None);
+        };
+        let bytes = fs::read(&path).map_err(io(&path))?;
+        mcp::McpSpec::parse(&path.display().to_string(), &bytes).map(Some)
     }
 
     /// 向来源查有没有新版本。只查不改。M1-16。
@@ -180,14 +220,18 @@ impl Library {
 
     fn store_file(&self, from: &Path) -> Result<ContentHash> {
         let bytes = fs::read(from).map_err(io(from))?;
-        let hash = hash_bytes(&bytes);
+        self.store_bytes(&bytes)
+    }
+
+    fn store_bytes(&self, bytes: &[u8]) -> Result<ContentHash> {
+        let hash = hash_bytes(bytes);
         let object = self.objects().join(&hash.0);
         if object.exists() {
             return Ok(hash);
         }
         let tmp = self.staging()?;
         fs::remove_dir(&tmp).map_err(io(&tmp))?;
-        fs::write(&tmp, &bytes).map_err(io(&tmp))?;
+        fs::write(&tmp, bytes).map_err(io(&tmp))?;
         let result = self.commit(&tmp, &object);
         if tmp.exists() {
             let _ = fs::remove_file(&tmp);

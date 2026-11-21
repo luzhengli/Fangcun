@@ -64,6 +64,10 @@ pub enum Error {
     #[error("解析 {origin} 失败：{message}")]
     Parse { origin: String, message: String },
 
+    /// 全局层的移除、降级只对已收编进资产库的项开放（7.5）。参数是没收编的项。
+    #[error("{0} 还没收编进资产库。先收编（fangcun adopt），再从全局移除")]
+    NotAdopted(String),
+
     /// 钥匙串出错（F6、M1-17）。信息里只有名称，从不带值。
     #[error("{0}")]
     Secret(String),
@@ -87,6 +91,7 @@ impl Error {
             Error::NoHomeDir => "no-home-dir",
             Error::Io { .. } => "io",
             Error::Parse { .. } => "parse",
+            Error::NotAdopted(_) => "not-adopted",
             Error::Secret(_) => "secret",
         }
     }

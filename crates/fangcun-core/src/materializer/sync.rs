@@ -1184,13 +1184,16 @@ fn project_key(key: &[String], project: &str) -> Vec<String> {
 }
 
 /// 一份 MCP 配置。JSON 用保序的 `serde_json`，TOML 用 `toml_edit`，都保住别的键和顺序。
-enum ConfigDoc {
+pub(super) enum ConfigDoc {
     Json(Value),
     Toml(toml_edit::DocumentMut),
 }
 
 impl ConfigDoc {
-    fn parse(format: FileFormat, text: Option<&str>) -> std::result::Result<Self, String> {
+    pub(super) fn parse(
+        format: FileFormat,
+        text: Option<&str>,
+    ) -> std::result::Result<Self, String> {
         let text = text.unwrap_or_default();
         match format {
             FileFormat::Json if text.trim().is_empty() => {
@@ -1385,7 +1388,7 @@ impl ConfigDoc {
         }
     }
 
-    fn remove(&mut self, key_path: &[String], name: &str) -> bool {
+    pub(super) fn remove(&mut self, key_path: &[String], name: &str) -> bool {
         match self {
             Self::Json(root) => {
                 let mut node = root;
@@ -1412,7 +1415,7 @@ impl ConfigDoc {
         }
     }
 
-    fn render(&self) -> String {
+    pub(super) fn render(&self) -> String {
         match self {
             Self::Json(value) => {
                 let mut text = serde_json::to_string_pretty(value).unwrap_or_default();

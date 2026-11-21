@@ -5,11 +5,13 @@
  * 参数名在 Rust 一侧是 snake_case，Tauri 会转成这里的 camelCase。
  */
 import type { Applied } from "./bindings/Applied";
+import type { AssetHit } from "./bindings/AssetHit";
 import type { ChangePlan } from "./bindings/ChangePlan";
 import type { CheckupReport } from "./bindings/CheckupReport";
 import type { DriftChoice } from "./bindings/DriftChoice";
 import type { EffectiveContext } from "./bindings/EffectiveContext";
 import type { Explanation } from "./bindings/Explanation";
+import type { GlobalItemRef } from "./bindings/GlobalItemRef";
 import type { GlobalOverview } from "./bindings/GlobalOverview";
 import type { HistoryEntry } from "./bindings/HistoryEntry";
 import type { ManifestEdit } from "./bindings/ManifestEdit";
@@ -56,6 +58,9 @@ export interface Commands {
   plan_finding: (args: { findingId: string }) => ChangePlan;
   plan_drift: (args: { projectRoot: string; asset: string; choice: DriftChoice }) => ChangePlan;
   check_upstream: () => UpstreamReport;
+  plan_remove_global: (args: { tool: ToolId; items: GlobalItemRef[] }) => ChangePlan;
+  search_assets: (args: { query: string; market: boolean }) => AssetHit[];
+  plan_add: (args: { projectRoot: string; asset: string }) => ChangePlan;
 }
 
 export const kernel = {
@@ -87,4 +92,8 @@ export const kernel = {
   planDrift: (projectRoot: string, asset: string, choice: DriftChoice) =>
     call("plan_drift", { projectRoot, asset, choice }),
   checkUpstream: () => call("check_upstream"),
+  planRemoveGlobal: (tool: ToolId, items: GlobalItemRef[]) =>
+    call("plan_remove_global", { tool, items }),
+  searchAssets: (query: string, market: boolean) => call("search_assets", { query, market }),
+  planAdd: (projectRoot: string, asset: string) => call("plan_add", { projectRoot, asset }),
 };

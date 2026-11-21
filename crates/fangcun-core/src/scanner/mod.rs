@@ -10,9 +10,9 @@ pub mod fsutil;
 mod usage;
 
 pub use checkup::{
-    CheckupReport, Finding, FindingCategory, FindingLocation, FindingStatus, GROUP_MIN,
-    GlobalGroup, LocationTone, common_prefix_label, diagnose, finding_ready, format_k,
-    group_global_skills, looks_like_secret, short_hash,
+    CheckupProgress, CheckupReport, Finding, FindingCategory, FindingLocation, FindingStatus,
+    GROUP_MIN, GlobalGroup, LocationTone, common_prefix_label, diagnose, finding_ready, format_k,
+    group_global_skills, looks_like_secret, mark_handled, short_hash,
 };
 pub(crate) use collect::requirement_met;
 pub use collect::{
