@@ -21,6 +21,7 @@ import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProje
 import { manifestView } from "./manifest";
 import {
   applyPlan,
+  driftPlan,
   findingPlan,
   history,
   initPlan,
@@ -84,6 +85,8 @@ const handlers: Partial<Commands> = {
   plan_rollback: ({ snapshot }) => rollbackToPlan(snapshot),
   /** Checkup.dc.html 的 dup。 */
   plan_finding: () => findingPlan(),
+  /** Main.dc.html 的 driftDoneMap：三种处理。 */
+  plan_drift: ({ choice }) => driftPlan(choice),
   /** Main.dc.html 的 HIST。 */
   history: () => history(),
   /** Main.dc.html 的 MF。未登记的目录没有清单。 */

@@ -631,3 +631,193 @@
   color: var(--accent);
   font-weight: 500;
 }
+
+/* 漂移块（6.3、M1-15），尺寸照原型 Main。 */
+.diff {
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.diff > div {
+  padding: 0 10px;
+  color: var(--tx-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff > div[data-kind="hunk"] {
+  padding: 2px 10px;
+  background: var(--code-bg);
+  color: var(--tx-3);
+}
+
+.diff > div[data-kind="remove"] {
+  background: var(--del-bg);
+  color: var(--danger);
+}
+
+.diff > div[data-kind="add"] {
+  background: var(--add-bg);
+  color: var(--ok);
+}
+
+.choices {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.choices legend {
+  padding: 0 0 6px;
+  font-size: 12px;
+  color: var(--tx-2);
+}
+
+.choices label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+
+.choices label[data-on="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.choices label[data-off="true"] {
+  cursor: default;
+  color: var(--tx-3);
+}
+
+.choices input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.choices label > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choiceTitle {
+  font-weight: 500;
+}
+
+.choiceDesc {
+  font-size: 12px;
+  color: var(--tx-2);
+}
+
+.stateActionsEnd {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* 可更新块（6.3、M1-16）。 */
+.updateFiles {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.updateFile {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.updateFile[data-script="true"] {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--danger-weak);
+  color: var(--danger);
+}
+
+.updateOp {
+  font-family: var(--mono);
+  color: var(--tx-3);
+}
+
+.updateFile[data-script="true"] .updateOp {
+  color: var(--danger);
+}
+
+.updateName {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.updateName strong {
+  font-weight: 600;
+}
+
+.affected {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.affected legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx-1);
+}
+
+.affected label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  cursor: pointer;
+}
+
+.affected input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.affectedName {
+  flex: 1;
+  color: var(--tx-1);
+}
+
+.queued {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--info);
+}
+
+/* 状态块里单独一行的按钮照原型靠左，不撑满。 */
+.startAligned {
+  align-self: flex-start;
+}

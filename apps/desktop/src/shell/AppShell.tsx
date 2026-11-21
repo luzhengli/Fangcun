@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
 import { PlanHost } from "@/components/PlanHost";
@@ -16,6 +17,7 @@ import { WindowToolbar } from "./WindowToolbar";
  */
 export function AppShell() {
   useOpenSettings();
+  useKernelEvents();
   return (
     <div className={styles.shell}>
       <WindowToolbar />
@@ -29,6 +31,33 @@ export function AppShell() {
       <RegisterHost />
     </div>
   );
+}
+
+/**
+ * 内核事件（7.2 监听器、M1-15）：外壳发来 `kernel-event`（发现漂移、活动记录新增），
+ * 让除了工具、设置以外的查询失效，界面自动重取：页头徽标、检查器、活动页、侧栏待处理数。
+ */
+function useKernelEvents() {
+  const client = useQueryClient();
+  useEffect(() => {
+    if (!insideTauri()) return;
+    let stop: (() => void) | undefined;
+    let gone = false;
+    void import("@tauri-apps/api/event").then(({ listen }) =>
+      listen("kernel-event", () => {
+        void client.invalidateQueries({
+          predicate: (q) => q.queryKey[0] !== "settings" && q.queryKey[0] !== "tools",
+        });
+      }).then((unlisten) => {
+        if (gone) unlisten();
+        else stop = unlisten;
+      }),
+    );
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, [client]);
 }
 
 /**

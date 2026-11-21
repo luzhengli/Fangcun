@@ -7,6 +7,7 @@
 import type { Applied } from "./bindings/Applied";
 import type { ChangePlan } from "./bindings/ChangePlan";
 import type { CheckupReport } from "./bindings/CheckupReport";
+import type { DriftChoice } from "./bindings/DriftChoice";
 import type { EffectiveContext } from "./bindings/EffectiveContext";
 import type { Explanation } from "./bindings/Explanation";
 import type { GlobalOverview } from "./bindings/GlobalOverview";
@@ -23,6 +24,7 @@ import type { SnapshotId } from "./bindings/SnapshotId";
 import type { SyncMode } from "./bindings/SyncMode";
 import type { ToolId } from "./bindings/ToolId";
 import type { ToolInfo } from "./bindings/ToolInfo";
+import type { UpstreamReport } from "./bindings/UpstreamReport";
 import { call } from "./client";
 
 /**
@@ -52,6 +54,8 @@ export interface Commands {
   history: (args: { projectRoot: string }) => HistoryEntry[];
   manifest_view: (args: { projectRoot: string }) => ManifestView | null;
   plan_finding: (args: { findingId: string }) => ChangePlan;
+  plan_drift: (args: { projectRoot: string; asset: string; choice: DriftChoice }) => ChangePlan;
+  check_upstream: () => UpstreamReport;
 }
 
 export const kernel = {
@@ -80,4 +84,7 @@ export const kernel = {
   history: (projectRoot: string) => call("history", { projectRoot }),
   manifestView: (projectRoot: string) => call("manifest_view", { projectRoot }),
   planFinding: (findingId: string) => call("plan_finding", { findingId }),
+  planDrift: (projectRoot: string, asset: string, choice: DriftChoice) =>
+    call("plan_drift", { projectRoot, asset, choice }),
+  checkUpstream: () => call("check_upstream"),
 };

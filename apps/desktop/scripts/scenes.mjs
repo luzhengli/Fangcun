@@ -60,6 +60,14 @@ export const SCENES = {
     steps: [{ click: "清单" }, { click: "fangcun.lock" }, { click: "源文件" }],
     focus: "main",
   },
+  "Main@drift": {
+    board: "Main",
+    steps: [{ click: "project-harness" }],
+  },
+  "Main@update": {
+    board: "Main",
+    steps: [{ click: "tdd" }],
+  },
   "Main@github": {
     board: "Main",
     steps: [{ click: "github" }],
