@@ -72,7 +72,7 @@ model  paths  error                        纯类型，不做 IO
 | `settings` | 本机设置 `~/.fangcun/settings.toml`：只读模式 | 已有（M1-04） |
 | `library` | 内容寻址的正本、索引、来源；`content` 是内容哈希（扫描也用它） | 正本与索引（M1-05）、来源与市场搜索（M1-06）已有，上游检查 M1-16 |
 | `materializer` | 计划、应用、快照、回滚、所有权、按键合并 | 骨架已有（M1-04）：`PlanBuilder`、`WriteScope`、`apply`、`snapshot`。所有权与按键合并 M1-10，回滚 M1-11 |
-| `watcher` | 监听漂移，向外壳推事件 | M1 |
+| `watcher` | 监听正本与 `.agents/skills`，有变化时回调（`notify`） | 已有（M1-15） |
 | `secrets` | 钥匙串（`security-framework`，服务名 `fangcun`），测试用 `MemoryStore` | 已有（M1-17） |
 
 内核是同步的，不依赖异步运行时。桌面外壳用 `AppState::run` 把每次调用放到阻塞线程。
@@ -100,7 +100,7 @@ model  paths  error                        纯类型，不做 IO
 
 写入命令成对：`plan_*`（`plan_sync`、`plan_init`、`plan_adopt`、`plan_finding`、`plan_rollback`、`plan_rollback_record`）出计划，`apply_plan` 落盘。外壳另有三个不属于内核用例的命令：`pick_directory`（「添加项目…」，外壳用 tauri-plugin-dialog 弹选文件夹面板，capabilities 不开它的权限，界面调不到插件）、`settings` / `save_settings`（只读开关变了时 `AppState::reopen` 换一个新内核）。应用菜单「设置…」（⌘,）发 `open-settings` 事件，界面切到 `/settings`。
 
-内核事件（漂移、活动记录新增）的转发还没接：`watcher::EventSink` 已定义，M1 在外壳里实现它，用 Tauri 事件发给界面，界面收到后让 `ipc/queries.ts` 里对应的查询失效。
+内核事件（漂移、活动记录新增）：外壳启动时 `AppState::watch` 按 `Kernel::watch_paths` 开监听，有变化就 `Kernel::refresh_drift`，新的事件以 `kernel-event` 发给界面，`AppShell` 收到后让查询失效；`apply_plan` 之后重设监听目录。启动时另在后台做一次上游检查（`AppState::check_upstream_in_background`）。
 
 菜单栏图标、`⌘K` 命令面板都还没有，实现时在外壳里加。
 
@@ -220,6 +220,8 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **界面暂存的清单改动**（6.8）：`state/staged.ts` 按项目存 `ManifestEdit`，「同步 · N」把它们交给 `plan_sync`（内核 `plan_sync_with`），清单用 `toml_edit` 改（`manifest::apply_edits`），和同步一份计划。能不能停用由内核填 `EffectiveItem.disable`，界面不判断。
 - **密钥**（M1-17）：内核的测试构建默认用内存存放处，不碰真实钥匙串；要指定用 `Kernel::with_secret_store`。同步时提交的配置按适配器 `env-reference` / `env-forward` 写引用，明文只写个人层（台账 `mcp-personal` 记位置和「变量 → 密钥」）。`apply` 存快照前按全部台账把这些明文换成 `secrets::marker`，回滚用 `snapshot::content` 从钥匙串补回。计划里存钥匙串用 `PlanBuilder::store_secret`，应用时先存再写文件，各记一条密钥记录。
 - **检查器的台账数据**（M1-31 至 33）：`kernel/item_state.rs` 给生效上下文填 `files`（台账）、`recent`（活动记录）、`secrets`；`kernel/manifest_view.rs` 出清单页签。
+- **漂移**（M1-15）：`materializer::drift::detect` 按台账判断（入库比实体目录，链接比正本目录名）。`Kernel::plan_drift` 的三种处理都走 `sync_into`（分叉传 `forked`，同步留着那一份、不再记账）。整目录改写用 `drift::replace_dir`，只列一行。回流用 `Sources::prepare_promote` / `finish_promote`，计划体里的 `promotions` 在写完文件后执行。待处理记录带 `subject`，`Kernel::log` 读的时候按现状结算（`settle_pending`），侧栏待处理数也走它。
+- **更新**（M1-16）：`Kernel::check_upstream` 写 `~/.fangcun/state/upstream.toml`，新版本各记一条待处理；`still_behind` 用锁里的哈希判断还要不要升。升级走 `apply_upgrades`（改 pin 和锁）再 `sync_into`；界面暂存的是 `ManifestEdit::Upgrade`，`plan_sync_with` 里处理，勾选的其他项目用 `upgrade_into`。差异在 `library::diff`，脚本按路径、可执行位、`#!`、扩展名判断。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型
@@ -230,7 +232,7 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 | --- | --- |
 | SQLite 的库 | `library` 的索引 |
 | git 的库，或直接调 `git` | `library` 的来源缓存 |
-| 文件监听的库 | `watcher` |
+| ~~文件监听的库~~ | 已定：`notify`（FSEvents），见 DECISIONS 2026-11-21 批 5 |
 | ~~钥匙串的库~~ | 已定：`security-framework`，见 DECISIONS 2026-11-21 批 4 |
 | ~~token 估算的口径~~ | 已定：ASCII 每 4 字符 1 个，其余每字符 1 个，见 `estimator` |
 | ~~内容哈希的算法~~ | 已定：SHA-256 十六进制，见 `scanner::fsutil::hash_dir` |
