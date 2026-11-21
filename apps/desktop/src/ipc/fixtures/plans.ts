@@ -32,6 +32,19 @@ export function syncPlan(projectRoot: string, edits: ManifestEdit[] = []): Chang
       ];
   // 暂存的「在本项目停用」：清单加一节，Claude Code 的开关加 16 个键（原型 larkOff）。
   for (const edit of edits) {
+    // 升级 tdd（Main.dc.html 的 tddQueued）：本项目改链接，勾选的项目各一行。
+    if (edit.op === "upgrade") {
+      changes[0] = { op: "add", path: ".agents/skills/tdd", detail: "链接到 tdd@b7e9f0" };
+      for (const other of edit.projects) {
+        const name = other.split("/").pop();
+        changes.push({
+          op: "modify",
+          path: `${name}/.agents/skills/tdd`,
+          detail: "改到 b7e9f0 · 另留该项目的快照",
+        });
+      }
+      continue;
+    }
     const n = edit.names.length;
     changes.unshift({
       op: "modify",
@@ -163,4 +176,62 @@ export function findingPlan(): ChangePlan {
     notes: [],
     blocked: false,
   };
+}
+
+/** 漂移的三种处理（Main.dc.html 的 driftDoneMap）。原型点了直接生效，这里照内核的做法先出计划。 */
+export function driftPlan(choice: "promote" | "discard" | "fork"): ChangePlan {
+  const plans = {
+    promote: {
+      title: "回流 project-harness 到 local:luyao-skills",
+      changes: [
+        {
+          op: "modify" as const,
+          path: "~/code/luyao-skills/project-harness",
+          detail: "回流 project-harness 的修改，生成新版本 9c1f2a",
+        },
+        { op: "modify" as const, path: "fangcun.toml", detail: "project-harness 改为固定 9c1f2a" },
+        { op: "modify" as const, path: "fangcun.lock", detail: "project-harness 锁到 9c1f2a" },
+      ],
+      notes: [
+        {
+          tone: "info" as const,
+          text: "另有 4 个项目也用 project-harness：agent-lab、fangcun、blog-site、notes-kit。回流后上游检查会把它们列进「可更新」，逐个决定是否跟进",
+        },
+      ],
+    },
+    discard: {
+      title: "丢弃 project-harness 的修改",
+      changes: [
+        {
+          op: "modify" as const,
+          path: "~/.fangcun/library/objects/4d9b1eb…",
+          detail: "恢复资产库里的正本 4d9b1eb，链到它的项目一起恢复；改过的内容进快照",
+        },
+      ],
+      notes: [
+        {
+          tone: "info" as const,
+          text: "想找回被丢弃的修改，对这条记录回滚即可（6.7 回滚规则第 4 条）",
+        },
+      ],
+    },
+    fork: {
+      title: "分叉 project-harness 为本项目专属",
+      changes: [
+        {
+          op: "modify" as const,
+          path: "fangcun.toml",
+          detail: "[skills] 去掉 project-harness，不再跟随来源",
+        },
+        { op: "modify" as const, path: "fangcun.lock", detail: "去掉 project-harness" },
+        {
+          op: "modify" as const,
+          path: ".agents/skills/project-harness",
+          detail: "改成本项目自己的实体目录，提交进仓库",
+        },
+      ],
+      notes: [],
+    },
+  };
+  return { id: state.next++, blocked: false, ...plans[choice] };
 }

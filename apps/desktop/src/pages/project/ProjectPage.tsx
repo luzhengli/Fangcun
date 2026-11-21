@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useParams } from "react-router";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
@@ -8,11 +8,15 @@ import { StatusBadge, StatusDot } from "@/components/StatusDot";
 import { ToolSwitch } from "@/components/ToolSwitch";
 import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
+import type { DriftChoice } from "@/ipc/bindings/DriftChoice";
+import type { DriftInfo } from "@/ipc/bindings/DriftInfo";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
+import type { FileDiff } from "@/ipc/bindings/FileDiff";
 import type { ManifestEdit } from "@/ipc/bindings/ManifestEdit";
 import type { ObservedKind } from "@/ipc/bindings/ObservedKind";
 import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
+import type { UpdateInfo } from "@/ipc/bindings/UpdateInfo";
 import { kernel } from "@/ipc/commands";
 import {
   useEffectiveContext,
@@ -115,11 +119,15 @@ function ProjectView({ root }: { root: string | undefined }) {
     setInspectorOpen(true);
   };
   // 再点一次侧栏里同一个项目：地址不变，但每次导航都有新的 location.key。
+  // 从活动页的待处理过来时带着 ?asset=，选中那一项（6.7「去处理漂移」「查看差异」）。
   const navKey = useLocation().key;
+  const [params] = useSearchParams();
   const [seenNavKey, setSeenNavKey] = useState(navKey);
+  const [wanted, setWanted] = useState<string | null>(params.get("asset"));
   if (navKey !== seenNavKey) {
     setSeenNavKey(navKey);
     toCard();
+    setWanted(params.get("asset"));
   }
   const picked = selected !== null;
   useEffect(() => {
@@ -138,6 +146,14 @@ function ProjectView({ root }: { root: string | undefined }) {
 
   const data = context.data;
   const items = data?.items ?? [];
+  if (wanted && data) {
+    const hit = items.find((i) => i.name === wanted);
+    setWanted(null);
+    if (hit) {
+      setTab("effective");
+      setSelected(hit.id);
+    }
+  }
   // 没选中任何一项时看项目卡片，已登记、未登记一样（6.3）。
   const current = items.find((i) => i.id === selected);
   const tools = useTools();
@@ -488,6 +504,10 @@ function ItemInspector({
         <p className={page.why}>{item.reason}</p>
         <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
       </Section>
+      {root && item.drift && <DriftBox item={item} drift={item.drift} root={root} />}
+      {root && item.update && (
+        <UpdateBox item={item} update={item.update} root={root} staged={staged} />
+      )}
       {root && item.disable && (
         <DisableBox item={item} root={root} staged={staged} toolName={toolName} />
       )}
@@ -563,12 +583,222 @@ function ItemInspector({
   );
 }
 
+type SwitchOp = "disable" | "enable";
+
 /** 这一项在暂存里是要停用还是要恢复。 */
-function stagedOp(staged: ManifestEdit[], item: EffectiveItem): ManifestEdit["op"] | null {
+function stagedOp(staged: ManifestEdit[], item: EffectiveItem): SwitchOp | null {
   const names = item.disable?.names;
   if (!names) return null;
-  const hit = staged.find((e) => e.kind === item.kind && e.names.join("\n") === names.join("\n"));
-  return hit?.op ?? null;
+  for (const e of staged) {
+    if (e.op === "upgrade") continue;
+    if (e.kind === item.kind && e.names.join("\n") === names.join("\n")) return e.op;
+  }
+  return null;
+}
+
+/** 差异片段：一个文件的行，增删着色（原型 Main 漂移块）。 */
+function DiffLines({ file }: { file: FileDiff }) {
+  if (file.binary)
+    return <p className={styles.sectionNote}>{file.path} 是二进制文件，不列差异。</p>;
+  return (
+    <div className={styles.diff}>
+      {file.lines.map((l, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 差异行的位置就是键
+        <div key={i} data-kind={l.kind}>
+          {l.kind === "add" ? "+ " : l.kind === "remove" ? "- " : l.kind === "context" ? "  " : ""}
+          {l.text}
+        </div>
+      ))}
+      {file.truncated > 0 && <div data-kind="hunk">…另有 {file.truncated} 行</div>}
+    </div>
+  );
+}
+
+/**
+ * 漂移块（6.3 检查器「漂移」、F4、9.3）：差异片段，回流、丢弃、分叉三选一，预览后应用。
+ * 回流只对本地来源，GitHub 来源置灰并说明。
+ */
+function DriftBox({ item, drift, root }: { item: EffectiveItem; drift: DriftInfo; root: string }) {
+  const preview = usePlan((s) => s.preview);
+  const [pick, setPick] = useState<DriftChoice>(drift.promoteBlocked ? "discard" : "promote");
+  const others = drift.others.length;
+  const options: { id: DriftChoice; title: string; desc: string; off: string | null }[] = [
+    {
+      id: "promote",
+      title: "回流到来源",
+      desc: `写回 ${item.source ?? "来源"} 生成新版本${others > 0 ? `，再决定其他 ${others} 个项目是否跟进` : ""}。`,
+      off: drift.promoteBlocked,
+    },
+    {
+      id: "discard",
+      title: "丢弃修改",
+      desc: `恢复为锁定的 ${drift.locked}，修改进快照，回滚能找回。`,
+      off: drift.original ? null : "原版取不回（本地来源没有提交）",
+    },
+    {
+      id: "fork",
+      title: "分叉为项目专属",
+      desc: "改成本项目自己的文件，提交进仓库，不再跟随来源。",
+      off: item.scope === "bundle" ? "来自套装的项还不能分叉" : null,
+    },
+  ];
+  const chosen = options.find((o) => o.id === pick && !o.off) ?? options.find((o) => !o.off);
+  const done: Record<DriftChoice, string> = {
+    promote: "已回流到来源",
+    discard: "已丢弃修改",
+    fork: "已分叉为项目专属",
+  };
+  return (
+    <div className={styles.stateBox}>
+      <h3 className={styles.stateTitle}>副本已被修改</h3>
+      <p className={styles.stateText}>{drift.summary}</p>
+      {drift.files.slice(0, 3).map((f) => (
+        <DiffLines key={f.path} file={f} />
+      ))}
+      {drift.files.length > 3 && (
+        <span className={styles.sectionNote}>另有 {drift.files.length - 3} 个文件有变化。</span>
+      )}
+      <fieldset className={styles.choices}>
+        <legend>怎么处理这份修改？</legend>
+        {options.map((o) => (
+          <label key={o.id} data-on={chosen?.id === o.id} data-off={o.off !== null}>
+            <input
+              type="radio"
+              name={`drift-${item.id}`}
+              checked={chosen?.id === o.id}
+              disabled={o.off !== null}
+              onChange={() => setPick(o.id)}
+            />
+            <span>
+              <span className={styles.choiceTitle}>{o.title}</span>
+              <span className={styles.choiceDesc}>{o.off ?? o.desc}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div className={styles.stateActionsEnd}>
+        <button
+          type="button"
+          className={page.buttonPrimary}
+          disabled={!chosen}
+          onClick={() =>
+            chosen &&
+            preview({
+              load: () => kernel.planDrift(root, item.name, chosen.id),
+              done: (applied) =>
+                `${done[chosen.id]} · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}，可撤销`,
+            })
+          }
+        >
+          预览并应用
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 可更新块（6.3 检查器「可更新」、F6）：版本差异，脚本变更标红；同一版本的其他项目可勾选，
+ * 一起加入同步计划，每个项目各留一个快照。
+ */
+function UpdateBox({
+  item,
+  update,
+  root,
+  staged,
+}: {
+  item: EffectiveItem;
+  update: UpdateInfo;
+  root: string;
+  staged: ManifestEdit[];
+}) {
+  const stage = useStaged((s) => s.stage);
+  const unstage = useStaged((s) => s.unstage);
+  const queued = staged.find(
+    (e): e is Extract<ManifestEdit, { op: "upgrade" }> =>
+      e.op === "upgrade" && e.asset === item.name,
+  );
+  const [picked, setPicked] = useState<string[]>([]);
+  const chosen = queued?.projects ?? picked;
+  const toggle = (id: string) =>
+    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const edit: ManifestEdit = { op: "upgrade", asset: item.name, projects: chosen };
+  const total = chosen.length + 1;
+  return (
+    <div className={styles.stateBox}>
+      <h3 className={styles.stateTitle}>
+        {update.from} → {update.to}
+      </h3>
+      <ul className={styles.updateFiles}>
+        {update.files.map((f) => (
+          <li key={f.path} className={styles.updateFile} data-script={f.script}>
+            <span className={styles.updateOp}>
+              {f.op === "add" ? "+" : f.op === "remove" ? "−" : "~"}
+            </span>
+            <span className={styles.updateName}>
+              {f.script ? (
+                <>
+                  <strong>脚本变更</strong> · {f.path}
+                  {f.op === "add"
+                    ? " 新增，会执行命令"
+                    : f.op === "remove"
+                      ? " 删除"
+                      : " 改动，会执行命令"}
+                </>
+              ) : (
+                f.path
+              )}
+            </span>
+            <span className={styles.updateOp}>
+              {f.added > 0 ? `+${f.added}` : ""}
+              {f.removed > 0 ? ` −${f.removed}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <fieldset className={styles.affected}>
+        <legend>受影响的项目 · 同一版本 {update.from}</legend>
+        <label>
+          <input type="checkbox" checked disabled />
+          <span className={styles.affectedName}>{projectName(root)}</span>
+          <span>本项目</span>
+        </label>
+        {update.others.map((p) => (
+          <label key={p.project}>
+            <input
+              type="checkbox"
+              checked={chosen.includes(p.project)}
+              disabled={queued !== undefined}
+              onChange={() => toggle(p.project)}
+            />
+            <span className={styles.affectedName}>{p.name}</span>
+            <span>{p.note}</span>
+          </label>
+        ))}
+        <span>勾选的项目一起加入同步计划，每个项目各留一个快照。</span>
+      </fieldset>
+      {queued ? (
+        <div className={styles.queued}>
+          已加入同步计划 · {total > 1 ? `共 ${total} 个项目` : "仅本项目"}
+          <button type="button" className={styles.linkButton} onClick={() => unstage(root, queued)}>
+            撤回
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={`${page.buttonPrimary} ${styles.startAligned}`}
+          onClick={() => stage(root, edit)}
+        >
+          {total > 1 ? `审阅后加入同步计划 · ${total} 个项目` : "审阅后加入同步计划"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function projectName(root: string): string {
+  return root.split("/").filter(Boolean).pop() ?? root;
 }
 
 /**
@@ -594,7 +824,7 @@ function DisableBox({
   if (!option.idle && !option.active && !pending) return null;
   if (item.kind === "instruction") return null;
   const kind = item.kind;
-  const edit = (op: ManifestEdit["op"]): ManifestEdit => ({ op, kind, names: option.names });
+  const edit = (op: SwitchOp): ManifestEdit => ({ op, kind, names: option.names });
   const what =
     item.kind === "mcp"
       ? "这个 MCP 服务每次会话都会启动，本项目从未调用。"

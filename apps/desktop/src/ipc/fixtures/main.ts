@@ -78,6 +78,8 @@ function item(
     files: [],
     secrets: [],
     recent: [],
+    drift: null,
+    update: null,
     overriddenBy: null,
     disable: null,
     ...x,
@@ -117,6 +119,34 @@ const R = {
   }),
   harness: item({
     id: "harness",
+    // Main.dc.html 漂移块：SKILL.md 第 14 行的差异、回流时列出的 4 个项目。
+    drift: {
+      locked: "4d9b1eb",
+      summary: "Agent 在本项目修改了 SKILL.md，相对 4d9b1eb 多 3 行、少 1 行。",
+      files: [
+        {
+          path: "SKILL.md",
+          op: "modify",
+          added: 3,
+          removed: 1,
+          script: false,
+          binary: false,
+          truncated: 0,
+          lines: [
+            { kind: "hunk", text: "@@ SKILL.md · 第 14 行 @@" },
+            { kind: "context", text: "## 收尾检查" },
+            { kind: "remove", text: "运行全部测试后再提交。" },
+            { kind: "add", text: "先运行受影响的测试，再运行全部测试。" },
+            { kind: "add", text: "提交前检查 fangcun status 无漂移。" },
+            { kind: "add", text: "新增依赖时同步更新 fangcun.toml。" },
+          ],
+        },
+      ],
+      shared: true,
+      original: true,
+      promoteBlocked: null,
+      others: ["agent-lab", "fangcun", "blog-site", "notes-kit"],
+    },
     recent: [
       act("5 分钟前", "检测到漂移 · 多 3 行、少 1 行", "drift", "drift1"),
       act("11-11", "收编进资产库", "adopt"),
@@ -141,6 +171,38 @@ const R = {
   }),
   tdd: item({
     id: "tdd",
+    // Main.dc.html 可更新块：SKILL.md 描述改写、新增脚本，另两个项目也在 a1b2c3。
+    update: {
+      from: "a1b2c3",
+      to: "b7e9f0",
+      scripts: true,
+      files: [
+        {
+          path: "SKILL.md",
+          op: "modify",
+          added: 3,
+          removed: 1,
+          script: false,
+          binary: false,
+          truncated: 0,
+          lines: [],
+        },
+        {
+          path: "scripts/run-tests.sh",
+          op: "add",
+          added: 22,
+          removed: 0,
+          script: true,
+          binary: false,
+          truncated: 0,
+          lines: [],
+        },
+      ],
+      others: [
+        { project: "/Users/me/code/agent-lab", name: "agent-lab", note: "跟随 main · 链接" },
+        { project: "/Users/me/code/fangcun", name: "fangcun", note: "跟随 main · 入库" },
+      ],
+    },
     recent: [
       act("11-12", "上游新提交 b7e9f0", "updatable"),
       act("10-28", "升级到 a1b2c3", "upgrade"),

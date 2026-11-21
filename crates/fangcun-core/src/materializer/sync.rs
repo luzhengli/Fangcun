@@ -52,6 +52,8 @@ pub struct SyncInput<'a> {
     pub sources: &'a Sources,
     /// 钥匙串：用了 `secret:` 的服务同步时取明文写进个人层（M1-17）。
     pub secrets: &'a dyn SecretStore,
+    /// 分叉为项目专属的 skill（M1-15）：清单里去掉了，但项目里那一份留着，不再归方寸管。
+    pub forked: &'a [String],
 }
 
 /// 一项要放进 `.agents/skills` 的 skill。
@@ -101,6 +103,7 @@ pub fn plan(input: &SyncInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         ignored: BTreeSet::from(["/fangcun.local.toml".to_owned()]),
         docs: BTreeMap::new(),
         bad_docs: BTreeSet::new(),
+        skipped: BTreeSet::new(),
     };
 
     let placed = state.collect_skills(mode)?;
@@ -164,6 +167,8 @@ struct Run<'a, 'b> {
     /// 改在内存里、还没写进计划的配置文件。
     docs: BTreeMap<PathBuf, PendingDoc>,
     bad_docs: BTreeSet<PathBuf>,
+    /// 这次没能同步的 skill（例如正本被改过、等漂移处理）：原来的受管路径照旧留着、照旧记账。
+    skipped: BTreeSet<String>,
 }
 
 /// 一份改在内存里的配置，和改之前的原文。
@@ -234,6 +239,7 @@ impl Run<'_, '_> {
                 Err(e) => {
                     self.notes
                         .push(PlanNote::danger(format!("{e}，没有同步这一项")));
+                    self.skipped.insert(name.clone());
                     continue;
                 }
             };
@@ -964,12 +970,35 @@ impl Run<'_, '_> {
 
     /// 台账里有、这次没有的路径：还是方寸写的样子就删，被人改过就留着并提示。
     fn remove_dropped(&mut self) -> Result<()> {
+        // 没能同步的项原样留着，照旧记账；分叉的项留着，从台账里去掉（不再归方寸管）。
+        let carried: Vec<OwnedPath> = self
+            .old
+            .paths
+            .iter()
+            .filter(|p| self.skipped.contains(&p.asset))
+            .filter(|p| !self.new.paths.iter().any(|n| n.path == p.path))
+            .cloned()
+            .collect();
+        for owned in carried {
+            let mode = self
+                .input
+                .project
+                .manifest
+                .project
+                .mode
+                .unwrap_or(SyncMode::Link);
+            if mode != SyncMode::Vendor {
+                self.ignored.insert(format!("/{}", owned.path));
+            }
+            self.new.paths.push(owned);
+        }
         let keep: BTreeSet<String> = self.new.paths.iter().map(|p| p.path.clone()).collect();
         let dropped: Vec<OwnedPath> = self
             .old
             .paths
             .iter()
             .filter(|p| !keep.contains(&p.path))
+            .filter(|p| !self.input.forked.contains(&p.asset))
             .cloned()
             .collect();
         // 先删工具目录里的链接，再删实体。
@@ -996,7 +1025,7 @@ impl Run<'_, '_> {
             };
             if !untouched {
                 self.notes.push(PlanNote::warning(format!(
-                    "{} 清单里已经去掉，但本机这份被改过，没有删（漂移处理在 M1-15）",
+                    "{} 清单里已经去掉，但本机这份被改过，没有删。先在项目页处理漂移",
                     owned.path
                 )));
                 self.new.paths.push(owned);
