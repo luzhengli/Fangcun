@@ -36,6 +36,27 @@ pub(super) fn run(dir: Option<&Path>, args: &[&str]) -> Result<Vec<u8>> {
     }
 }
 
+/// 带环境变量跑一条 git 命令（回流时用临时索引、固定的提交时间）。
+pub(super) fn run_env(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String> {
+    let mut cmd = command(Some(dir));
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let output = cmd
+        .args(args)
+        .output()
+        .map_err(|e| Error::Source(format!("运行 git 失败：{e}。请确认本机装了 git")))?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+    } else {
+        Err(Error::Source(format!(
+            "git {} 失败：{}",
+            args.first().copied().unwrap_or_default(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        )))
+    }
+}
+
 pub(super) fn run_text(dir: Option<&Path>, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&run(dir, args)?).trim().to_owned())
 }

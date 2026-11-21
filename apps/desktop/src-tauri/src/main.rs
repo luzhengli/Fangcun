@@ -22,6 +22,8 @@ fn main() {
             // 默认可写；设置里开了只读模式时只读（7.5）。
             let kernel = Kernel::open_configured(false)?;
             app.manage(AppState::new(kernel));
+            AppState::watch(app.handle());
+            AppState::check_upstream_in_background(app.handle());
             add_settings_menu(app)?;
             Ok(())
         })
@@ -54,6 +56,8 @@ fn main() {
             commands::history,
             commands::manifest_view,
             commands::plan_finding,
+            commands::plan_drift,
+            commands::check_upstream,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");

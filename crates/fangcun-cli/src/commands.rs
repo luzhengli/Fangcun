@@ -60,12 +60,9 @@ pub fn run(cli: Cli) -> Result<()> {
         }
         Command::Update {
             asset,
-            dry_run: _,
+            dry_run,
             projects,
-        } => {
-            let projects: Vec<ProjectId> = projects.into_iter().map(ProjectId).collect();
-            let _plan = kernel.plan_update(asset.as_deref(), &projects)?;
-        }
+        } => update(&kernel, &cwd, asset.as_deref(), dry_run, &projects, cli.yes)?,
         Command::Rollback { snapshot } => {
             let plan = kernel.plan_rollback(&project_root_of(&cwd), SnapshotId(snapshot))?;
             confirm_and_apply(&kernel, &plan, cli.yes)?;
@@ -80,6 +77,90 @@ pub fn run(cli: Cli) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// `fangcun update`（F6、第 5 节）：先做上游检查（联网），`--dry-run` 只列差异，否则出升级计划。
+/// `--projects` 写项目名，按已登记的项目找；不写时是当前项目。
+fn update(
+    kernel: &Kernel,
+    cwd: &Path,
+    asset: Option<&str>,
+    dry_run: bool,
+    projects: &[String],
+    yes: bool,
+) -> Result<()> {
+    let report = kernel.check_upstream()?;
+    for error in &report.errors {
+        println!("! 没查到：{error}");
+    }
+    let items: Vec<_> = report
+        .items
+        .iter()
+        .filter(|i| asset.is_none_or(|a| a == i.asset))
+        .collect();
+    if items.is_empty() {
+        println!("没有可更新的项。");
+        return Ok(());
+    }
+    for item in &items {
+        println!(
+            "{}  {} → {}  {}{}",
+            item.asset,
+            item.from,
+            item.to,
+            item.projects.join("、"),
+            if item.scripts {
+                "  ‼ 含脚本变更"
+            } else {
+                ""
+            }
+        );
+        for file in &item.files {
+            let mark = match file.op {
+                FileOp::Add => "+",
+                FileOp::Remove => "−",
+                _ => "~",
+            };
+            let script = if file.script { "  ‼ 脚本" } else { "" };
+            println!(
+                "  {mark} {}  +{} −{}{script}",
+                file.path, file.added, file.removed
+            );
+            if dry_run {
+                for line in &file.lines {
+                    use fangcun_core::library::diff::DiffKind;
+                    let prefix = match line.kind {
+                        DiffKind::Hunk => "",
+                        DiffKind::Context => "    ",
+                        DiffKind::Add => "  + ",
+                        DiffKind::Remove => "  - ",
+                    };
+                    println!("    {prefix}{}", line.text);
+                }
+            }
+        }
+    }
+    if dry_run {
+        return Ok(());
+    }
+    let ids: Vec<ProjectId> = if projects.is_empty() {
+        vec![ProjectId(
+            project_root_of(cwd).to_string_lossy().into_owned(),
+        )]
+    } else {
+        let all = kernel.projects()?;
+        projects
+            .iter()
+            .map(|name| {
+                all.iter()
+                    .find(|p| p.registered && (p.name == *name || p.id.0 == *name))
+                    .map(|p| p.id.clone())
+                    .ok_or_else(|| Error::NotFound(format!("已登记的项目 {name}")))
+            })
+            .collect::<Result<_>>()?
+    };
+    let plan = kernel.plan_update(asset, &ids)?;
+    confirm_and_apply(kernel, &plan, yes)
 }
 
 /// `fangcun secret`（F6、9.3）：值只从终端或标准输入读，不打印、不进记录。
@@ -336,9 +417,17 @@ fn print_status(kernel: &Kernel, cwd: &Path) -> Result<()> {
         root.display()
     );
     if status.has_manifest {
-        println!("有 fangcun.toml。同步状态与漂移在 M1 读取。");
+        if status.drifted.is_empty() && status.updatable.is_empty() {
+            println!("没有漂移，也没有可更新的项（上次上游检查的结果）。");
+        }
+        for asset in &status.drifted {
+            println!("● 已漂移  {asset}：副本被改过。在桌面应用的项目页处理：回流、丢弃或分叉");
+        }
+        for line in &status.updatable {
+            println!("● 可更新  {line}。看差异：fangcun update --dry-run");
+        }
     } else {
-        println!("未登记：没有 fangcun.toml。M0 只读，登记项目在 M1 开放。");
+        println!("未登记：没有 fangcun.toml。登记：fangcun init --from-existing");
     }
     println!();
     for tool in kernel.tools() {

@@ -3,9 +3,11 @@ import type { AssetKind } from "./AssetKind";
 import type { AssetState } from "./AssetState";
 import type { Declaration } from "./Declaration";
 import type { DisableOption } from "./DisableOption";
+import type { DriftInfo } from "./DriftInfo";
 import type { ItemActivity } from "./ItemActivity";
 import type { Scope } from "./Scope";
 import type { TokenEstimate } from "./TokenEstimate";
+import type { UpdateInfo } from "./UpdateInfo";
 
 /**
  * 生效上下文列表里的一行。
@@ -76,6 +78,14 @@ secrets: Array<string>,
  * 最近活动（6.3 检查器第 6 条）：这一项的时间线，从活动记录按资产取，新的在前。
  */
 recent: Array<ItemActivity>, 
+/**
+ * 漂移（6.3 检查器「漂移」块、M1-15）。
+ */
+drift: DriftInfo | null, 
+/**
+ * 可更新（6.3 检查器「可更新」块、M1-16）。
+ */
+update: UpdateInfo | null, 
 /**
  * 被谁覆盖：生效那一项的 `id`。
  */

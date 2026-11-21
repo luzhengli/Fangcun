@@ -118,6 +118,17 @@ pub struct Matched {
     pub upstream_missing: bool,
 }
 
+/// 回流造好的提交，应用时把分支挪过去（[`Sources::finish_promote`]）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Promotion {
+    pub repo: PathBuf,
+    pub branch: String,
+    pub parent: String,
+    pub commit: String,
+    /// skill 在仓库里的目录。
+    pub path: String,
+}
+
 /// 往回找多少个改过这个目录的提交。
 const HISTORY_DEPTH: &str = "200";
 
@@ -236,6 +247,190 @@ impl Sources {
             path: dir,
             version: result?,
         })
+    }
+
+    /// 来源对应的本机 git 仓库：GitHub 是缓存的裸仓库（`fetch` 为真时先拉），本地是登记的目录。
+    fn repo_of(&self, source: &SourceRef, fetch: bool) -> Result<PathBuf> {
+        match Source::parse(source)? {
+            Source::Github { owner, repo } if fetch => self.fetch_github(&owner, &repo),
+            Source::Github { owner, repo } => {
+                let dir = self
+                    .home
+                    .git_cache_dir()
+                    .join("github.com")
+                    .join(&owner)
+                    .join(format!("{repo}.git"));
+                if dir.join("HEAD").exists() {
+                    Ok(dir)
+                } else {
+                    self.fetch_github(&owner, &repo)
+                }
+            }
+            Source::Local { name } => self.local_dir(&name),
+        }
+    }
+
+    /// 把某个提交里的 skill 目录导出到 `to`（已存在、为空），不存进资产库。漂移处理取原版用：
+    /// 先用本机的仓库，缺这个提交时 GitHub 再拉一次。
+    pub fn export_version(
+        &self,
+        source: &SourceRef,
+        commit: &str,
+        path: &str,
+        to: &Path,
+    ) -> Result<()> {
+        let mut repo = self.repo_of(source, false)?;
+        if git::commit_of(&repo, commit).is_none() {
+            repo = self.repo_of(source, true)?;
+        }
+        git::export(&repo, commit, &checked_path(path)?, to)
+    }
+
+    /// 上游检查（M1-16）：`track` 取那个分支最新的提交，否则取默认分支最新的提交。GitHub 先拉一次。
+    pub fn upstream_commit(&self, source: &SourceRef, track: Option<&str>) -> Result<String> {
+        let repo = self.repo_of(source, true)?;
+        let policy = track.map(|t| VersionPolicy::Track(t.to_owned()));
+        Ok(resolve_policy(&repo, policy.as_ref())?.0)
+    }
+
+    /// 回流（M1-15，9.3）第一步，出计划时做：在本地来源的仓库里用临时索引造一个提交——当前分支的
+    /// 最新提交，把 `path` 换成 `from` 的内容。只写 git 的对象，不动分支、工作目录和索引；
+    /// 计划没应用时这些对象没人引用，等 git 自己回收。提交时间在这里定下，提交编号也就定了。
+    pub fn prepare_promote(
+        &self,
+        source: &SourceRef,
+        path: &str,
+        from: &Path,
+        message: &str,
+    ) -> Result<Promotion> {
+        let Source::Local { name } = Source::parse(source)? else {
+            return Err(Error::Source("只有本地来源能回流（9.3）".to_owned()));
+        };
+        let repo = self.local_dir(&name)?;
+        let path = checked_path(path)?;
+        let branch = git::run_text(Some(&repo), &["symbolic-ref", "--quiet", "--short", "HEAD"])
+            .map_err(|_| {
+                Error::Source(format!(
+                    "来源 {name} 不在任何分支上（detached HEAD），回流不了"
+                ))
+            })?;
+        let parent = git::commit_of(&repo, "HEAD")
+            .ok_or_else(|| Error::Source(format!("来源 {name} 还没有提交")))?;
+        for key in ["user.name", "user.email"] {
+            if git::run_text(Some(&repo), &["config", key])
+                .unwrap_or_default()
+                .is_empty()
+            {
+                return Err(Error::Source(format!(
+                    "来源 {name} 的 git 没设 {key}，回流的提交没有作者。先 git config {key} …"
+                )));
+            }
+        }
+        let index = std::env::temp_dir().join(format!(
+            "fangcun-promote-{}-{}.index",
+            std::process::id(),
+            parent
+        ));
+        let index_s = index.to_string_lossy().into_owned();
+        let env = [("GIT_INDEX_FILE", index_s.as_str())];
+        let result = (|| {
+            git::run_env(&repo, &["read-tree", &parent], &env)?;
+            let prefix = if path.is_empty() {
+                String::new()
+            } else {
+                format!("{path}/")
+            };
+            if !path.is_empty() {
+                git::run_env(
+                    &repo,
+                    &[
+                        "rm",
+                        "-r",
+                        "-q",
+                        "--cached",
+                        "--ignore-unmatch",
+                        "--",
+                        &path,
+                    ],
+                    &env,
+                )?;
+            }
+            for file in super::content::hashed_files(from) {
+                let full = format!("{prefix}{}", file.rel);
+                let blob = git::run_env(
+                    &repo,
+                    &[
+                        "hash-object",
+                        "-w",
+                        "--path",
+                        &full,
+                        "--",
+                        &file.source.to_string_lossy(),
+                    ],
+                    &env,
+                )?;
+                let mode = if super::diff_executable(&file.source) {
+                    "100755"
+                } else {
+                    "100644"
+                };
+                git::run_env(
+                    &repo,
+                    &[
+                        "update-index",
+                        "--add",
+                        "--cacheinfo",
+                        &format!("{mode},{blob},{full}"),
+                    ],
+                    &env,
+                )?;
+            }
+            let tree = git::run_env(&repo, &["write-tree"], &env)?;
+            let secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let when = format!("{secs} +0000");
+            let commit = git::run_env(
+                &repo,
+                &["commit-tree", &tree, "-p", &parent, "-m", message],
+                &[("GIT_AUTHOR_DATE", &when), ("GIT_COMMITTER_DATE", &when)],
+            )?;
+            Ok(commit)
+        })();
+        let _ = fs::remove_file(&index);
+        let commit = result?;
+        Ok(Promotion {
+            repo,
+            branch,
+            parent,
+            commit,
+            path,
+        })
+    }
+
+    /// 回流第二步，应用计划写完文件后做：把分支挪到新提交（分支还在原处才挪），再让索引里这个目录
+    /// 跟上新提交，工作目录这时已经是新内容。
+    pub fn finish_promote(promotion: &Promotion) -> Result<()> {
+        let refname = format!("refs/heads/{}", promotion.branch);
+        git::run(
+            Some(&promotion.repo),
+            &[
+                "update-ref",
+                "-m",
+                "fangcun: 回流",
+                &refname,
+                &promotion.commit,
+                &promotion.parent,
+            ],
+        )?;
+        let path = if promotion.path.is_empty() {
+            "."
+        } else {
+            promotion.path.as_str()
+        };
+        git::run(Some(&promotion.repo), &["reset", "-q", "--", path])?;
+        Ok(())
     }
 
     /// 本机装着的一份 GitHub skill 对应上游的哪个提交：先试锁里记的提交，再沿着改过这个目录的

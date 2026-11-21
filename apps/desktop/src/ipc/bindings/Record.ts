@@ -5,6 +5,7 @@ import type { RecordKind } from "./RecordKind";
 import type { RecordSnapshot } from "./RecordSnapshot";
 import type { RecordStatus } from "./RecordStatus";
 import type { SnapshotId } from "./SnapshotId";
+import type { Subject } from "./Subject";
 import type { Timestamp } from "./Timestamp";
 import type { Trigger } from "./Trigger";
 
@@ -47,4 +48,9 @@ command: string | null,
 /**
  * 命令的输出。
  */
-output: string | null, };
+output: string | null, 
+/**
+ * 待处理的记录（漂移、可更新）指向哪项资产。读的时候按现状判断还待不待处理，
+ * 处理过了显示「已记录」（6.7「待处理」）。
+ */
+subject?: Subject | null, };
