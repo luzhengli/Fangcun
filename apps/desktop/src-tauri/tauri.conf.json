@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Fangcun",
-  "version": "0.0.0",
-  "identifier": "app.fangcun.desktop",
+  "version": "0.1.0",
+  "identifier": "io.github.luzhengli.fangcun",
   "build": {
     "beforeDevCommand": "pnpm dev:web",
     "devUrl": "http://localhost:1420",

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Tauri 构建时和自动生成的 Info.plist 合并。显示名「方寸」，.app 文件名仍是 productName（Fangcun.app），见设计文档 9.3。 -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>方寸</string>
+  <key>CFBundleDisplayName</key>
+  <string>方寸</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>zh_CN</string>
+</dict>
+</plist>
