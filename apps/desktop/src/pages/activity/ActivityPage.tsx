@@ -11,6 +11,7 @@ import type { Trigger } from "@/ipc/bindings/Trigger";
 import { kernel } from "@/ipc/commands";
 import { useActivity, useProjects } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
+import { PageToolbar } from "@/shell/PageToolbar";
 import { usePlan } from "@/state/plan";
 import page from "../page.module.css";
 import styles from "./ActivityPage.module.css";
@@ -149,9 +150,7 @@ export function ActivityPage() {
 
   return (
     <div className={page.page}>
-      <header className={page.header}>
-        <h1 className={page.title}>活动</h1>
-        <span className={styles.subtitle}>所有项目的落盘记录 · 每次写入都留快照，可一键回滚</span>
+      <PageToolbar title="活动" subtitle="所有项目的落盘记录 · 每次写入都留快照，可一键回滚">
         <label className={styles.projectLabel}>
           项目
           <select
@@ -169,7 +168,7 @@ export function ActivityPage() {
             <option value="global">全局层</option>
           </select>
         </label>
-      </header>
+      </PageToolbar>
       <div className={page.split}>
         <section aria-label="活动时间线" className={page.list}>
           <div className={styles.toolbar}>

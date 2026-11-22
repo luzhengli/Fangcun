@@ -123,6 +123,8 @@ src/
 
 - **两种状态分开放。** 内核的数据走 TanStack Query，键集中在 `ipc/queries.ts`。只属于窗口的状态（侧栏折叠、待应用的同步计划）放 `state/`。
 - **样式用 CSS Modules 加 token。** 不引入第二套设计系统。原型是行内样式，实现时改写成模块样式，尺寸照抄。
+- **工具栏与页面标题**（方寸 2，批 8）：工具栏由外壳画（`shell/Toolbar.tsx`），页面不要自己画页头，用 `<PageToolbar title subtitle mono tag crumb>` 放标题，子元素放进右侧控件区。项目页选中一项时传 `crumb`，标题变面包屑。控件样式从 `components/controls.module.css` 取（`c.b`、`c.primary`、`c.quiet`、`c.danger`、`c.small`、`c.icon`、`c.seg`、`c.kbd`、`c.tag`），说明文字用 `InfoTip`，目标工具用 `ToolPicker`。
+- **侧栏**：`useSidebar()` 返回 `shown`、`peek`、`toggle`、`close`。宽窗口里开关把侧栏整个藏起（`ui.sidebarCollapsed`）；窄于 960px 时侧栏默认收起，开关让它浮出（`ui.sidebarPeek`），点外面、Esc、点导航项都收起。
 - **token 的旧名字**：2026-11-22 原型换成方寸 2 的 token（`--win`、`--side`、`--insp`、`--raised`、`--fill-1…3`、`--k1…3` 等）。`tokens.css` 末尾有一段旧名字别名（`--bg`、`--bg-sidebar`、`--line-strong` 等指到新 token），只给还没重做的界面用。新代码只用新名字；某个页面按方寸 2 重做完，就把它用到的旧名字换掉，全部换完删掉别名段。
 - **页面自己摆「列表 + 检查器」。** 骨架只管工具栏和侧栏，因为套装页的左栏和别的页不一样。
 - **跨页面的组件先写一次。** `components/` 里已有：检查器 `Inspector`（6.1 统一结构，含 `Section`、`ReadOnlyAction`）、状态 `StatusDot`/`StatusBadge`（圆点加短标签，语气见 `tone.ts`）、层级刻度 `ScopeTicks`、预算条 `BudgetBar`、目标工具 `ToolSwitch`、变更计划弹窗与提示条 `PlanHost`、登记弹窗 `RegisterHost`（后两个挂在 `AppShell` 上，全应用一份）。
@@ -228,7 +230,7 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **加入清单**（M1-22，`Kernel::plan_add`）：`manifest::add_skill`/`add_mcp` 用 `toml_edit` 加一项，别的不动；再 `resolve_lock`（新项联网解析、存库）和 `sync_into`，一份计划，最后把标题改回「把 X 加进 Y」（`sync_into` 会改标题）。已在清单里的出一份没有变更的计划。
 - **体检的处理进度**（M1-28）：`plan_finding` 的计划用 `PlanBuilder::finding` 记下发现编号，进 `Record.finding`。`doctor`/`rescan` 之后 `scanner::mark_handled` 按「这次扫描之后、状态仍是已应用」的记录标 `resolved` 和 `Finding.record`，`CheckupReport.progress` 是已处理 / 总数（尚未扫描的不算）。不另存状态，回滚自然回到待处理。
 - **测试**：批 6 的端到端测试在 `materializer/sync/tests/batch6.rs`，共用上一层的临时主目录和冒充 GitHub 的仓库，钥匙串用 `MemoryStore`。
-- **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
+- **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt。方寸 2 侧栏顶行和工具栏都高 52px，目标中线 26pt，现在是 x 20、y 24.25（还没实测）。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型
 

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import c from "@/components/controls.module.css";
 import { Inspector, ReadOnlyAction, Section } from "@/components/Inspector";
-import { StatusDot } from "@/components/StatusDot";
 import { TONE_COLORS, type Tone } from "@/components/tone";
 import type { Finding } from "@/ipc/bindings/Finding";
 import type { FindingCategory } from "@/ipc/bindings/FindingCategory";
 import type { LocationTone } from "@/ipc/bindings/LocationTone";
 import { kernel } from "@/ipc/commands";
 import { useCheckup } from "@/ipc/queries";
+import { PageToolbar } from "@/shell/PageToolbar";
 import { usePlan } from "@/state/plan";
 import page from "../page.module.css";
 import styles from "./CheckupPage.module.css";
@@ -46,19 +47,23 @@ export function CheckupPage() {
 
   return (
     <div className={page.page}>
-      <header className={page.header}>
-        <div className={page.titleGroup} style={{ alignItems: "center" }}>
-          <h1 className={page.title}>体检报告</h1>
-          {data && <StatusDot tone="ok" label="只读扫描完成，未改动任何文件" />}
-          {report.isLoading && <StatusDot tone="muted" label="正在扫描…" />}
-        </div>
-        <button type="button" className={page.button} onClick={() => navigate(-1)}>
+      <PageToolbar
+        title="体检报告"
+        subtitle={
+          report.isLoading ? "正在扫描…" : data ? "只读扫描完成 · 没有改动任何文件" : undefined
+        }
+      >
+        <button type="button" className={c.b} onClick={() => navigate(-1)}>
           稍后处理
         </button>
-        <button type="button" className={page.buttonPrimary} onClick={() => navigate("/projects")}>
+        <button
+          type="button"
+          className={`${c.b} ${c.primary}`}
+          onClick={() => navigate("/projects")}
+        >
           进入项目
         </button>
-      </header>
+      </PageToolbar>
 
       {report.isError && <p className={page.error}>{report.error.message}</p>}
 

@@ -7,21 +7,25 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 72px 16px;
+  /* 面板在工具栏（52px）下方 12px 处居中，遮罩盖住整个窗口（6.1「浮层」）。 */
+  padding: 64px 16px 24px;
   box-sizing: border-box;
-  background: rgb(20 20 22 / 0.28);
+  background: rgb(0 0 0 / 0.2);
+  animation: fc-fade 160ms ease-out;
 }
 
 .dialog {
   width: 100%;
-  max-width: 640px;
-  max-height: calc(100vh - 144px);
+  max-width: 620px;
+  max-height: calc(100vh - 88px);
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  border-radius: 12px;
+  background: var(--raised);
+  border-radius: 14px;
   box-shadow: var(--shadow-pop);
   overflow: hidden;
+  transform-origin: 50% 0;
+  animation: fc-drop 220ms var(--ease);
 }
 
 .head {
@@ -188,13 +192,16 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 8px 8px 14px;
-  border-radius: 10px;
+  gap: 10px;
+  height: 40px;
+  padding: 0 6px 0 14px;
+  border-radius: 20px;
   background: var(--tx-1);
-  color: var(--bg);
+  color: var(--win);
   box-shadow: var(--shadow-pop);
+  font-size: 13px;
   white-space: nowrap;
+  animation: fc-rise 220ms var(--ease);
 }
 
 .toast svg {
@@ -202,12 +209,42 @@
 }
 
 .toastButton {
-  height: 26px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--bg) 14%, transparent);
-  color: var(--bg);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--win) 14%, transparent);
+  color: var(--win);
+  font: inherit;
+  font-weight: 500;
+}
+
+@keyframes fc-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fc-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+
+@keyframes fc-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veil,
+  .dialog,
+  .toast {
+    animation: none;
+  }
 }
 
 /* 登记弹窗：物化方式的两个选项（Main.dc.html「登记：先问物化方式」）。 */

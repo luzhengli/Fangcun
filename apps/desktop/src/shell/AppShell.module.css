@@ -1,98 +1,81 @@
-/* 窗口骨架。尺寸取自 prototype/project/Main.dc.html 的工具栏和侧栏。 */
+/*
+ * 窗口骨架（6.1，方寸 2）：侧栏贯通到顶，右边是统一工具栏和主区。
+ * 尺寸取自 prototype/project/Main.dc.html 的 .side、header 和 .nav。
+ */
 
 .shell {
+  position: relative;
   display: flex;
-  flex-direction: column;
   height: 100vh;
   min-height: 640px;
   overflow: hidden;
+  background: var(--win);
 }
 
-/* ── 整窗工具栏 ── */
-
-.toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 40px;
-  padding: 0 12px;
-  background: var(--bg-sidebar);
-  border-bottom: 1px solid var(--line);
-}
-
-/* 给系统画的三个窗口按钮留位置：3 × 12px，间隔 8px，右边空 16px。 */
-.trafficLights {
-  flex: 0 0 auto;
-  width: 52px;
-  margin-right: 16px;
-}
-
-.toolbarButton {
-  width: 28px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--tx-2);
-}
-
-.toolbarButton:hover {
-  box-shadow: inset 0 0 0 999px var(--veil);
-}
-
-.toolbarButton[data-active="true"] {
-  background: var(--bg-hover);
-}
-
-/* ── 侧栏与主区 ── */
-
-.split {
+.column {
   flex: 1;
-  display: flex;
-  flex-wrap: nowrap;
-  min-height: 0;
-}
-
-.sidebar {
-  flex: 0 0 216px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 12px 10px 16px;
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--line);
-  overflow-y: auto;
+}
+
+/* ── 侧栏 ── */
+
+.sidebar {
+  flex: 0 0 236px;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  background: var(--side);
+  border-right: 0.5px solid var(--line);
 }
 
-.sidebar[data-collapsed="true"] {
-  flex-basis: 56px;
-  padding-left: 8px;
-  padding-right: 8px;
+/* 窄窗口里点开的侧栏浮在内容上。 */
+.sidebar[data-peek="true"] {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 8;
+  width: 236px;
+  box-shadow: var(--shadow-pop);
 }
 
-.brand {
+.peekVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* 窗口按钮是系统画的（tauri.conf.json 的 trafficLightPosition），这里留出位置和侧栏开关。 */
+.sideTop {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* 原型是内容高 28px 加上下各 2px 的内边距。这里全局是 border-box，所以写 32px。 */
-  height: 32px;
-  padding: 2px 6px;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  height: 52px;
+  padding: 0 12px 0 20px;
 }
 
-.brandMark {
-  display: inline-flex;
-  color: var(--accent);
+.trafficLights {
+  flex: none;
+  width: 52px;
+  height: 12px;
+}
+
+.sideScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fill-3) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 2px 10px 12px;
 }
 
 .navGroup {
@@ -101,84 +84,251 @@
   gap: 1px;
 }
 
-.navItem {
+.nav {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
+  gap: 9px;
+  width: 100%;
+  height: 28px;
   padding: 0 8px;
+  border: 0;
   border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
   color: var(--tx-1);
+  text-align: left;
   text-decoration: none;
+  cursor: default;
 }
 
-.navItem:hover {
-  color: var(--tx-1);
-  box-shadow: inset 0 0 0 999px var(--veil);
+.nav:hover {
+  background: var(--fill-1);
 }
 
-.navItem[aria-current="page"] {
-  background: var(--bg-hover);
-  font-weight: 500;
+.nav[aria-current="page"] {
+  background: var(--accent-weak);
+  font-weight: 600;
 }
 
-.navItem svg {
-  flex: 0 0 auto;
-  color: var(--tx-2);
+.nav svg {
+  flex: none;
+  color: var(--tx-3);
 }
 
-.navItem[aria-current="page"] svg {
+.nav[aria-current="page"] svg,
+.nav[data-parent="true"] svg {
   color: var(--accent);
+}
+
+.nav[data-parent="true"] {
+  font-weight: 600;
+}
+
+.nav:disabled {
+  color: var(--tx-3);
 }
 
 .navLabel {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navCount {
-  font-size: 12px;
-  color: var(--tx-3);
-}
-
-.navCount[data-tone="warn"] {
-  color: var(--warn);
-}
-
-.navKbd {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--tx-3);
 }
 
-/* 折叠后只保留图标，文字留给读屏软件。 */
-.sidebar[data-collapsed="true"] .navItem {
-  justify-content: center;
-  padding: 0;
+/* 「活动」旁的待处理数：浅橙底深橙字（6.1）。 */
+.badge {
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--warn-weak);
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
 }
 
-.sidebar[data-collapsed="true"] .navLabel,
-.sidebar[data-collapsed="true"] .navCount,
-.sidebar[data-collapsed="true"] .navKbd {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.groupTitle {
+  padding: 0 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--tx-3);
 }
 
-.sidebarFooter {
-  margin-top: auto;
+.groupEmpty {
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.projectDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.projectDot[data-hollow="true"] {
+  border: 1.25px solid var(--muted-dot);
+}
+
+.projectNote {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recent {
+  color: var(--tx-2);
+}
+
+.addProject {
+  margin-top: 2px;
+  color: var(--tx-2);
+}
+
+.sideFoot {
+  flex: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 1px;
+  padding: 6px 10px 10px;
+  border-top: 0.5px solid var(--line);
+}
+
+.sideFoot .kbd {
+  height: 16px;
+  font-size: 10px;
+  background: transparent;
 }
 
 .footnote {
-  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px 0;
   font-size: 11px;
   color: var(--tx-3);
+  white-space: nowrap;
 }
+
+/* ── 统一工具栏 ── */
+
+.toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 12px;
+  border-bottom: 0.5px solid var(--line-2);
+  background: var(--win);
+}
+
+/* 侧栏收起时，工具栏左边接过窗口按钮的位置和侧栏开关。 */
+.lead {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lead .trafficLights {
+  margin: 0 10px 0 8px;
+}
+
+.history {
+  display: inline-flex;
+}
+
+.titleSlot {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.crumb {
+  display: inline;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: var(--tx-2);
+  cursor: default;
+}
+
+.crumb:hover {
+  background: var(--fill-1);
+  color: var(--tx-1);
+}
+
+.crumbSep {
+  color: var(--tx-3);
+  font-weight: 400;
+}
+
+.crumbLeaf {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtitle {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.subtitleMono {
+  font-family: var(--mono);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions:empty {
+  display: none;
+}
+
+/* ── 主区 ── */
 
 .main {
   flex: 1;
@@ -189,136 +339,15 @@
   overflow: hidden;
 }
 
-/* 窗口窄于 900px：各栏上下堆叠，整页滚动。 */
+/* 窗口窄于 900px：列表与检查器上下堆叠，整页滚动（6.1）。 */
 @media (max-width: 900px) {
   .shell {
     height: auto;
-    overflow: visible;
-  }
-
-  .split {
-    flex-wrap: wrap;
-  }
-
-  .sidebar,
-  .sidebar[data-collapsed="true"] {
-    flex: 1 1 100%;
+    min-height: 100vh;
     overflow: visible;
   }
 
   .main {
-    flex: 1 1 100%;
     overflow: visible;
   }
-}
-
-/* ── 项目列表 ── */
-
-.groupTitle {
-  padding: 0 8px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--tx-3);
-}
-
-/* 第二组标题上面多留一点（Main.dc.html：padding-top 12px）。 */
-.groupTitle[data-gap="true"] {
-  padding-top: 12px;
-}
-
-.groupEmpty {
-  padding: 4px 8px;
-  font-size: 12px;
-  color: var(--tx-3);
-}
-
-/* 「添加项目…」：加号占圆点的位置，文字和项目名对齐。 */
-.addProject {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  height: 28px;
-  margin-top: 6px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--tx-2);
-  text-align: left;
-}
-
-.addProjectIcon {
-  flex: none;
-  display: inline-flex;
-  margin: 0 -2.5px;
-}
-
-.addProject:hover {
-  box-shadow: inset 0 0 0 999px var(--veil);
-}
-
-.projectItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 6px;
-  color: var(--tx-1);
-  text-decoration: none;
-}
-
-.projectItem:hover {
-  color: var(--tx-1);
-  box-shadow: inset 0 0 0 999px var(--veil);
-}
-
-.projectItem[aria-current="page"] {
-  background: var(--bg);
-  box-shadow: 0 0 0 1px var(--line);
-  font-weight: 500;
-}
-
-.projectDot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 4px;
-  background: var(--muted-dot);
-}
-
-/* 未登记：空心灰点。 */
-.projectDot[data-hollow="true"] {
-  box-sizing: border-box;
-  background: transparent;
-  border: 1px solid var(--muted-dot);
-}
-
-.projectName {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-button.navItem {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-}
-
-.toolbarButton:disabled {
-  color: var(--tx-3);
-  opacity: 0.55;
-  cursor: default;
-  box-shadow: none;
-}
-
-.projectNote {
-  font-size: 11px;
-  color: var(--tx-3);
 }

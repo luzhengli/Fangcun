@@ -7,12 +7,13 @@ import { insideTauri } from "@/ipc/client";
 import styles from "./AppShell.module.css";
 import { SETTINGS_PATH } from "./nav";
 import { Sidebar } from "./Sidebar";
-import { WindowToolbar } from "./WindowToolbar";
+import { Toolbar } from "./Toolbar";
 
 /**
- * 窗口骨架（6.1），所有页面共用：整窗工具栏在上，下面是侧栏和主区。
+ * 窗口骨架（6.1，方寸 2），所有页面共用：左边是贯通到顶的侧栏，右边是统一工具栏和主区。
  *
  * 主区里的「列表 + 检查器」由各页面自己摆，因为套装页的左栏和别的页不一样。
+ * 页面的标题和工具栏控件用 `PageToolbar` 放进工具栏。
  * 窗口固定为一屏高，各栏各自滚动；窄于 900px 时改为上下堆叠，整页滚动。
  */
 export function AppShell() {
@@ -20,9 +21,9 @@ export function AppShell() {
   useKernelEvents();
   return (
     <div className={styles.shell}>
-      <WindowToolbar />
-      <div className={styles.split}>
-        <Sidebar />
+      <Sidebar />
+      <div className={styles.column}>
+        <Toolbar />
         <main className={styles.main}>
           <Outlet />
         </main>

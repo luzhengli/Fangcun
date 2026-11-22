@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router";
 import { BudgetBar } from "@/components/BudgetBar";
+import c from "@/components/controls.module.css";
+import { Icon } from "@/components/Icon";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
-import { StatusBadge, StatusDot } from "@/components/StatusDot";
-import { ToolSwitch } from "@/components/ToolSwitch";
+import { StatusDot } from "@/components/StatusDot";
+import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { DriftChoice } from "@/ipc/bindings/DriftChoice";
@@ -27,6 +29,7 @@ import {
   useTools,
 } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
+import { PageToolbar } from "@/shell/PageToolbar";
 import { usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
 import { useStaged, useStagedEdits } from "@/state/staged";
@@ -158,32 +161,57 @@ function ProjectView({ root }: { root: string | undefined }) {
   const current = items.find((i) => i.id === selected);
   const tools = useTools();
   const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
+  const pending = syncPlan.data?.changes.length ?? 0;
+  const openRegister = useRegister((s) => s.open);
   const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
 
   return (
     <div className={page.page}>
-      <header className={page.header}>
-        <div className={page.titleGroup}>
-          <h1 className={page.title}>{data?.projectName ?? "…"}</h1>
-          <span className={page.path}>{data?.projectPath}</span>
-        </div>
-        {summary && !registered && <StatusBadge tone="muted" label="未登记" />}
-        <ToolSwitch value={tool} onChange={setTool} />
-        <button type="button" className={styles.palette} disabled title="命令面板还没有实现">
-          <span>搜索资产与动作</span>
-          <span className={styles.kbd}>⌘K</span>
+      <PageToolbar
+        title={data?.projectName ?? "…"}
+        subtitle={data?.projectPath}
+        mono
+        tag={summary && !registered ? "未登记" : undefined}
+        crumb={
+          current
+            ? { leaf: current.name, back: toCard, backTitle: "回到项目卡片（Esc）" }
+            : undefined
+        }
+      >
+        <ToolPicker value={tool} onChange={setTool} />
+        <button
+          type="button"
+          className={styles.palette}
+          aria-label="命令面板"
+          disabled
+          title="命令面板还没有实现（M1-42）"
+        >
+          <Icon name="search" size={14} strokeWidth={1.6} />
+          <span className={styles.paletteText}>搜索资产与动作</span>
+          <span className={c.kbd}>⌘K</span>
         </button>
         {registered && (
           <button
             type="button"
-            className={page.buttonPrimary}
+            className={pending > 0 ? `${c.b} ${c.primary}` : c.b}
             onClick={openSync}
             title="按清单与锁物化，先出变更计划"
           >
-            同步 <span className={styles.count}>· {syncPlan.data?.changes.length ?? "…"}</span>
+            <Icon name="sync" size={14} strokeWidth={1.6} />
+            同步
+            {pending > 0 && <span className={styles.count}>· {pending}</span>}
           </button>
         )}
-      </header>
+        {summary && !registered && root && (
+          <button
+            type="button"
+            className={`${c.b} ${c.primary}`}
+            onClick={() => openRegister(root)}
+          >
+            登记…
+          </button>
+        )}
+      </PageToolbar>
 
       {data && (
         <div className={page.band}>

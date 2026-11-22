@@ -1,4 +1,6 @@
-import { NavLink, useNavigate } from "react-router";
+import { useEffect } from "react";
+import { NavLink, useMatch, useNavigate } from "react-router";
+import c from "@/components/controls.module.css";
 import { Icon } from "@/components/Icon";
 import { TONE_COLORS, toneOfState } from "@/components/tone";
 import type { AssetState } from "@/ipc/bindings/AssetState";
@@ -10,13 +12,6 @@ import styles from "./AppShell.module.css";
 import { NAV_ITEMS, projectPath, SETTINGS_PATH } from "./nav";
 import { useSidebar } from "./useSidebar";
 
-/**
- * 侧栏（6.1）：「方寸」标识、五个导航项、项目列表、底部的「设置」「重新体检」。
- * 可折叠为 56px 宽的图标栏，此时只保留导航图标。
- *
- * 项目分两组（D-28）：「已登记项目」，和「近 30 天的项目」里还没登记的目录；
- * 两组下面是「添加项目…」，选一个目录登记（F3）。
- */
 /** 项目旁的短标签：只在需要处理时出现。 */
 const PROJECT_NOTE: Partial<Record<AssetState, string>> = {
   drifted: "漂移",
@@ -24,13 +19,20 @@ const PROJECT_NOTE: Partial<Record<AssetState, string>> = {
   "script-changed": "脚本变更",
 };
 
+/**
+ * 侧栏（6.1，方寸 2）：贯通到窗口顶部，顶上一行是系统的窗口按钮和侧栏开关，没有「方寸」字标。
+ * 下面是五个导航项、「已登记」「近 30 天 · 未登记」两组项目和「添加项目…」；
+ * 底部固定「设置 ⌘,」「重新体检」和一行「本地优先 · 零遥测」。
+ * 折叠时整个藏起；窗口窄于 960px 时浮在内容上，点外面或 Esc 收起。
+ */
 export function Sidebar() {
-  const { collapsed } = useSidebar();
+  const sidebar = useSidebar();
   const overview = useOverview();
   const projects = useProjects();
   const rescan = useRescan();
   const navigate = useNavigate();
   const openRegister = useRegister((s) => s.open);
+  const onProject = useMatch("/projects/:projectId") !== null;
   const registered = projects.data?.filter((p) => p.registered) ?? [];
   const recent = projects.data?.filter((p) => !p.registered) ?? [];
   const addProject = async () => {
@@ -38,102 +40,155 @@ export function Sidebar() {
     if (root) openRegister(root);
   };
 
+  useEffect(() => {
+    if (!sidebar.peek || !sidebar.shown) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") sidebar.close();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sidebar]);
+
+  if (!sidebar.shown) return null;
+
   return (
-    <nav aria-label="主导航" className={styles.sidebar} data-collapsed={collapsed}>
-      {!collapsed && (
-        <div className={styles.brand}>
-          <span className={styles.brandMark}>
-            <Icon name="logo" size={18} />
-          </span>
-          <span>方寸</span>
-        </div>
-      )}
-
-      <div className={styles.navGroup}>
-        {NAV_ITEMS.map((item) => (
-          <NavLink key={item.to} to={item.to} className={styles.navItem} title={item.label}>
-            <Icon name={item.icon} />
-            <span className={styles.navLabel}>{item.label}</span>
-            {overview.data && (
-              <span className={styles.navCount} data-tone={item.countTone}>
-                {overview.data[item.count]}
-              </span>
-            )}
-          </NavLink>
-        ))}
-      </div>
-
-      {!collapsed && projects.data && (
-        <div className={styles.navGroup}>
-          <div className={styles.groupTitle}>已登记项目</div>
-          {registered.map((p) => (
-            <ProjectLink key={p.id} project={p} />
-          ))}
-          <div className={styles.groupTitle} data-gap="true">
-            近 30 天的项目
-          </div>
-          {recent.map((p) => (
-            <ProjectLink key={p.id} project={p} />
-          ))}
-          {recent.length === 0 && <div className={styles.groupEmpty}>没有未登记的目录</div>}
+    <>
+      <nav aria-label="主导航" className={styles.sidebar} data-peek={sidebar.peek}>
+        <div className={styles.sideTop} data-tauri-drag-region>
+          <span className={styles.trafficLights} aria-hidden="true" />
+          <span className={styles.spacer} data-tauri-drag-region />
           <button
             type="button"
-            className={styles.addProject}
-            title="选一个目录登记：先问物化方式，再出变更计划"
-            onClick={() => void addProject()}
+            className={c.icon}
+            aria-label="隐藏侧栏"
+            aria-expanded="true"
+            title="隐藏侧栏 ⌃⌘S"
+            onClick={sidebar.toggle}
           >
-            <span className={styles.addProjectIcon}>
-              <Icon name="plus" size={12} />
-            </span>
-            <span>添加项目…</span>
+            <Icon name="sidebar" strokeWidth={1.4} />
           </button>
         </div>
-      )}
 
-      <div className={styles.sidebarFooter}>
-        <NavLink to={SETTINGS_PATH} className={styles.navItem} title="设置（⌘,）">
-          <Icon name="settings" />
-          <span className={styles.navLabel}>设置</span>
-          <span className={styles.navKbd}>⌘,</span>
-        </NavLink>
+        <div className={styles.sideScroll}>
+          <div className={styles.navGroup}>
+            {NAV_ITEMS.map((item) => {
+              const parent = item.to === "/projects" && onProject;
+              const count = overview.data?.[item.count];
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === "/projects"}
+                  className={styles.nav}
+                  data-parent={parent}
+                  onClick={sidebar.close}
+                >
+                  <Icon name={item.icon} strokeWidth={1.4} />
+                  <span className={styles.navLabel}>{item.label}</span>
+                  {count !== undefined &&
+                    (item.countTone === "warn" ? (
+                      count > 0 && (
+                        <span className={styles.badge} title="待处理">
+                          {count}
+                        </span>
+                      )
+                    ) : (
+                      <span className={styles.navCount}>{count}</span>
+                    ))}
+                </NavLink>
+              );
+            })}
+          </div>
+
+          {projects.data && (
+            <>
+              <div className={styles.navGroup}>
+                <div className={styles.groupTitle}>已登记</div>
+                {registered.map((p) => (
+                  <ProjectLink key={p.id} project={p} onPick={sidebar.close} />
+                ))}
+                {registered.length === 0 && (
+                  <div className={styles.groupEmpty}>还没有登记的项目</div>
+                )}
+              </div>
+              <div className={styles.navGroup}>
+                <div className={styles.groupTitle}>近 30 天 · 未登记</div>
+                {recent.map((p) => (
+                  <ProjectLink key={p.id} project={p} onPick={sidebar.close} />
+                ))}
+                {recent.length === 0 && <div className={styles.groupEmpty}>没有未登记的目录</div>}
+                <button
+                  type="button"
+                  className={`${styles.nav} ${styles.addProject}`}
+                  title="选一个目录登记"
+                  onClick={() => void addProject()}
+                >
+                  <Icon name="plus" strokeWidth={1.4} />
+                  <span className={styles.navLabel}>添加项目…</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className={styles.sideFoot}>
+          <NavLink to={SETTINGS_PATH} className={styles.nav} onClick={sidebar.close}>
+            <Icon name="settings" strokeWidth={1.4} />
+            <span className={styles.navLabel}>设置</span>
+            <span className={c.kbd}>⌘,</span>
+          </NavLink>
+          <button
+            type="button"
+            className={styles.nav}
+            disabled={rescan.isPending}
+            onClick={() => {
+              sidebar.close();
+              navigate("/checkup");
+              rescan.mutate();
+            }}
+          >
+            <Icon name="checkup" strokeWidth={1.4} />
+            <span className={styles.navLabel}>{rescan.isPending ? "正在体检…" : "重新体检"}</span>
+          </button>
+          <span className={styles.footnote} title="不需要账号，不上传任何数据">
+            <Icon name="shield" size={11} />
+            本地优先 · 零遥测
+          </span>
+        </div>
+      </nav>
+      {sidebar.peek && (
         <button
           type="button"
-          className={styles.navItem}
-          title="重新体检"
-          disabled={rescan.isPending}
-          onClick={() => {
-            navigate("/checkup");
-            rescan.mutate();
-          }}
-        >
-          <Icon name="checkup" />
-          <span className={styles.navLabel}>{rescan.isPending ? "正在体检…" : "重新体检"}</span>
-        </button>
-        {!collapsed && <div className={styles.footnote}>本地优先 · 零遥测</div>}
-      </div>
-    </nav>
+          className={styles.peekVeil}
+          aria-label="收起侧栏"
+          onClick={sidebar.close}
+        />
+      )}
+    </>
   );
 }
 
-function ProjectLink({ project: p }: { project: ProjectSummary }) {
+function ProjectLink({ project: p, onPick }: { project: ProjectSummary; onPick: () => void }) {
+  const tone = p.state ? toneOfState(p.state) : "ok";
+  const note = p.registered && p.state ? PROJECT_NOTE[p.state] : undefined;
   return (
-    <NavLink to={projectPath(p.id)} className={styles.projectItem} title={p.path}>
+    <NavLink
+      to={projectPath(p.id)}
+      className={`${styles.nav} ${p.registered ? "" : styles.recent}`}
+      title={p.path}
+      onClick={onPick}
+    >
       <span
         aria-hidden="true"
         className={styles.projectDot}
         data-hollow={!p.registered}
-        style={
-          p.registered
-            ? { background: TONE_COLORS[p.state ? toneOfState(p.state) : "neutral"][1] }
-            : undefined
-        }
+        style={p.registered ? { background: TONE_COLORS[tone][1] } : undefined}
       />
-      <span className={styles.projectName}>{p.name}</span>
-      {!p.registered ? (
-        <span className={styles.projectNote}>未登记</span>
-      ) : (
-        p.state &&
-        PROJECT_NOTE[p.state] && <span className={styles.projectNote}>{PROJECT_NOTE[p.state]}</span>
+      <span className={styles.navLabel}>{p.name}</span>
+      {note && (
+        <span className={styles.projectNote} style={{ color: TONE_COLORS[tone][0] }}>
+          {note}
+        </span>
       )}
     </NavLink>
   );

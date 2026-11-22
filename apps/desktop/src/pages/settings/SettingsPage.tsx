@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import type { SettingsForm } from "@/ipc/bindings/SettingsForm";
 import { useSaveSettings, useSettings } from "@/ipc/queries";
+import { PageToolbar } from "@/shell/PageToolbar";
 import styles from "./SettingsPage.module.css";
 
 /**
- * 设置（6.1、M1-24）：主窗口里显示，侧栏折成图标栏，旁边是设置目录，右边是内容。
+ * 设置（6.1、M1-24）：主窗口里显示，侧栏照常显示，右边是设置目录与内容。
  * 先只有「通用」一页，分「写入」「快照」两组。改了立刻存进 `~/.fangcun/settings.toml`。
  */
 export function SettingsPage() {
@@ -15,8 +16,8 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
+      <PageToolbar title="设置" subtitle="⌘, · 改完立即生效" />
       <aside aria-label="设置目录" className={styles.directory}>
-        <h1 className={styles.directoryTitle}>设置</h1>
         <button type="button" aria-current="page" className={styles.directoryItem}>
           <span className={styles.directoryIcon}>
             <Icon name="settings" />
