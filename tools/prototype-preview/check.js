@@ -7,6 +7,10 @@
 // 只检查不截图：加 --no-screens
 // 截图写到别的目录：加 --out <目录>（相对仓库根目录）。pnpm screens --compare 用它在本机重渲原型，
 // 免得拿云端渲染的截图和本机的应用比，字体不同算出一片差异。
+// 只渲染几张画板：加 --only Main,Global。只重写这几张的截图，别的截图不动（本机字体和云端不同，
+// 全部重渲会让没改的画板截图也变）。
+// 渲染别处的画板（例如画布上的草稿，不碰 prototype/）：加 --src <目录>，目录结构同 prototype/project/，
+// 要有 canvas.json。一般和 --out 一起用。
 // 需要 Playwright。claude.ai 云端会话里已装好；本地没有时运行 npm i -g playwright && npx playwright install chromium。
 'use strict';
 const fs = require('fs');
@@ -19,7 +23,10 @@ try { ({ chromium } = require('playwright')); } catch (e) {
 }
 
 const ROOT = path.resolve(__dirname, '..', '..') + path.sep;
-const SRC = path.join(ROOT, 'prototype', 'project');
+const PROJECT = path.join(ROOT, 'prototype', 'project');
+const arg = (flag) => { const i = process.argv.indexOf(flag); return i >= 0 ? process.argv[i + 1] : undefined; };
+const SRC = arg('--src') ? path.resolve(ROOT, arg('--src')) : PROJECT;
+const ONLY = arg('--only') ? arg('--only').split(',').map((s) => s.trim().replace(/\.dc\.html$/, '')) : null;
 const outAt = process.argv.indexOf('--out');
 const SHOTS = outAt >= 0 ? path.resolve(ROOT, process.argv[outAt + 1]) : path.join(ROOT, 'prototype', 'screens');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
@@ -27,7 +34,12 @@ const noScreens = process.argv.includes('--no-screens');
 
 (async () => {
   const canvas = JSON.parse(fs.readFileSync(path.join(SRC, 'canvas.json'), 'utf8'));
-  const boards = canvas.order.filter((f) => f.endsWith('.dc.html') && !f.includes('/ds/'));
+  const listed = canvas.order.filter((f) => f.endsWith('.dc.html') && !f.includes('/ds/'));
+  const boards = ONLY ? listed.filter((f) => ONLY.includes(f.replace(/\.dc\.html$/, ''))) : listed;
+  if (ONLY && boards.length < ONLY.length) {
+    console.error('canvas.json 里没有：' + ONLY.filter((n) => !boards.includes(n + '.dc.html')).join('、'));
+    process.exit(2);
+  }
   // 被别的画板 <dc-import> 的子组件也是画板，单独渲染一样要能过。
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -36,6 +48,12 @@ const noScreens = process.argv.includes('--no-screens');
     const u = new URL(route.request().url());
     let f = path.normalize(path.join(ROOT, decodeURIComponent(u.pathname)));
     if (!f.startsWith(ROOT)) return route.fulfill({ status: 403, body: '' });
+    // --src：预览器读 prototype/project/ 的请求改去读那个目录。
+    // 那个目录里没有的文件（被引用的子画板、设计系统）仍读 prototype/project/。
+    if (SRC !== PROJECT && f.startsWith(PROJECT + path.sep)) {
+      const alt = path.join(SRC, path.relative(PROJECT, f));
+      if (fs.existsSync(alt)) f = alt;
+    }
     if (f.endsWith(path.sep)) f = path.join(f, 'index.html');
     if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
     route.fulfill({ status: 200, contentType: (TYPES[path.extname(f)] || 'application/octet-stream') + '; charset=utf-8', body: fs.readFileSync(f) });
@@ -65,8 +83,8 @@ const noScreens = process.argv.includes('--no-screens');
       await page.screenshot({ path: path.join(SHOTS, name + '.png'), fullPage: true });
     }
   }
-  // 画布上已经删掉的画板，截图也删掉。
-  if (!noScreens) {
+  // 画布上已经删掉的画板，截图也删掉。只渲染了几张时不删。
+  if (!noScreens && !ONLY) {
     const keep = new Set(boards.map((f) => f.replace(/\.dc\.html$/, '') + '.png'));
     for (const f of fs.readdirSync(SHOTS)) if (f.endsWith('.png') && !keep.has(f)) fs.unlinkSync(path.join(SHOTS, f));
   }
