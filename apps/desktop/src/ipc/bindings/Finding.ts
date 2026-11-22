@@ -27,4 +27,12 @@ ready: boolean,
  * 已处理时，处理它的那条活动记录（M1-28）。界面的「撤销」凭它出回滚计划
  * （`Kernel::plan_rollback_record`）；回滚之后这一条回到待处理。
  */
-record: string | null, };
+record: string | null, 
+/**
+ * 量化卡片上的大数字（6.2），例如「5 份 → 1 份」「每个项目 −6.4k」。
+ */
+metric: string | null, 
+/**
+ * 量化卡片上大数字下面的短说明，例如「重复副本」「每个项目都在缴」。
+ */
+metricNote: string | null, };

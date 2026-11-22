@@ -28,6 +28,8 @@ export const checkup: CheckupReport = {
   findings: [
     {
       id: "dup",
+      metric: "4",
+      metricNote: "份可以归并成 1 份",
       ready: true,
       record: null,
       category: "duplicate",
@@ -46,6 +48,8 @@ export const checkup: CheckupReport = {
     },
     {
       id: "repos",
+      metric: "4",
+      metricNote: "个仓库存着相同的 skill",
       ready: false,
       record: null,
       category: "duplicate",
@@ -63,6 +67,8 @@ export const checkup: CheckupReport = {
     },
     {
       id: "tax",
+      metric: "6.4k",
+      metricNote: "每个项目都在缴",
       ready: false,
       record: null,
       category: "global-tax",
@@ -78,6 +84,8 @@ export const checkup: CheckupReport = {
     },
     {
       id: "spread",
+      metric: "28",
+      metricNote: "个 skill Codex 没拿到",
       ready: false,
       record: null,
       category: "inconsistent",
@@ -94,6 +102,8 @@ export const checkup: CheckupReport = {
     },
     {
       id: "lock",
+      metric: "129 天",
+      metricNote: "全局锁没跟上目录",
       ready: false,
       record: null,
       category: "detached",
@@ -109,6 +119,8 @@ export const checkup: CheckupReport = {
     },
     {
       id: "secret",
+      metric: null,
+      metricNote: null,
       ready: false,
       record: null,
       category: "secret",
