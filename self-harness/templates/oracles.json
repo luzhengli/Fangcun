@@ -1,0 +1,4 @@
+{
+  "$comment": "判官清单。格式见 references/oracles.md。grade 只能是 机判、机证、人判、无。",
+  "oracles": []
+}

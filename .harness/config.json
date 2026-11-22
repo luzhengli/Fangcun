@@ -1,0 +1,76 @@
+{
+  "$comment": "self-harness 的项目配置。说明见 self-harness/SKILL.md。",
+  "entry": ["AGENTS.md"],
+  "startup": ["docs/STATUS.md"],
+  "status": "docs/STATUS.md",
+  "backlog": "docs/BACKLOG.md",
+  "decisions": "docs/DECISIONS.md",
+  "friction": {
+    "file": "docs/WORKFLOW.md",
+    "heading": "摩擦记录",
+    "threshold": 5
+  },
+  "queues": [
+    {
+      "title": "待人处理",
+      "file": "docs/BACKLOG.md",
+      "heading": "待人处理"
+    },
+    {
+      "title": "原型待改（在终端会话里用 Artifact 工具改画布）",
+      "file": "docs/BACKLOG.md",
+      "heading": "原型待改"
+    }
+  ],
+  "docs": ["AGENTS.md", "docs", "prototype/README.md", "self-harness", ".harness"],
+  "metricsExclude": [
+    "pnpm-lock.yaml",
+    "prototype/",
+    "apps/desktop/src/ipc/bindings/",
+    "Cargo.lock"
+  ],
+  "check": "pnpm check",
+  "ports": [1420],
+  "boundaries": [
+    {
+      "dir": "self-harness",
+      "forbidden": [
+        "方寸",
+        "Fangcun",
+        "fangcun",
+        "墨格",
+        "Tauri",
+        "pnpm workflow",
+        "画布",
+        "原型待改"
+      ],
+      "why": "孵化中的通用 skill 不写本项目专有的东西（DECISIONS 2026-11-22）"
+    }
+  ],
+  "budgets": {
+    "entryLines": 120,
+    "statusLines": 40
+  },
+  "find": [
+    {
+      "file": "docs/product-design.md",
+      "headings": "^#{2,3} (7\\.|9\\.2|9\\.3)"
+    },
+    {
+      "file": "docs/DECISIONS.md"
+    },
+    {
+      "file": "docs/BACKLOG.md"
+    }
+  ],
+  "decisionsMetric": {
+    "agent": "Agent 定",
+    "overturned": "推翻|改回|人选了相反|返工一遍"
+  },
+  "extra": [
+    {
+      "title": "示例数据落后于原型",
+      "run": "node tools/workflow/status.mjs drift"
+    }
+  ]
+}

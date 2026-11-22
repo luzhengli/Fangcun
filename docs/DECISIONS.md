@@ -8,6 +8,19 @@
 
 ---
 
+## 2026-11-22 self-harness 孵化；停写 LOG；STATUS 只留判断
+
+- **人说**：「我们所做的事情如果有一个对应一个最恰当的概念是什么？」（讨论后定名 harness）「LOG如果可以被git 或 pr 替换，可以不写，STSTUS可以参考你的建议。」「是否可以做一个skill负责这套harness的完整生命周期的管理……Agent平台通用、项目无关……这个skill本身也应该不断打磨进化。」「我同意现在方寸仓库里孵化，建议这个skill叫做 self_harness ，第二个验证项目可以参考/Users/luyao/Project/Habitat这个Web项目（不过这个项目本身的Harness可能不是很完善）。你可以用Node。」
+- **人定**：停写 `docs/LOG.md`，做了什么看 git log 与 PR；STATUS 只写判断，事实由脚本算。self-harness 在本仓库孵化，用 Node，第二个验证项目是 Habitat。
+- **Agent 定，可逆**：
+  - 名字用 `self-harness`：Agent Skills 规范要求名字只用小写字母、数字、连字符，目录名要和名字一致，`self_harness` 用不了。
+  - 放在仓库根目录 `self-harness/`，`.claude/skills/` 和 `.agents/skills/`（Codex 认的目录）各放一个软链。本项目的数据放 `.harness/`（配置、规则清单、判官清单、度量快照）。
+  - `self-harness/` 里不许出现本项目专有的词，由 `.harness/config.json` 的 `boundaries` 和 `harness check` 守着，`harness check` 进 `pnpm lint`。
+  - `pnpm workflow` 的通用部分（分支、PR、队列、摩擦、端口、find）改用 self-harness，本项目只留原型版本与示例数据；输出顺序有变，内容不少。
+  - 「Agent 定被推翻」先按关键词粗估（`Agent 定` 对 `推翻|改回|…`），收工时在被推翻的条目后补「推翻」，口径以后才稳。
+  - Habitat 只读试跑：配置放在 Habitat 之外（`--config`），没在那边落任何文件；要不要在 Habitat 落 `.harness/`，下次和人商量（W-30）。
+  - 第一次盘点：规则 32 条（第 1 档 1、第 2 档 6、第 3 档 5、第 5 档 11、第 6 档 9），判官 26 个维度（机判 10、机证 5、人判 2、无 9）。档位按「现在最强的那道守卫」记。
+
 ## 2026-11-22 第三次复盘工作流里 Agent 的取舍
 
 - **人说**：「复盘工作流」

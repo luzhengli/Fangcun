@@ -1,0 +1,189 @@
+{
+  "$comment": "判官清单。格式见 self-harness/references/oracles.md。2026-11-22 第一次盘点。",
+  "oracles": [
+    {
+      "group": "正确性",
+      "dimension": "内核行为",
+      "oracle": "内核测试（cargo test）",
+      "grade": "机判",
+      "when": "提交前、CI"
+    },
+    {
+      "group": "正确性",
+      "dimension": "写入范围、只读、写前快照",
+      "oracle": "内核测试",
+      "grade": "机判",
+      "when": "提交前、CI"
+    },
+    {
+      "group": "正确性",
+      "dimension": "回滚逐字节一致、漂移 5 秒内出提示（第 5 节验收）",
+      "oracle": "内核测试",
+      "grade": "机判",
+      "when": "提交前、CI"
+    },
+    {
+      "group": "正确性",
+      "dimension": "和 skills 命令行的哈希一致",
+      "oracle": "CI 跑 hash-crosscheck",
+      "grade": "机判",
+      "when": "CI"
+    },
+    {
+      "group": "正确性",
+      "dimension": "并发",
+      "oracle": "测试只跑一遍",
+      "grade": "机判",
+      "when": "CI",
+      "trust": "偶发问题抓不到，合并后才在别的 PR 上失败",
+      "next": "并发测试循环跑（W-24）"
+    },
+    {
+      "group": "正确性",
+      "dimension": "界面交互",
+      "oracle": "前端测试 20 个",
+      "grade": "机判",
+      "when": "提交前、CI",
+      "trust": "覆盖很薄"
+    },
+    {
+      "group": "正确性",
+      "dimension": "命令行和界面行为一致",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "同一组用例分别走命令行和 IPC，比对结果"
+    },
+    {
+      "group": "守规矩",
+      "dimension": "写入范围、类型绑定、不用 panic 占位、密钥（规则 3、7、9、10）",
+      "oracle": "测试、CI 比对、clippy、类型",
+      "grade": "机判"
+    },
+    {
+      "group": "守规矩",
+      "dimension": "颜色 token 取值与原型一致",
+      "oracle": "tokens.test.ts",
+      "grade": "机判"
+    },
+    {
+      "group": "守规矩",
+      "dimension": "组件里不写色值（规则 8 后半）",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "lint（.harness/rules.json A-08）"
+    },
+    {
+      "group": "守规矩",
+      "dimension": "业务逻辑只在内核、外壳只调 Kernel、只有 materializer 落盘、不写死路径、CSP 与权限（规则 1、2、4、5、6）",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "可见性与 grep 级检查（A-02、A-04、A-05、A-06）"
+    },
+    {
+      "group": "守规矩",
+      "dimension": "self-harness 不写本项目专有的词",
+      "oracle": "harness check",
+      "grade": "机判",
+      "when": "lint"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "有没有违背已定的事",
+      "oracle": "pnpm workflow find",
+      "grade": "机证",
+      "trust": "按关键词，换个说法就查不到"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "原型符合设计文档",
+      "oracle": "同步时 Agent 逐条对照",
+      "grade": "人判",
+      "trust": "靠 Agent 读，没有机证",
+      "next": "要求编号后，按编号列出原型里有、文档里没有的"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "实现长得像原型",
+      "oracle": "pnpm screens --compare",
+      "grade": "机证",
+      "when": "实现后",
+      "trust": "差异占比有环境噪声，要看拼图"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "示例数据跟上原型",
+      "oracle": "画板哈希比对（pnpm workflow、CI 警告）",
+      "grade": "机判",
+      "trust": "只知道变了，不知道对了"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "实现的文案、行为符合设计文档",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "要求编号 + 测试、场景标出守哪一条（可追溯）"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "术语与语气",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "lint：界面文案禁用词（P-16）"
+    },
+    {
+      "group": "符合意图",
+      "dimension": "人验收过的界面不退化",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "人验收的截图存基线，pnpm screens 对基线比"
+    },
+    {
+      "group": "体验",
+      "dimension": "窗口外壳对齐",
+      "oracle": "pnpm window-shot",
+      "grade": "机证"
+    },
+    {
+      "group": "体验",
+      "dimension": "首次启动两分钟看到体检报告（F1 验收）",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "R-05：全新 ~/.fangcun 的计时脚本"
+    },
+    {
+      "group": "体验",
+      "dimension": "VoiceOver、200% 缩放、菜单快捷键",
+      "oracle": "没有（Codex 操控桌面走不通）",
+      "grade": "无",
+      "next": "R-06，权限要人给"
+    },
+    {
+      "group": "体验",
+      "dimension": "好不好用、对不对味",
+      "oracle": "人",
+      "grade": "人判",
+      "when": "每轮末"
+    },
+    {
+      "group": "流程",
+      "dimension": "PR base、没合并的分支、示例数据落后、端口占用",
+      "oracle": "pnpm workflow",
+      "grade": "机证",
+      "when": "开工"
+    },
+    {
+      "group": "流程",
+      "dimension": "收工清单做没做",
+      "oracle": "没有",
+      "grade": "无",
+      "next": "Stop hook（W-11）"
+    },
+    {
+      "group": "流程",
+      "dimension": "STATUS 长度与新鲜度、常驻长度、断链、规则与判官清单格式",
+      "oracle": "harness audit、harness check",
+      "grade": "机证",
+      "when": "复盘、lint"
+    }
+  ]
+}

@@ -1,0 +1,387 @@
+{
+  "$comment": "规则清单。格式见 self-harness/references/rules.md。2026-11-22 第一次盘点。",
+  "rules": [
+    {
+      "id": "A-01",
+      "text": "业务逻辑只在内核，外壳和命令行只做参数转换和输出",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 5,
+      "guard": "AGENTS.md 常驻；没有自动检查",
+      "violations": [],
+      "next": "架构测试：apps/desktop/src 里不出现文件、子进程调用（第 2 档）",
+      "keep": "三条最要紧的规则之一"
+    },
+    {
+      "id": "A-02",
+      "text": "外壳只调 Kernel，不直接用内核下面的模块",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 6,
+      "guard": "没有",
+      "violations": [],
+      "next": "Rust 可见性：内核子模块改 pub(crate)，外壳用不到（第 1 档）"
+    },
+    {
+      "id": "A-03",
+      "text": "只写写入范围，写前留快照；只读模式拒绝一切写入",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 2,
+      "guard": "内核测试",
+      "violations": []
+    },
+    {
+      "id": "A-04",
+      "text": "写入先出计划，只有 Kernel::apply 落盘，只有 materializer 改方寸目录以外的文件",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 5,
+      "guard": "apply 只认内核出过的计划有测试；「只有 materializer 写盘」没人守",
+      "violations": [],
+      "next": "grep 级检查：materializer 以外出现 fs::write、remove_file 就报（第 2 档）",
+      "keep": "三条最要紧的规则之一"
+    },
+    {
+      "id": "A-05",
+      "text": "内核不写死任何工具的路径或格式，一律从适配器查",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 6,
+      "guard": "没有",
+      "violations": [],
+      "next": "grep 级检查：内核源码（adapter 模块以外）出现 .claude/、.codex/ 字面量就报（第 2 档）"
+    },
+    {
+      "id": "A-06",
+      "text": "界面只经 ipc/ 取数据，不加文件、子进程、网络权限，CSP default-src 'self'",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 5,
+      "guard": "CSP 在运行时拦外部请求；权限和 CSP 配置本身没有测试",
+      "violations": [],
+      "next": "测试读 tauri.conf.json 和 capabilities，断言 CSP 与权限不变（第 2 档）",
+      "keep": "零遥测由它保证"
+    },
+    {
+      "id": "A-07",
+      "text": "类型从内核单向流到界面，改了内核类型跑 pnpm bindings",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 2,
+      "guard": "CI：git diff --exit-code bindings",
+      "violations": []
+    },
+    {
+      "id": "A-08",
+      "text": "颜色只用「墨格」token，组件里不写色值",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 5,
+      "guard": "token 取值有测试；组件里写色值没人守（现在 0 处）",
+      "violations": [],
+      "next": "lint：components、pages 里出现 #rrggbb、rgb( 就报（第 2 档）"
+    },
+    {
+      "id": "A-09",
+      "text": "密钥的值不过 IPC、不进日志、不进快照",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 1,
+      "guard": "SecretValue 类型，Debug 不输出内容",
+      "violations": []
+    },
+    {
+      "id": "A-10",
+      "text": "不用会 panic 的占位",
+      "source": "docs/ARCHITECTURE.md#不能破的规则",
+      "level": 2,
+      "guard": "clippy 禁 todo!、unimplemented!",
+      "violations": []
+    },
+    {
+      "id": "P-01",
+      "text": "设计 → 原型 → 实现；文档没写到的设计先问人，和第 7 节选型不一致的取舍也先问",
+      "source": "AGENTS.md#谁说了算",
+      "level": 5,
+      "guard": "AGENTS.md 常驻；`pnpm workflow find` 辅助",
+      "violations": [
+        {
+          "date": "2026-11-19",
+          "ref": "M1-05 索引用了 TOML，违背 7.2，返工"
+        },
+        {
+          "date": "2026-11-19",
+          "ref": "快照保留期已定又问一遍"
+        }
+      ],
+      "next": "给设计文档要求编号、实现标出守哪一条，`pnpm workflow` 报没有出处的取舍（W-32 一并想）"
+    },
+    {
+      "id": "P-02",
+      "text": "问人之前、写代码之前先跑 find 查定没定过",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 5,
+      "guard": "规则 + 工具；要 Agent 记得跑",
+      "violations": [
+        {
+          "date": "2026-11-19",
+          "ref": "M1-09 find 结果被截断，漏看 9.2"
+        }
+      ],
+      "next": "find 已不截断（W-16）；再考虑 UserPromptSubmit hook 提醒"
+    },
+    {
+      "id": "P-03",
+      "text": "收工清单：STATUS、BACKLOG、DECISIONS、摩擦",
+      "source": "AGENTS.md#收工前必须做的事",
+      "level": 5,
+      "guard": "AGENTS.md 常驻",
+      "violations": [
+        {
+          "date": "2026-11-22",
+          "ref": "开工时 STATUS 仍写 #45 待合并，实际已合"
+        }
+      ],
+      "next": "STATUS 只留判断，事实交给 `pnpm workflow`（W-27）；Stop hook 提醒（W-11）"
+    },
+    {
+      "id": "P-04",
+      "text": "STATUS 不超过 40 行，只写现在",
+      "source": "AGENTS.md#收工前必须做的事",
+      "level": 3,
+      "guard": "`harness audit` 报超预算",
+      "violations": []
+    },
+    {
+      "id": "P-05",
+      "text": "同步原型的会话收尾必须开 PR",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 3,
+      "guard": "`pnpm workflow --fetch` 列出没合并的远端分支",
+      "violations": [
+        {
+          "date": "2026-11-14",
+          "ref": "云端推了分支没开 PR"
+        }
+      ]
+    },
+    {
+      "id": "P-06",
+      "text": "依赖的 PR 都以 main 为基，不变基",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 3,
+      "guard": "`pnpm workflow --fetch` 标出 base 不是 main 的 PR",
+      "violations": [
+        {
+          "date": "2026-11-19",
+          "ref": "#12 叠在 #11 上被关"
+        },
+        {
+          "date": "2026-11-22",
+          "ref": "批 12 叠在批 11 上，要变基、改 base"
+        }
+      ]
+    },
+    {
+      "id": "P-07",
+      "text": "发布画布前在本会话读两遍（不带 path 一次，paths 读每个要覆盖的文件）",
+      "source": "docs/WORKFLOW.md#同步原型",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "只读 canvas.json，被拒"
+        },
+        {
+          "date": "2026-11-21",
+          "ref": "paths 读过仍被拒"
+        },
+        {
+          "date": "2026-11-21",
+          "ref": "子代理发布被拒"
+        },
+        {
+          "date": "2026-11-21",
+          "ref": "主会话发布被拒"
+        }
+      ],
+      "next": "做成「改画布」skill，步骤写死（第 4 档）；再看能不能用 PreToolUse hook 查会话记录（第 2 档）"
+    },
+    {
+      "id": "P-08",
+      "text": "子代理不发布画布，由主会话读过再发",
+      "source": "docs/WORKFLOW.md#同步原型",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "子代理发布被 auto mode 拦下"
+        }
+      ],
+      "next": "并进「改画布」skill"
+    },
+    {
+      "id": "P-09",
+      "text": "Codex 固定 gpt-6.1-terra、思考 max，命令接 < /dev/null，只写证据目录",
+      "source": "AGENTS.md#Computer use",
+      "level": 5,
+      "guard": "AGENTS.md 常驻",
+      "violations": [
+        {
+          "date": "2026-11-22",
+          "ref": "codex exec 卡在 stdin 半小时"
+        },
+        {
+          "date": "2026-11-22",
+          "ref": "Codex 越界改了五份文档"
+        }
+      ],
+      "next": "包装脚本 `pnpm codex <任务书> <证据目录>`，参数写死（第 1 档）"
+    },
+    {
+      "id": "P-10",
+      "text": "派子代理、Codex 的任务书写明能改哪些文件、结果放哪",
+      "source": "docs/WORKFLOW.md#任务书",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "子代理写不了报告文件"
+        },
+        {
+          "date": "2026-11-22",
+          "ref": "子代理不许碰设计文档，只能记 D-41"
+        }
+      ],
+      "next": "任务书模板做成 skill 的 reference，派活时加载"
+    },
+    {
+      "id": "P-11",
+      "text": "示例数据跟上原型",
+      "source": "docs/WORKFLOW.md#质量关",
+      "level": 3,
+      "guard": "CI 警告、`pnpm workflow`",
+      "violations": []
+    },
+    {
+      "id": "P-12",
+      "text": "「墨格」token 与原型逐项一致",
+      "source": "docs/WORKFLOW.md#质量关",
+      "level": 2,
+      "guard": "tokens.test.ts",
+      "violations": []
+    },
+    {
+      "id": "P-13",
+      "text": "原型能渲染，预览器认得所有写法",
+      "source": "docs/WORKFLOW.md#同步原型",
+      "level": 2,
+      "guard": "CI 跑 check.js",
+      "violations": []
+    },
+    {
+      "id": "P-14",
+      "text": "prototype/ 只同步，不手改",
+      "source": "AGENTS.md#原型怎么读",
+      "level": 5,
+      "guard": "AGENTS.md 常驻",
+      "violations": [],
+      "next": "CI：prototype/ 的改动只能出现在标题含「原型同步」的 PR（第 2 档）"
+    },
+    {
+      "id": "P-15",
+      "text": "跟人交流、写文档用中文",
+      "source": "AGENTS.md#交流",
+      "level": 5,
+      "guard": "AGENTS.md 常驻、记忆",
+      "violations": [],
+      "keep": "人明确要求"
+    },
+    {
+      "id": "P-16",
+      "text": "固定术语：资产、物化（界面写「同步」）、漂移、回流 / 丢弃 / 分叉、固定 / 跟随、常驻标「估算」",
+      "source": "AGENTS.md#写文档的约定",
+      "level": 5,
+      "guard": "AGENTS.md 常驻",
+      "violations": [],
+      "next": "lint：界面文案里出现「物化」就报（第 2 档）"
+    },
+    {
+      "id": "P-17",
+      "text": "任务说「自主优化」时先拿一页出大方向给人看",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "第一版只修了七处，人要整体重做"
+        }
+      ]
+    },
+    {
+      "id": "P-18",
+      "text": "先实测、读官方文档那一行，再问人",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-20",
+          "ref": "原型搬本地用了三个会话"
+        }
+      ]
+    },
+    {
+      "id": "P-19",
+      "text": "画板里悬停 setState 先判断、悬停弹层记静音状态",
+      "source": "docs/WORKFLOW.md#改画板时的写法",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "悬停死循环"
+        },
+        {
+          "date": "2026-11-21",
+          "ref": "弹层关了又自己打开"
+        }
+      ],
+      "next": "预览器按需更新 DOM，根除（W-26）"
+    },
+    {
+      "id": "P-20",
+      "text": "截图场景按区域限定，重名时会提醒",
+      "source": "docs/WORKFLOW.md#工具",
+      "level": 3,
+      "guard": "scenes.mjs 打印提醒",
+      "violations": [
+        {
+          "date": "2026-11-21",
+          "ref": "btn: 点错按钮"
+        },
+        {
+          "date": "2026-11-21",
+          "ref": "click:漂移 点到侧栏"
+        }
+      ]
+    },
+    {
+      "id": "P-21",
+      "text": "CI 要带上 main 的修复时用 gh pr update-branch",
+      "source": "docs/WORKFLOW.md#交接规则",
+      "level": 6,
+      "guard": "只有文字",
+      "violations": [
+        {
+          "date": "2026-11-19",
+          "ref": "重跑 CI 带不上修复"
+        }
+      ]
+    },
+    {
+      "id": "H-01",
+      "text": "self-harness 目录不写本项目专有的词",
+      "source": ".harness/config.json#boundaries",
+      "level": 2,
+      "guard": "`harness check` 在 pnpm lint 里",
+      "violations": []
+    }
+  ]
+}

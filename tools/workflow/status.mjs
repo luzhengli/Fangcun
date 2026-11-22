@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-// 工作流现在卡在哪：一条命令看完要接手的东西。说明见 docs/WORKFLOW.md「pnpm workflow」。
+// 工作流现在卡在哪。通用部分（分支、PR、待人处理、摩擦、端口、find）交给 self-harness，
+// 这里只放本项目自己的：原型版本、示例数据跟没跟上原型。说明见 docs/WORKFLOW.md「工具」。
 //
 // 用法（在仓库根目录）：
-//   pnpm workflow                 打印状态
+//   pnpm workflow                 打印状态（self-harness status，加上原型版本与示例数据）
 //   pnpm workflow --fetch         先 git fetch，再看开着的 PR、云端推来还没合并的分支
 //   pnpm workflow accept Main …   示例数据已经跟上这几张画板，记下画板现在的哈希
 //   pnpm workflow accept Settings --fixture settings.ts
 //                                 第一次给某张画板配示例数据：登记画板和对应的示例数据文件
 //   pnpm workflow --ci            只报示例数据落后，按 GitHub Actions 的 ::warning:: 格式，不失败
-//   pnpm workflow find 快照 保留   查这件事定没定过：设计文档第 7 节与 9.2、9.3，DECISIONS、BACKLOG
-//                                 里同时含这几个词的行，带章节。问人之前、写代码之前跑（W-12）。
-//                                 先按文件报处数；超过 40 处时，没列出的也报出章节，加 --all 全列
+//   pnpm workflow drift           只列示例数据落后的画板（self-harness status 调它）
+//   pnpm workflow find 快照 保留   查这件事定没定过（self-harness find，范围在 .harness/config.json）。
+//                                 问人之前、写代码之前跑（W-12）
 //
 // 只读，accept 只改 apps/desktop/src/ipc/fixtures/prototype-sync.json。
 
@@ -23,6 +24,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SYNC = join(REPO, "apps/desktop/src/ipc/fixtures/prototype-sync.json");
+const HARNESS = join(REPO, "self-harness/scripts/harness.mjs");
 
 const read = (file) => readFileSync(join(REPO, file), "utf8");
 const hashBoard = (board) =>
@@ -39,69 +41,8 @@ function fixtureDrift() {
     .filter((b) => b.now !== b.hash);
 }
 
-// 某个标题（任意级别，如 `## 待人处理`、`### 摩擦记录`）下没勾的 `- [ ]` 条目，读到同级或更高级的标题为止。
-function openItems(file, heading) {
-  if (!existsSync(join(REPO, file))) return [];
-  const lines = read(file).split("\n");
-  const level = (l) => /^(#+) /.exec(l)?.[1].length ?? 0;
-  const start = lines.findIndex((l) => level(l) > 0 && l.replace(/^#+ /, "").trim() === heading);
-  if (start < 0) return [];
-  const depth = level(lines[start]);
-  const items = [];
-  for (const line of lines.slice(start + 1)) {
-    const d = level(line);
-    if (d > 0 && d <= depth) break;
-    const m = /^- \[ \] (.*)$/.exec(line);
-    if (m) items.push(m[1]);
-  }
-  return items;
-}
-
-const git = (...args) => spawnSync("git", args, { cwd: REPO, encoding: "utf8" });
-
-function unmergedBranches() {
-  const r = git(
-    "branch",
-    "-r",
-    "--no-merged",
-    "origin/main",
-    "--format=%(refname:short)\t%(committerdate:short)\t%(subject)",
-  );
-  return r.stdout
-    .split("\n")
-    .filter((l) => l && !l.startsWith("origin/HEAD"))
-    .map((l) => l.split("\t"));
-}
-
-// 占着 pnpm dev 端口 1420 的进程：忘了关的旧 `pnpm dev` 会让新的启动失败，还可能连着真实的 ~/.fangcun。
-function devPort() {
-  const pids = spawnSync("lsof", ["-nP", "-iTCP:1420", "-sTCP:LISTEN", "-t"], { encoding: "utf8" })
-    .stdout.split("\n")
-    .filter(Boolean);
-  return pids.map((pid) => {
-    const ps = spawnSync("ps", ["-o", "etime=,command=", "-p", pid], {
-      encoding: "utf8",
-    }).stdout.trim();
-    const [etime, ...cmd] = ps.split(/\s+/);
-    return `PID ${pid}，已跑 ${etime}  ${cmd.join(" ").slice(0, 60)}`;
-  });
-}
-
-// 开着的 PR。base 不是 main 的单独标出来：交接规则第 6 条要求都以 main 为基（W-15）。
-function openPrs() {
-  const r = spawnSync(
-    "gh",
-    ["pr", "list", "--state", "open", "--json", "number,title,baseRefName,headRefName,isDraft"],
-    { cwd: REPO, encoding: "utf8" },
-  );
-  if (r.status !== 0) return null;
-  return JSON.parse(r.stdout).map(
-    (p) =>
-      `#${p.number} ${p.headRefName}${p.baseRefName === "main" ? "" : ` → ${p.baseRefName}（base 应为 main）`}${p.isDraft ? "（草稿）" : ""}  ${p.title}`,
-  );
-}
-
-const short = (s, n = 60) => (s.length > n ? `${s.slice(0, n)}…` : s);
+const harness = (...args) =>
+  process.exit(spawnSync("node", [HARNESS, ...args], { cwd: REPO, stdio: "inherit" }).status ?? 1);
 
 const argv = process.argv.slice(2);
 
@@ -134,53 +75,11 @@ if (argv[0] === "accept") {
   process.exit(0);
 }
 
-// 查「定没定过」：每行都要含全部关键词（不分大小写）。设计文档只看技术选型和已拍板的章节。
-if (argv[0] === "find") {
-  const words = argv.slice(1).map((w) => w.toLowerCase());
-  if (words.length === 0) {
-    console.error("要写关键词，例如：pnpm workflow find 索引 SQLite");
-    process.exit(2);
-  }
-  const scopes = [
-    { file: "docs/product-design.md", keep: (h) => /^#{2,3} (7\.|9\.2|9\.3)/.test(h) },
-    { file: "docs/DECISIONS.md", keep: () => true },
-    { file: "docs/BACKLOG.md", keep: () => true },
-  ];
-  const all = argv.includes("--all");
-  const hits = [];
-  for (const { file, keep } of scopes) {
-    let heading = "";
-    read(file)
-      .split("\n")
-      .forEach((line, i) => {
-        if (/^#{2,3} /.test(line)) heading = line;
-        if (!keep(heading) || !words.every((w) => line.toLowerCase().includes(w))) return;
-        hits.push({ file, line: i + 1, heading: heading.replace(/^#+ /, ""), text: line.trim() });
-      });
-  }
-  if (hits.length === 0) {
-    console.log("没找到。换个说法再查一次；确实没有就是没定过，按 AGENTS.md 先问人。");
-    process.exit(0);
-  }
-  // 先报每个文件几处，结果多时也不会整份漏看（W-16）。
-  const byFile = Object.groupBy(hits, (h) => h.file);
-  console.log(
-    `共 ${hits.length} 处：${Object.entries(byFile)
-      .map(([f, hs]) => `${f} ${hs.length}`)
-      .join("，")}\n`,
-  );
-  const LIMIT = 40;
-  const shown = all ? hits : hits.slice(0, LIMIT);
-  for (const h of shown)
-    console.log(`${h.file}:${h.line}  ${h.heading}\n    ${short(h.text, 160)}`);
-  if (shown.length < hits.length) {
-    const rest = Object.groupBy(hits.slice(LIMIT), (h) => `${h.file}  ${h.heading}`);
-    console.log(
-      `\n另有 ${hits.length - LIMIT} 处没列出，在这些章节（加 --all 全列，或加关键词缩小）：`,
-    );
-    for (const [where, hs] of Object.entries(rest))
-      console.log(`  ${where}：第 ${hs.map((h) => h.line).join("、")} 行`);
-  }
+if (argv[0] === "find") harness(...argv);
+
+if (argv[0] === "drift") {
+  for (const b of fixtureDrift())
+    console.log(`${b.board} → fixtures/${b.fixture}，上次对齐 ${b.version}`);
   process.exit(0);
 }
 
@@ -193,54 +92,6 @@ if (argv.includes("--ci")) {
   process.exit(0);
 }
 
-if (argv.includes("--fetch")) git("fetch", "--quiet", "--prune", "origin");
-
 const version = /\| 版本 \| (\S+) \|/.exec(read("prototype/README.md"))?.[1] ?? "?";
-const drift = fixtureDrift();
-const human = openItems("docs/BACKLOG.md", "待人处理");
-const proto = openItems("docs/BACKLOG.md", "原型待改");
-const friction = openItems("docs/WORKFLOW.md", "摩擦记录");
-const branches = unmergedBranches();
-const head = git("rev-parse", "--abbrev-ref", "HEAD").stdout.trim();
-const dirty = git("status", "--porcelain").stdout.trim().split("\n").filter(Boolean).length;
-
-const section = (title, items, empty) => {
-  console.log(`\n${title}${items.length ? `（${items.length}）` : ""}`);
-  if (items.length === 0) console.log(`  ${empty}`);
-  for (const i of items) console.log(`  · ${i}`);
-};
-
-console.log(`分支 ${head}，未提交的改动 ${dirty} 处。原型版本 ${version}。`);
-section(
-  "待人处理",
-  human.map((i) => short(i)),
-  "没有",
-);
-if (argv.includes("--fetch")) {
-  const prs = openPrs();
-  section("开着的 PR", prs ?? [], prs ? "没有" : "查不到（gh 没装或没登录）");
-}
-section(
-  "云端推来、还没合并的分支",
-  branches.map(([b, d, s]) => `${b}  ${d}  ${short(s, 50)}`),
-  "没有（加 --fetch 先拉一次）",
-);
-section(
-  "原型待改（在终端会话里用 Artifact 工具改画布）",
-  proto.map((i) => short(i)),
-  "没有",
-);
-section(
-  "示例数据落后于原型",
-  drift.map((b) => `${b.board} → fixtures/${b.fixture}，上次对齐 ${b.version}`),
-  "没有",
-);
-section(
-  "没复盘的流程摩擦",
-  friction.map((i) => short(i)),
-  "没有",
-);
-const port = devPort();
-if (port.length > 0) section("端口 1420 被占着（pnpm dev 会启动失败，确认是谁的再关）", port, "");
-if (friction.length >= 5)
-  console.log("  已经攒了 5 条以上，该复盘工作流了（docs/WORKFLOW.md「复盘」）。");
+console.log(`原型版本 ${version}。`);
+harness("status", ...argv);
