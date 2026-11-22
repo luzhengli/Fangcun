@@ -6,15 +6,17 @@ use std::path::{Path, PathBuf};
 
 use fangcun_core::global::GlobalItemRef;
 use fangcun_core::journal::{FileOp, Record, RecordFilter, RecordStatus, Trigger};
+use fangcun_core::library::diff::DiffKind;
+use fangcun_core::materializer::drift::DriftChoice;
 use fangcun_core::materializer::{ChangeOp, ChangePlan};
 use fangcun_core::model::{
     AssetKind, NoteTone, ProjectId, Scope, SnapshotId, SyncMode, TokenEstimate, ToolId,
 };
-use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
+use fangcun_core::resolver::{DriftInfo, EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
 use fangcun_core::{Error, Kernel, Result};
 
-use crate::cli::{Cli, Command, ExportFormat, SecretAction};
+use crate::cli::{Cli, Command, DriftAction, ExportFormat, SecretAction};
 
 pub fn run(cli: Cli) -> Result<()> {
     let cwd = current_project()?;
@@ -32,6 +34,21 @@ pub fn run(cli: Cli) -> Result<()> {
             confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Status => print_status(&kernel, &cwd)?,
+        Command::Drift { asset, action } => {
+            let root = project_root_of(&cwd);
+            match (asset, action) {
+                (Some(asset), Some(action)) => {
+                    let choice = match action {
+                        DriftAction::Promote => DriftChoice::Promote,
+                        DriftAction::Discard => DriftChoice::Discard,
+                        DriftAction::Fork => DriftChoice::Fork,
+                    };
+                    let plan = kernel.plan_drift(&root, &asset, choice)?;
+                    confirm_and_apply(&kernel, &plan, cli.yes)?;
+                }
+                (asset, _) => print_drift(&kernel.drift_report(&root, asset.as_deref())?),
+            }
+        }
         Command::Add { asset } => {
             let plan = kernel.plan_add(&project_root_of(&cwd), &asset)?;
             confirm_and_apply(&kernel, &plan, cli.yes)?;
@@ -444,7 +461,7 @@ fn print_status(kernel: &Kernel, cwd: &Path) -> Result<()> {
             println!("没有漂移，也没有可更新的项（上次上游检查的结果）。");
         }
         for asset in &status.drifted {
-            println!("● 已漂移  {asset}：副本被改过。在桌面应用的项目页处理：回流、丢弃或分叉");
+            println!("● 已漂移  {asset}：副本被改过。看差异：fangcun drift {asset}");
         }
         for line in &status.updatable {
             println!("● 可更新  {line}。看差异：fangcun update --dry-run");
@@ -460,6 +477,55 @@ fn print_status(kernel: &Kernel, cwd: &Path) -> Result<()> {
         print_context_summary(&tool.name, &context);
     }
     Ok(())
+}
+
+/// `fangcun drift`：每项漂移一段，差异照活动页的样子，加号减号打头（第 5 节、6.9）。
+fn print_drift(report: &[(String, DriftInfo)]) {
+    if report.is_empty() {
+        println!("没有漂移：受管的副本和锁里的一样。");
+        return;
+    }
+    let single = report.len() == 1;
+    for (asset, info) in report {
+        println!("● 已漂移  {asset}（锁定 {}）", info.locked);
+        println!("  {}", info.summary);
+        if !info.others.is_empty() {
+            println!("  同样用它的项目：{}", info.others.join("、"));
+        }
+        if single {
+            for file in &info.files {
+                println!();
+                println!("  {}  +{} −{}", file.path, file.added, file.removed);
+                for line in &file.lines {
+                    let mark = match line.kind {
+                        DiffKind::Hunk => "  ",
+                        DiffKind::Context => "   ",
+                        DiffKind::Add => "  +",
+                        DiffKind::Remove => "  −",
+                    };
+                    println!("{mark}{}", line.text);
+                }
+                if file.truncated > 0 {
+                    println!("   …还有 {} 行", file.truncated);
+                }
+            }
+        }
+        println!();
+        match &info.promote_blocked {
+            Some(why) => println!("  回流用不了：{why}"),
+            None => println!("  回流：fangcun drift {asset} promote"),
+        }
+        if info.original {
+            println!("  丢弃：fangcun drift {asset} discard");
+        } else {
+            println!("  丢弃用不了：原版取不回");
+        }
+        println!("  分叉：fangcun drift {asset} fork");
+        if !single {
+            println!("  看差异：fangcun drift {asset}");
+        }
+        println!();
+    }
 }
 
 fn print_context_summary(tool_name: &str, context: &EffectiveContext) {

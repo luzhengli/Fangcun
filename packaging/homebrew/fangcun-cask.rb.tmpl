@@ -1,0 +1,31 @@
+# 由 Fangcun 仓库的 .github/workflows/tap.yml 按模板 packaging/homebrew/fangcun-cask.rb.tmpl 生成，不要手改。
+cask "fangcun" do
+  version "{{VERSION}}"
+  sha256 "{{DMG_SHA256}}"
+
+  url "https://github.com/luzhengli/Fangcun/releases/download/v#{version}/Fangcun-#{version}-macos-universal.dmg"
+  name "方寸"
+  name "Fangcun"
+  desc "Agent 上下文的包管理器与环境管理器"
+  homepage "https://github.com/luzhengli/Fangcun"
+
+  depends_on macos: ">= :high_sierra"
+
+  app "Fangcun.app"
+
+  # 不清 ~/.fangcun：项目里的链接指向那里的正本，删了项目会断。要彻底清掉，自己删这个目录。
+  zap trash: [
+    "~/Library/Application Support/io.github.luzhengli.fangcun",
+    "~/Library/Caches/io.github.luzhengli.fangcun",
+    "~/Library/Preferences/io.github.luzhengli.fangcun.plist",
+    "~/Library/Saved Application State/io.github.luzhengli.fangcun.savedState",
+    "~/Library/WebKit/io.github.luzhengli.fangcun",
+  ]
+
+  caveats <<~EOS
+    这一版没有签名公证。第一次打开时 macOS 会拦下：
+    在「系统设置 → 隐私与安全性」里点「仍要打开」，之后照常使用。
+
+    卸载（包括 --zap）不会删 ~/.fangcun：项目里的链接指向那里的资产库正本。
+  EOS
+end

@@ -713,8 +713,19 @@ fn record(
         ([first, ..], _) => format!("{} 等 {} 个范围", name(first), snapshots.len()),
     };
     let at = Timestamp::now();
+    // 编号要唯一：界面的「撤销」和命令行的回滚都按编号找记录。时间只到秒，计划编号每个进程
+    // 都从 1 数起，命令行（每次一个新进程）在同一秒里连跑两次就会撞号，所以再加进程号和
+    // 进程内递增的序号。
+    static SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     Record {
-        id: format!("{}-{}-{}", kind_slug(body.kind), at.0, plan.id),
+        id: format!(
+            "{}-{}-{}-{seq}-{}",
+            kind_slug(body.kind),
+            at.0,
+            std::process::id(),
+            plan.id
+        ),
         at,
         kind: body.kind,
         title: plan.title.clone(),

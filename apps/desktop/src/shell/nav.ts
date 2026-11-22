@@ -1,3 +1,4 @@
+import { FEATURES } from "@/app/features";
 import type { IconName } from "@/components/Icon";
 import type { Overview } from "@/ipc/bindings/Overview";
 
@@ -11,14 +12,18 @@ export interface NavItem {
   countTone: "muted" | "warn";
 }
 
-/** 侧栏的五个导航项，顺序固定（6.1）。 */
-export const NAV_ITEMS: readonly NavItem[] = [
+/** 侧栏的五个导航项，顺序固定（6.1）。v0.1 套装隐藏，只有四个（9.3、M1-35）。 */
+const ALL_NAV_ITEMS: readonly NavItem[] = [
   { label: "项目", to: "/projects", icon: "projects", count: "projects", countTone: "muted" },
   { label: "资产库", to: "/library", icon: "library", count: "library", countTone: "muted" },
   { label: "套装", to: "/bundles", icon: "bundles", count: "bundles", countTone: "muted" },
   { label: "全局", to: "/global", icon: "global", count: "global", countTone: "muted" },
   { label: "活动", to: "/activity", icon: "activity", count: "pending", countTone: "warn" },
 ];
+
+export const NAV_ITEMS: readonly NavItem[] = ALL_NAV_ITEMS.filter(
+  (item) => FEATURES.bundles || item.to !== "/bundles",
+);
 
 /** 体检报告不在五个导航项里，入口是侧栏底部的「重新体检」。 */
 export const CHECKUP_PATH = "/checkup";

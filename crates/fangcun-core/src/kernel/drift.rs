@@ -106,6 +106,28 @@ impl Kernel {
             .collect()
     }
 
+    /// 命令行 `fangcun drift`：本项目的漂移和差异（第 5 节）。写了 `asset` 时只看这一项，
+    /// 它没有漂移时报「找不到」。
+    pub fn drift_report(
+        &self,
+        root: &Path,
+        asset: Option<&str>,
+    ) -> Result<Vec<(String, DriftInfo)>> {
+        let _ = self.refresh_drift();
+        let lock = Lock::load(root)?;
+        let drifts = self.drifts(root)?;
+        if let Some(a) = asset
+            && !drifts.iter().any(|d| d.asset == a)
+        {
+            return Err(Error::NotFound(format!("{a} 的漂移（副本和锁里的一样）")));
+        }
+        Ok(drifts
+            .iter()
+            .filter(|d| asset.is_none_or(|a| d.asset == a))
+            .map(|d| (d.asset.clone(), self.drift_info(root, d, lock.as_ref())))
+            .collect())
+    }
+
     /// 检查器漂移块的数据。
     pub(super) fn drift_info(
         &self,
@@ -197,11 +219,18 @@ impl Kernel {
             DriftChoice::Fork => format!("分叉 {asset} 为本项目专属"),
             DriftChoice::Promote => format!("回流 {asset} 到 {}", locked.source),
         };
+        let verb = match choice {
+            DriftChoice::Promote => "promote",
+            DriftChoice::Discard => "discard",
+            DriftChoice::Fork => "fork",
+        };
+        // 活动页给每条写入附上对应的命令（6.7、第 5 节）。
         let mut builder = PlanBuilder::new(
             title.clone(),
             RecordKind::Drift,
             SnapshotScope::Project(root.to_path_buf()),
-        );
+        )
+        .command(format!("fangcun drift {asset} {verb}"));
         builder.subject(asset, None);
         let in_manifest = project.manifest.skills.contains_key(asset);
         let manifest_file = root.join(crate::paths::MANIFEST_FILE);
@@ -559,7 +588,8 @@ fn drift_record(root: &Path, drifted: &Drifted, info: &DriftInfo, trigger: Trigg
                 note: Some(format!("+{} −{}", f.added, f.removed)),
             })
             .collect(),
-        command: None,
+        // 待处理的漂移附「看差异」的命令，三个动作在它的输出里（第 5 节）。
+        command: Some(format!("fangcun drift {}", drifted.asset)),
         output: None,
         subject: Some(Subject {
             asset: drifted.asset.clone(),

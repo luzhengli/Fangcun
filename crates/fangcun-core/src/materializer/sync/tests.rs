@@ -1087,6 +1087,19 @@ fn promote_commits_to_the_local_source_and_repins_the_project() {
     let context = kernel.effective_context(&f.proj, &claude()).unwrap();
     let item = context.items.iter().find(|i| i.name == "harness").unwrap();
     assert!(item.drift.as_ref().unwrap().promote_blocked.is_none());
+    // 命令行 `fangcun drift`（第 5 节）：列出这一项和差异；没漂移的项报找不到。
+    let report = kernel.drift_report(&f.proj, None).unwrap();
+    assert_eq!(report.len(), 1);
+    assert_eq!(report[0].0, "harness");
+    assert!(report[0].1.files.iter().any(|d| d.path == "SKILL.md"));
+    assert_eq!(
+        kernel.drift_report(&f.proj, Some("harness")).unwrap().len(),
+        1
+    );
+    assert!(matches!(
+        kernel.drift_report(&f.proj, Some("tdd")),
+        Err(crate::Error::NotFound(_))
+    ));
 
     let plan = kernel
         .plan_drift(
@@ -1098,7 +1111,16 @@ fn promote_commits_to_the_local_source_and_repins_the_project() {
     assert!(!plan.blocked, "{:?}", plan.notes);
     // 出计划时分支还没动。
     assert_eq!(git(&mine, &["rev-parse", "HEAD"]), first);
-    kernel.apply(&plan).unwrap();
+    let applied = kernel.apply(&plan).unwrap();
+    // 活动页给这条记录附上对应的命令（6.7）。
+    let records = kernel
+        .log(&crate::journal::RecordFilter::default())
+        .unwrap();
+    let record = records.iter().find(|r| r.id == applied.record).unwrap();
+    assert_eq!(
+        record.command.as_deref(),
+        Some("fangcun drift harness promote")
+    );
 
     let head = git(&mine, &["rev-parse", "HEAD"]);
     assert_ne!(head, first);
@@ -1123,6 +1145,23 @@ fn promote_commits_to_the_local_source_and_repins_the_project() {
         fs::read_to_string(f.proj.join(".claude/skills/harness/SKILL.md")).unwrap(),
         "---\nname: harness\n---\nh2\n"
     );
+}
+
+/// 两个内核（相当于命令行连跑两次）在同一秒里各写一条，记录编号不撞；回滚按编号找到的是自己那条。
+#[test]
+fn record_ids_stay_unique_across_kernels() {
+    let f = fixture("record-ids");
+    let first = kernel(&f);
+    lock_and_sync(&first, &f, &manifest("link", "", false));
+    // 新内核的计划编号又从 1 数起，和第一个内核的第一条（锁）同类同秒。
+    let second = kernel(&f);
+    let plan = second.plan_export_skills_lock(&f.proj).unwrap();
+    second.apply(&plan).unwrap();
+    let records = second
+        .log(&crate::journal::RecordFilter::default())
+        .unwrap();
+    let ids: std::collections::BTreeSet<_> = records.iter().map(|r| r.id.as_str()).collect();
+    assert_eq!(ids.len(), records.len(), "记录编号有重复：{records:#?}");
 }
 
 // 批 6：MCP 入库、从全局移除、fangcun add、体检的处理进度。

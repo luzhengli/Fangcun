@@ -4,26 +4,28 @@
 
 ## 现在在哪
 
-M1 进行中，目标是 v0.1。方寸 2 的界面批次都做完了，剩批 7 发布。工作流上刚孵化出 self-harness（通用 skill），本项目是它的第一个用户。
+批 7（v0.1 发布）的代码与流水线做完了，在 `batch7-release` 的 PR 上：包标识与显示名、版本 0.1.0、套装隐藏、`fangcun drift`、发布流水线、Homebrew tap、README。离发版还差人的三件事（下面第 1 步）。
 
 ## 下一步
 
-1. **人**：先合 #47（第三次复盘），再合 self-harness 孵化的 PR。看一眼 H-15（设计文档要不要做要求编号）。
-2. **Agent**：批 7 发布。开工时问人：R-03 的 tap 仓库、R-01 的包标识（D-16）、M1-35 全局页「建议转套装」的文案。
-3. **Agent**：harness 的下一轮，按 `pnpm harness audit` 的结论：W-31 AGENTS.md 瘦到 120 行、W-32 规则升档第一批（几条 grep 级 lint、`pnpm codex` 包装脚本、「改画布」skill）、W-33 BACKLOG 归档。可以穿插在发布之间做。
-4. **Agent（终端会话）**：P-14，资产库「谁在用」写法和全局统一。
-5. 发布前可以顺手做：M1-48 项目页与原型的界面差异。
+1. **人**：
+   - 合并批 7 的 PR。先看 PR 上「发布」那次运行过没过，它是 universal 构建第一次在 CI 上跑。
+   - 建 TAP_TOKEN（H-16）。
+   - 定 H-17：先走查再发版（推荐），还是先发。
+2. **人 + Agent**：R-06 真机走查。重点看菜单栏和 Dock 是否显示「方寸」、中文应用菜单、dmg 第一次打开的放行流程、R-05 的两分钟。桌面操作要人做，或者给 Codex 开权限。
+3. **Agent**：人说「发版 v0.1.0」后按 WORKFLOW「发版」推标签。草稿 Release 出来后请人补说明、点发布，再装一遍核对。
+4. **Agent，发版后**：W-37 命令行冒烟进 CI；W-31、W-32、W-33（harness 瘦身、规则升档、BACKLOG 归档）；P-14；M1-48。
 
 ## 卡在哪
 
-- D-34 剩真机实测（VoiceOver、200% 缩放、菜单里的 ⌘K），Codex 操控桌面要人给权限（R-06）。
+- 菜单栏与 Dock 的名字、放行流程只有打开应用才看得见。Agent 没有判官，攒在 R-06。
 - 目标工具图标贴近官方标志，发布前要查商标规定（R-07）。
-- self-harness 只在两个项目上试过，Habitat 那边还没落 `.harness/`，要和人商量（W-30）。
+- D-34 剩 VoiceOver、200% 缩放实测，和 R-06 一起走。
 
 ## 接手须知
 
-- 先读 `docs/ARCHITECTURE.md`（不能破的规则、实现要点）和 `docs/WORKFLOW.md`。
-- 交接物只有 PR 和 BACKLOG 条目。做了什么写在 PR 描述里，`docs/LOG.md` 已停写。
-- 改了规则或质量关，同步改 `.harness/rules.json`、`oracles.json`；`self-harness/` 里不写本项目专有的词（`pnpm lint` 会拦）。
-- 派子代理或 Codex 照 WORKFLOW「任务书」写；画布只由主会话发布。
+- 先读 `docs/ARCHITECTURE.md`（不能破的规则、实现要点）和 `docs/WORKFLOW.md`（新加了「发版」一节）。
+- 交接物只有 PR 和 BACKLOG 条目。做了什么写在 PR 描述里。
+- v0.1 不出的功能按 `apps/desktop/src/app/features.ts` 隐藏；内核给用户的文字只写 v0.1 做得到的事。
+- 改了规则或质量关，同步改 `.harness/`；`self-harness/` 里不写本项目专有的词。
 - 跟人交流、写文档一律用中文。

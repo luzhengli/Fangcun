@@ -1,0 +1,126 @@
+name: 发布
+
+# 推 v* 标签时：构建 universal 的桌面应用（dmg）与命令行（压缩包），建成草稿 Release。
+# 人在 GitHub 上看过、点「Publish release」后，tap.yml 才更新 Homebrew tap（R-02、R-03、9.3）。
+#
+# 签名公证：v0.1 没有 Apple Developer 账号，用 ad-hoc 签名（tauri.conf.json 的 signingIdentity "-"）。
+# 有账号后在仓库 Secrets 里加 APPLE_CERTIFICATE、APPLE_CERTIFICATE_PASSWORD、APPLE_SIGNING_IDENTITY，
+# 以及公证用的 APPLE_ID、APPLE_PASSWORD、APPLE_TEAM_ID，下面「签名与公证」一步就会打开，不用改别处。
+
+on:
+  push:
+    tags: ["v*"]
+  # 改了发布相关的文件时，PR 上完整构建一遍、产物传成附件，不建 Release，免得第一次跑就在正式发版时。
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - packaging/**
+      - apps/desktop/src-tauri/tauri.conf.json
+      - apps/desktop/src-tauri/Info.plist
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 构建并建草稿 Release
+    runs-on: macos-latest
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: pnpm install --frozen-lockfile
+
+      # 标签、桌面应用、命令行三处的版本号要一样（R-01）。PR 上没有标签，只比后两处。
+      - name: 版本号和标签一致
+        id: version
+        run: |
+          app=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          cli=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          tag="v${app}"
+          [ "${GITHUB_REF_TYPE}" = "tag" ] && tag="${GITHUB_REF_NAME}"
+          echo "标签 ${tag}，桌面应用 ${app}，命令行 ${cli}"
+          if [ "${tag}" != "v${app}" ] || [ "${app}" != "${cli}" ]; then
+            echo "::error::版本号对不上：标签 ${tag}、tauri.conf.json ${app}、Cargo.toml ${cli}"
+            exit 1
+          fi
+          echo "version=${app}" >> "$GITHUB_OUTPUT"
+
+      # 提交前的同一道关：格式、lint、类型、测试、前端构建。
+      - run: pnpm check
+
+      - name: 签名与公证（有 Apple Developer 账号的 Secrets 才开）
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            value="${!name}"
+            [ -n "${value}" ] && echo "${name}=${value}" >> "$GITHUB_ENV"
+          done
+
+      - name: 桌面应用（universal）
+        run: pnpm --filter @fangcun/desktop tauri build --target universal-apple-darwin
+
+      - name: 命令行（universal）
+        run: |
+          cargo build --release --locked -p fangcun-cli --target aarch64-apple-darwin
+          cargo build --release --locked -p fangcun-cli --target x86_64-apple-darwin
+          mkdir -p dist/cli
+          lipo -create -output dist/cli/fangcun \
+            target/aarch64-apple-darwin/release/fangcun \
+            target/x86_64-apple-darwin/release/fangcun
+          codesign --force --sign - dist/cli/fangcun
+          dist/cli/fangcun --version
+
+      - name: 打包与校验和
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          mkdir -p dist/out
+          dmg=$(find target/universal-apple-darwin/release/bundle/dmg -name '*.dmg' | head -1)
+          cp "${dmg}" "dist/out/Fangcun-${v}-macos-universal.dmg"
+          cp LICENSE-MIT LICENSE-APACHE dist/cli/
+          tar -C dist/cli -czf "dist/out/fangcun-${v}-macos-universal.tar.gz" fangcun LICENSE-MIT LICENSE-APACHE
+          (cd dist/out && shasum -a 256 *.dmg *.tar.gz > SHA256SUMS && cat SHA256SUMS)
+
+      - name: PR 上只传附件
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fangcun-${{ steps.version.outputs.version }}-macos-universal
+          path: dist/out/
+          retention-days: 7
+
+      - name: 草稿 Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          gh release create "${GITHUB_REF_NAME}" dist/out/* \
+            --draft \
+            --title "方寸 ${v}" \
+            --notes-file packaging/release-notes.md
