@@ -28,9 +28,9 @@ const OUT = join(APP, "screens");
 
 // 开发包的进程名是 Cargo 包名，打包后的是 productName。
 const OWNERS = ["fangcun-desktop", "Fangcun", "方寸"];
-// 对齐的目标：工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线是 19.5pt：40px 高、底边 1px 线）。
+// 对齐的目标：侧栏顶上一行与统一工具栏的中线，26pt（两者都高 52px，方寸 2）。2026-11-22 前是 40px 工具栏的 19.25pt。
 // 取实测值让一排按钮在同一条线上，见 DECISIONS 2026-11-14「窗口按钮的位置」。
-const TOOLBAR_MID_PT = 19.25;
+const TOOLBAR_MID_PT = 26;
 // macOS 关闭按钮的红色。
 const CLOSE_RED = [255, 95, 87];
 

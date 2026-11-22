@@ -8,12 +8,12 @@ import { create } from "zustand";
 import type { ToolId } from "@/ipc/bindings/ToolId";
 
 interface UiState {
-  /** 侧栏是否折叠成 56px 的图标栏。 */
+  /** 侧栏是否整个藏起（6.1，macOS 原生做法，不留图标栏）。 */
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
-  /** 设置页里侧栏默认折成图标栏（6.1），工具栏的侧栏开关可以临时展开。 */
-  settingsNavOpen: boolean;
-  toggleSettingsNav: () => void;
+  /** 窗口窄于 960px 时侧栏默认收起；点开后浮在内容上，点外面或 Esc 收起。 */
+  sidebarPeek: boolean;
+  setSidebarPeek: (open: boolean) => void;
   /** 项目页与全局页当前看的目标工具。两页共用，切过去不用再选。 */
   tool: ToolId;
   setTool: (tool: ToolId) => void;
@@ -22,8 +22,8 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  settingsNavOpen: false,
-  toggleSettingsNav: () => set((state) => ({ settingsNavOpen: !state.settingsNavOpen })),
+  sidebarPeek: false,
+  setSidebarPeek: (sidebarPeek) => set({ sidebarPeek }),
   tool: "claude-code",
   setTool: (tool) => set({ tool }),
 }));

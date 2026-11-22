@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { Inspector, Section } from "@/components/Inspector";
 import { StatusDot } from "@/components/StatusDot";
-import { ToolSwitch } from "@/components/ToolSwitch";
+import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, TONE_COLORS, type Tone } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { GlobalRow } from "@/ipc/bindings/GlobalRow";
 import type { GlobalStatus } from "@/ipc/bindings/GlobalStatus";
 import { useGlobalOverview } from "@/ipc/queries";
+import { PageToolbar } from "@/shell/PageToolbar";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
 import styles from "./GlobalPage.module.css";
@@ -70,12 +71,10 @@ export function GlobalPage() {
 
   return (
     <div className={page.page}>
+      <PageToolbar title="全局" subtitle="每个项目都会加载这一层，越薄越好">
+        <ToolPicker value={tool} onChange={setTool} />
+      </PageToolbar>
       <header className={styles.header}>
-        <div className={styles.titleLine}>
-          <h1 className={page.title}>全局</h1>
-          <span className={styles.subtitle}>每个项目都会加载这一层，越薄越好</span>
-          <ToolSwitch value={tool} onChange={setTool} />
-        </div>
         {budget && (
           <>
             <div className={styles.budgetLine}>

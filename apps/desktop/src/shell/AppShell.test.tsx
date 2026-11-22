@@ -43,15 +43,24 @@ describe("窗口骨架（6.1）", () => {
     expect(screen.getByRole("button", { name: "前进" })).toBeDisabled();
   });
 
-  it("侧栏底部写着「本地优先 · 零遥测」，折叠后不显示", () => {
+  it("侧栏底部写着「本地优先 · 零遥测」；收起侧栏时整个藏起，工具栏里出现「显示侧栏」", () => {
     renderApp();
     expect(screen.getByText("本地优先 · 零遥测")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "折叠侧栏" }));
-    expect(screen.queryByText("本地优先 · 零遥测")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "展开侧栏" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "隐藏侧栏" }));
+    expect(screen.queryByRole("navigation", { name: "主导航" })).not.toBeInTheDocument();
+    const show = screen.getByRole("button", { name: "显示侧栏" });
+    expect(show).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(show);
+    expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
+  });
+
+  it("页面标题在统一工具栏里", () => {
+    renderApp("/activity");
+    const toolbar = screen.getByRole("toolbar", { name: "窗口工具栏" });
+    expect(within(toolbar).getByRole("heading", { level: 1, name: "活动" })).toBeInTheDocument();
+    expect(
+      within(toolbar).getByText("所有项目的落盘记录 · 每次写入都留快照，可一键回滚"),
+    ).toBeInTheDocument();
   });
 
   it.each([

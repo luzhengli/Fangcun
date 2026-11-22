@@ -1,7 +1,10 @@
+import { PageToolbar } from "@/shell/PageToolbar";
 import styles from "./PagePlaceholder.module.css";
 
 interface Props {
   title: string;
+  /** 工具栏的副标题，照原型。 */
+  subtitle?: string;
   /** 设计文档里的章节，例如「6.3」。 */
   section: string;
   /** 原型画板的文件名，例如「Main.dc.html」。 */
@@ -14,12 +17,10 @@ interface Props {
  * 还没实现的页面的占位。实现某一页时，把那一页对它的引用删掉；
  * 六页都实现后删掉这个组件。
  */
-export function PagePlaceholder({ title, section, board, backlog }: Props) {
+export function PagePlaceholder({ title, subtitle, section, board, backlog }: Props) {
   return (
-    <section className={styles.placeholder} aria-labelledby="page-title">
-      <h1 id="page-title" className={styles.title}>
-        {title}
-      </h1>
+    <section className={styles.placeholder} aria-label={title}>
+      <PageToolbar title={title} subtitle={subtitle} />
       <p className={styles.note}>这一页还没有实现。</p>
       <dl className={styles.refs}>
         <dt>要求</dt>

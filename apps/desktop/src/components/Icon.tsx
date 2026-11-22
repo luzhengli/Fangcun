@@ -5,12 +5,42 @@
 import type { ReactNode } from "react";
 
 const paths = {
-  back: <path d="M13 8H3M7 4 3 8l4 4" />,
-  forward: <path d="M3 8h10M9 4l4 4-4 4" />,
+  back: <path d="M10 3.5 5.5 8l4.5 4.5" />,
+  forward: <path d="M6 3.5 10.5 8 6 12.5" />,
   sidebar: (
     <>
-      <rect x="2" y="2.5" width="12" height="11" rx="2" />
-      <path d="M6.5 2.5v11" />
+      <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2" />
+      <path d="M6 2.75v10.5" />
+    </>
+  ),
+  inspector: (
+    <>
+      <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2" />
+      <path d="M10 2.75v10.5" />
+    </>
+  ),
+  chevronDown: <path d="m4 6 4 4 4-4" />,
+  check: <path d="m3.5 8.5 3 3 6-7" />,
+  info: (
+    <>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 7.25v3.5" />
+      <circle cx="8" cy="5.1" r=".55" fill="currentColor" stroke="none" />
+    </>
+  ),
+  shield: <path d="M8 1.75 13.25 4v4c0 3-2.25 5.25-5.25 6.25C5 13.25 2.75 11 2.75 8V4z" />,
+  search: (
+    <>
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="m10.5 10.5 3 3" />
+    </>
+  ),
+  sync: (
+    <>
+      <path d="M13 6.5A5 5 0 0 0 4 4.5L2.5 6" />
+      <path d="M2.5 3v3h3" />
+      <path d="M3 9.5a5 5 0 0 0 9 2L13.5 10" />
+      <path d="M13.5 13v-3h-3" />
     </>
   ),
   logo: (
@@ -59,7 +89,15 @@ const paths = {
 
 export type IconName = keyof typeof paths;
 
-export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
+export function Icon({
+  name,
+  size = 16,
+  strokeWidth = 1.5,
+}: {
+  name: IconName;
+  size?: number;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       width={size}
@@ -67,7 +105,7 @@ export function Icon({ name, size = 16 }: { name: IconName; size?: number }) {
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

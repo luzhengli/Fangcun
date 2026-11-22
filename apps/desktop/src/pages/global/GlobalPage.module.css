@@ -9,19 +9,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-.titleLine {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-}
-
-.subtitle {
-  color: var(--tx-3);
-  font-size: 12px;
-  flex: 1 1 200px;
-}
-
 .budgetLine {
   display: flex;
   flex-wrap: wrap;
