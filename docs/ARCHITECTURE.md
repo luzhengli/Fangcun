@@ -127,7 +127,7 @@ src/
 - **决定卡片**（批 9）：`components/DecisionCard.tsx` 的 `DecisionCard`（标题、量化、正文、底部一行）、`Options`（单选，推荐项排第一）、`WriteList`（「会写入 · N 处」）、`Done`（完成和撤销）。卡片要用的计划用 `useQuery` 向内核要，点按钮用 `state/plan.ts` 的 `applyInline` 写，它会重取查询、出带撤销的提示条。放进 `Inspector` 的 `decision`，排在「为什么」之后、字段表之前。检查器是纵向 flex 容器，卡片和其他带 `overflow: hidden` 的块要 `flex: none`，否则会被压到 0 高（截图看不见、`innerText` 却有字）。
 - **同步计划分组**：`PlanRequest.group` 给每一行一个原因，可「移出计划」；`title`、`sub` 覆盖面板标题。项目页的分法见 `ProjectView.openSync`。
 - **侧栏**：`useSidebar()` 返回 `shown`、`peek`、`toggle`、`close`。宽窗口里开关把侧栏整个藏起（`ui.sidebarCollapsed`）；窄于 960px 时侧栏默认收起，开关让它浮出（`ui.sidebarPeek`），点外面、Esc、点导航项都收起。
-- **token 的旧名字**：2026-11-22 原型换成方寸 2 的 token（`--win`、`--side`、`--insp`、`--raised`、`--fill-1…3`、`--k1…3` 等）。`tokens.css` 末尾有一段旧名字别名（`--bg`、`--bg-sidebar`、`--line-strong` 等指到新 token），只给还没重做的界面用。新代码只用新名字；某个页面按方寸 2 重做完，就把它用到的旧名字换掉，全部换完删掉别名段。
+- **token**：只用方寸 2 的名字（`--win`、`--side`、`--insp`、`--raised`、`--fill-1…3`、`--k1…3` 等），和原型 `DesignSystem.dc.html` 的 `.fc`、`.fc.dark` 逐项一致（`tokens.test.ts` 把关）。旧「墨格」名字的别名段批 12 已删。
 - **页面自己摆「列表 + 检查器」。** 骨架只管工具栏和侧栏，因为套装页的左栏和别的页不一样。
 - **跨页面的组件先写一次。** `components/` 里已有：检查器 `Inspector`（6.1 统一结构，含 `Section`、`ReadOnlyAction`）、状态 `StatusDot`/`StatusBadge`（圆点加短标签，语气见 `tone.ts`）、层级刻度 `ScopeTicks`、预算条 `BudgetBar`、目标工具 `ToolSwitch`、变更计划弹窗与提示条 `PlanHost`、登记弹窗 `RegisterHost`（后两个挂在 `AppShell` 上，全应用一份）。
 - **写入一律走 `state/plan.ts`。** 页面调 `usePlan().preview({ load, done, after?, back?, undoable? })`：`load` 向内核要计划，`PlanHost` 弹窗、应用、让查询失效、出提示条；提示条的「撤销」先出 `plan_rollback_record` 的计划。登记先经 `state/register.ts` 问物化方式。
@@ -236,6 +236,9 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **按版本开关的功能**：`apps/desktop/src/app/features.ts`。v0.1 的 `FEATURES.bundles` 为假，套装相关的按钮按它隐藏（M1-35 接着用）。
 - **命令面板**（`components/CommandPalette.tsx`，开关在 `state/palette.ts`）：挂在 `AppShell`，`⌘K` 全局。要触发页面里的动作时用地址参数：项目页认 `?asset=`、`?tab=manifest|history`、`?do=sync`，资产库认 `?asset=`，活动页认 `?record=`、`?check=1`。页面按 `location.key` 判断是不是新的一次导航。
 - **「谁在用」与最近活动**：`components/WhoBar.tsx` 的 `WhoButton`、`WhoList`、`RecentList`，全局页和资产库页共用；展开哪些行由页面记着，和选中无关。
+- **弹层的焦点**（D-34）：新弹层用 `components/useDialogFocus.ts`（打开时焦点进第一个可聚焦元素、Tab 在里面转、关闭后还给打开前的元素）。变更计划、登记、命令面板都接了。
+- **只读模式**：界面用 `useReadOnly()`（`ipc/queries.ts`）判断，「同步」和计划面板的「应用」据此变灰；内核在只读时本来就出不了写入计划。
+- **外壳命令**：只做系统动作、不碰业务的放在 `src-tauri/src/commands.rs`，例如 `pick_directory`、`reveal_settings`（`open -R`）。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt。方寸 2 侧栏顶行和工具栏都高 52px，目标中线 26pt，现在是 x 20、y 24.25（还没实测）。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型

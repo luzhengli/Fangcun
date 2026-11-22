@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { SyncMode } from "@/ipc/bindings/SyncMode";
 import { kernel } from "@/ipc/commands";
@@ -9,6 +9,7 @@ import { useRegister } from "@/state/register";
 import c from "./controls.module.css";
 import { WriteList } from "./DecisionCard";
 import styles from "./PlanHost.module.css";
+import { useDialogFocus } from "./useDialogFocus";
 
 const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
   {
@@ -19,7 +20,7 @@ const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
   {
     mode: "vendor",
     title: "入库",
-    desc: "实体文件提交进仓库，同事与云端 Agent 不装方寸也能用。适合多人协作的仓库。",
+    desc: "实体文件提交进仓库，同事与云端 Agent 不装方寸也能用。适合多人协作。",
   },
 ];
 
@@ -35,6 +36,8 @@ export function RegisterHost() {
 
 function RegisterDialog({ root }: { root: string }) {
   const close = useRegister((s) => s.close);
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialog, true);
   const navigate = useNavigate();
   const client = useQueryClient();
   const suggestion = useQuery({
@@ -84,6 +87,7 @@ function RegisterDialog({ root }: { root: string }) {
   return (
     <div className={styles.veil}>
       <div
+        ref={dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="reg-title"

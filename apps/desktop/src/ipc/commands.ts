@@ -53,6 +53,7 @@ export interface Commands {
   plan_rollback_record: (args: { recordId: string }) => ChangePlan;
   apply_plan: (args: { plan: ChangePlan }) => Applied;
   pick_directory: () => string | null;
+  reveal_settings: () => null;
   settings: () => SettingsForm;
   save_settings: (args: { form: SettingsForm }) => SettingsForm;
   history: (args: { projectRoot: string }) => HistoryEntry[];
@@ -87,6 +88,7 @@ export const kernel = {
   planRollbackRecord: (recordId: string) => call("plan_rollback_record", { recordId }),
   applyPlan: (plan: ChangePlan) => call("apply_plan", { plan }),
   pickDirectory: () => call("pick_directory"),
+  revealSettings: () => call("reveal_settings"),
   settings: () => call("settings"),
   saveSettings: (form: SettingsForm) => call("save_settings", { form }),
   history: (projectRoot: string) => call("history", { projectRoot }),

@@ -20,27 +20,15 @@ export function BudgetBar({ budget, lead }: { budget: Budget; lead: React.ReactN
         {lead}
         <span className={styles.spacer} />
         <span className={styles.legend}>
-          <span
-            aria-hidden="true"
-            className={styles.swatch}
-            style={{ background: "var(--bar-1)" }}
-          />
+          <span aria-hidden="true" className={styles.swatch} style={{ background: "var(--k1)" }} />
           指令 {formatK(budget.instructions)}
         </span>
         <span className={styles.legend}>
-          <span
-            aria-hidden="true"
-            className={styles.swatch}
-            style={{ background: "var(--bar-2)" }}
-          />
+          <span aria-hidden="true" className={styles.swatch} style={{ background: "var(--k2)" }} />
           Skill {formatK(budget.skills)}
         </span>
         <span className={styles.legend}>
-          <span
-            aria-hidden="true"
-            className={styles.swatch}
-            style={{ background: "var(--bar-3)" }}
-          />
+          <span aria-hidden="true" className={styles.swatch} style={{ background: "var(--k3)" }} />
           {mcpLabel}
         </span>
       </div>
@@ -49,9 +37,9 @@ export function BudgetBar({ budget, lead }: { budget: Budget; lead: React.ReactN
         aria-label={`常驻 ${formatK(total)}，预算 ${formatK(budget.limit)}，估算值`}
         className={styles.bar}
       >
-        <span style={{ width: width(budget.instructions), background: "var(--bar-1)" }} />
-        <span style={{ width: width(budget.skills), background: "var(--bar-2)" }} />
-        <span style={{ width: width(budget.mcp), background: "var(--bar-3)" }} />
+        <span style={{ width: width(budget.instructions), background: "var(--k1)" }} />
+        <span style={{ width: width(budget.skills), background: "var(--k2)" }} />
+        <span style={{ width: width(budget.mcp), background: "var(--k3)" }} />
       </div>
     </section>
   );

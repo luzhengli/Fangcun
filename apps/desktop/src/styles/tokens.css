@@ -109,27 +109,3 @@
     --shadow-tip: 0 8px 24px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.14);
   }
 }
-
-/*
- * 旧名字的过渡别名：2026-11-22 原型换成方寸 2 的 token，现有界面还在用「墨格」的旧名字。
- * 这里把旧名字指到最接近的新 token，深色跟着新 token 一起变。界面按方寸 2 重做时逐个换成新名字，再删掉这一段。
- * 不要在新代码里用这些名字。
- */
-:root {
-  --bg: var(--win);
-  --bg-sidebar: var(--side);
-  --bg-subtle: var(--sunken);
-  --bg-hover: var(--fill-2);
-  --bg-selected: var(--accent-weak);
-  --veil: var(--fill-1);
-  --line-strong: var(--line-2);
-  --bar-1: var(--k1);
-  --bar-2: var(--k2);
-  --bar-3: var(--k3);
-  --code-bg: var(--code);
-  --add-bg: var(--add);
-  --del-bg: var(--del);
-  --unknown: var(--unk);
-  --unknown-dot: var(--unk-dot);
-  --unknown-weak: var(--unk-weak);
-}

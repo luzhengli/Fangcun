@@ -70,9 +70,7 @@ export const activity: ActivityRecord[] = [
     subject: { asset: "project-harness", version: null },
     summary:
       "Agent 在工作时改进了项目里的 skill 副本。改动还留在副本里，等你决定回流、丢弃或分叉。",
-    changes: [
-      ["~", ".agents/skills/project-harness/SKILL.md", "+12 −3 行 · 与正本 4d9b1eb 不一致"],
-    ],
+    changes: [["~", ".agents/skills/project-harness/SKILL.md", "+3 −1 行 · 与正本 4d9b1eb 不一致"]],
     cli: "$ fangcun status\nevals_studio  1 处漂移  project-harness",
   }),
   E(
@@ -88,8 +86,8 @@ export const activity: ActivityRecord[] = [
       subject: { asset: "tdd", version: "b7e9f0" },
       summary: "跟随 main 的 tdd 有新版本。差异里新增了一个脚本，需要你确认后才会更新。",
       changes: [
-        ["~", "SKILL.md", "+8 −2 行"],
-        ["+", "scripts/run-tests.sh", "新增脚本 · 会执行命令"],
+        ["~", "SKILL.md", "+3 −1 行 · 描述改写"],
+        ["+", "scripts/run-tests.sh", "新增脚本 +22 行 · 会执行命令"],
       ],
       cli: "$ fangcun update tdd --dry-run",
     },

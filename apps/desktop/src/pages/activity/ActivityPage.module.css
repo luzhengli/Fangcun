@@ -18,8 +18,8 @@
   height: 26px;
   padding: 0 8px;
   border-radius: 6px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg);
+  border: 1px solid var(--line-2);
+  background: var(--win);
   color: var(--tx-1);
   font-size: 12px;
 }
@@ -64,11 +64,11 @@
 }
 
 .row:hover {
-  box-shadow: inset 0 0 0 999px var(--veil);
+  box-shadow: inset 0 0 0 999px var(--fill-1);
 }
 
 .row[aria-pressed="true"] {
-  background: var(--bg-selected);
+  background: var(--accent-weak);
 }
 
 .colTime {
@@ -86,7 +86,7 @@
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--bg-hover);
+  background: var(--fill-2);
   color: var(--tx-2);
 }
 
@@ -226,7 +226,7 @@
   margin: 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--code-bg);
+  background: var(--code);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.6;

@@ -90,6 +90,12 @@ pub struct Finding {
     pub metric: Option<String>,
     /// 量化卡片上大数字下面的短说明，例如「重复副本」「每个项目都在缴」。
     pub metric_note: Option<String>,
+    /// 发现列表右边的影响，例如「5 份 → 1 份」「每个项目 −6.4k」（6.2）。
+    #[serde(default)]
+    pub impact: Option<String>,
+    /// 发现列表标题下面类别后的一句，例如「4 份内容相同」「只有 client-acme 用到」。
+    #[serde(default)]
+    pub brief: String,
 }
 
 /// 页头的「处理进度 N / 总数」（6.2、M1-28）。「尚未扫描」的不算在总数里。
@@ -321,6 +327,8 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
             record: None,
             metric: Some(copies.len().to_string()),
             metric_note: Some("份可以归并成 1 份".to_owned()),
+            impact: Some(format!("{} 份 → 1 份", copies.len())),
+            brief: format!("{same} 份内容相同"),
             id: format!("duplicate:{name}"),
             category: FindingCategory::Duplicate,
             title,
@@ -374,6 +382,8 @@ fn repos(scan: &Scan, findings: &mut Vec<Finding>) {
         record: None,
         metric: Some(shared.len().to_string()),
         metric_note: Some("个仓库存着相同的 skill".to_owned()),
+        impact: Some(format!("{} → 1 个正本", shared.len())),
+        brief: "内容相同的一批 skill".to_owned(),
         id: "duplicate:repos".to_owned(),
         category: FindingCategory::Duplicate,
         title: format!("{} 个仓库存放着相同的 skill", shared.len()),
@@ -501,6 +511,8 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         record: None,
         metric: Some(format_k(TokenEstimate(resident))),
         metric_note: Some("每个项目都在缴".to_owned()),
+            impact: Some(format!("每个项目 −{}", format_k(TokenEstimate(resident)))),
+            brief: if users.is_empty() { "近 30 天没有项目用到".to_owned() } else { format!("只有 {} 用到", users.join("、")) },
             id: format!("global-tax:{}", group.label),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个 {} skill 加载进了每一个项目", group.members.len(), group.label),
@@ -553,6 +565,8 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         record: None,
         metric: Some(format_k(TokenEstimate(resident))),
         metric_note: Some("近 30 天没人用".to_owned()),
+            impact: Some(format!("每个项目 −{}", format_k(TokenEstimate(resident)))),
+            brief: "近 30 天没有项目用到".to_owned(),
             id: "global-tax:never-used".to_owned(),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个全局 skill 近 30 天没有项目用到", never_used.len()),
@@ -606,11 +620,18 @@ fn inconsistent(scan: &Scan, findings: &mut Vec<Finding>) {
             }
         })
         .collect();
+    // 列表右边写缺得最多的那个工具，例如「Codex 缺 28」。
+    let worst = names_by_tool
+        .iter()
+        .min_by_key(|(_, names)| names.len())
+        .map(|(tool, names)| format!("{} 缺 {}", scan.tool_name(tool), all.len() - names.len()));
     findings.push(Finding {
         ready: false,
         record: None,
         metric: Some(all.len().to_string()),
         metric_note: Some("个全局 skill 分发不齐".to_owned()),
+        impact: worst.clone(),
+        brief: format!("{} 个工具各拿到一部分", names_by_tool.len()),
         id: "inconsistent:global-skills".to_owned(),
         category: FindingCategory::Inconsistent,
         title: format!("{} 个全局 skill 在各工具间分发不齐", all.len()),
@@ -708,6 +729,8 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
             record: None,
             metric: Some((only_lock.len() + only_disk.len()).to_string()),
             metric_note: Some("项锁和目录对不上".to_owned()),
+            impact: Some(format!("{} 项对不上", only_lock.len() + only_disk.len())),
+            brief: "锁和目录对不上".to_owned(),
             id: format!("detached:{}", lock.path.display()),
             category: FindingCategory::Detached,
             title: "全局锁文件与实际目录不一致".to_owned(),
@@ -766,6 +789,8 @@ fn secrets(scan: &Scan, findings: &mut Vec<Finding>) {
         record: None,
         metric: Some(hits.len().to_string()),
         metric_note: Some("处已提交的明文".to_owned()),
+        impact: Some(format!("{} 处", hits.len())),
+        brief: "只记位置，不读出值".to_owned(),
         id: "secret:mcp".to_owned(),
         category: FindingCategory::Secret,
         title: format!("{} 处已提交的 MCP 配置里有明文密钥", hits.len()),

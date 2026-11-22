@@ -14,7 +14,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--win);
   color: var(--tx-1);
   font-family: var(--font);
   /* 正文 13px（6.10）。 */
@@ -52,4 +52,16 @@ pre,
 .mono {
   font-family: var(--mono);
   user-select: text;
+}
+
+/* 系统开了「减少动态效果」时动效全部关掉（6.1「键盘」、6.10）。各组件自己的写法之外再兜一层。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

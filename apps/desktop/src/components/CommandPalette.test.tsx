@@ -48,4 +48,18 @@ describe("命令面板 ⌘K（6.1）", () => {
       expect(screen.queryByRole("dialog", { name: "命令面板" })).not.toBeInTheDocument();
     });
   });
+
+  it("关闭后焦点回到打开它的按钮，Tab 不跑出面板（D-34）", async () => {
+    renderApp("/global");
+    const trigger = screen.getByRole("button", { name: "检查器" });
+    trigger.focus();
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    const dialog = await screen.findByRole("dialog", { name: "命令面板" });
+    const input = within(dialog).getByRole("combobox");
+    expect(input).toHaveFocus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(trigger).toHaveFocus();
+  });
 });

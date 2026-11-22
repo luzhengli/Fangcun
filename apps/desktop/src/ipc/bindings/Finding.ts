@@ -35,4 +35,12 @@ metric: string | null,
 /**
  * 量化卡片上大数字下面的短说明，例如「重复副本」「每个项目都在缴」。
  */
-metricNote: string | null, };
+metricNote: string | null, 
+/**
+ * 发现列表右边的影响，例如「5 份 → 1 份」「每个项目 −6.4k」（6.2）。
+ */
+impact: string | null, 
+/**
+ * 发现列表标题下面类别后的一句，例如「4 份内容相同」「只有 client-acme 用到」。
+ */
+brief: string, };

@@ -202,6 +202,28 @@ pub async fn pick_directory(app: tauri::AppHandle) -> CommandResult<Option<Strin
         .map(|path| path.to_string_lossy().into_owned()))
 }
 
+/// 设置页「在访达显示」：在访达里选中 `~/.fangcun/settings.toml`，还没有这个文件时打开所在目录。
+/// 和选目录对话框一样是外壳这一侧的系统动作，界面只发命令，拿不到路径以外的东西。
+#[tauri::command]
+pub async fn reveal_settings(state: State<'_, AppState>) -> CommandResult<()> {
+    let file = state
+        .run(|kernel| Ok(kernel.home().settings_file()))
+        .await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut open = std::process::Command::new("open");
+        if file.exists() {
+            open.arg("-R").arg(&file);
+        } else {
+            open.arg(file.parent().unwrap_or(&file));
+        }
+        open.status()
+    })
+    .await
+    .map_err(|join_error| ErrorPayload::internal(join_error.to_string()))?
+    .map_err(|error| ErrorPayload::internal(format!("打不开访达：{error}")))?;
+    Ok(())
+}
+
 /// 设置页（6.1、M1-24）。
 #[tauri::command]
 pub async fn settings(state: State<'_, AppState>) -> CommandResult<SettingsForm> {

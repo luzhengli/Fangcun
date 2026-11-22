@@ -269,12 +269,12 @@ export function CheckupPage() {
                         {f.title}
                       </span>
                       <span className={styles.findingSub}>
-                        {CATEGORY[f.category].label} · {f.action}
+                        {CATEGORY[f.category].label} · {f.brief || f.action}
                       </span>
                     </span>
-                    {f.metric && (
+                    {(f.impact ?? f.metric) && f.status !== "resolved" && (
                       <span className={styles.impact}>
-                        {f.metric} {f.metricNote}
+                        {f.impact ?? `${f.metric} ${f.metricNote ?? ""}`}
                       </span>
                     )}
                     <span className={styles.pill} style={{ color: TONE_COLORS[tone][0] }}>

@@ -52,6 +52,7 @@ fn main() {
             commands::plan_rollback_record,
             commands::apply_plan,
             commands::pick_directory,
+            commands::reveal_settings,
             commands::settings,
             commands::save_settings,
             commands::history,
