@@ -85,6 +85,13 @@ const paths = {
     </>
   ),
   plus: <path d="M8 3v10M3 8h10" />,
+  picked: (
+    <>
+      <rect x="2" y="2" width="12" height="12" rx="3" />
+      <path d="m5 8.25 2 2 4-4.5" />
+    </>
+  ),
+  chevron: <path d="M6 3.5 10.5 8 6 12.5" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;
@@ -93,10 +100,12 @@ export function Icon({
   name,
   size = 16,
   strokeWidth = 1.5,
+  className,
 }: {
   name: IconName;
   size?: number;
   strokeWidth?: number;
+  className?: string;
 }) {
   return (
     <svg
@@ -109,6 +118,7 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      className={className}
     >
       {paths[name]}
     </svg>

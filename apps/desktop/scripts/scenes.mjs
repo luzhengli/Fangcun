@@ -37,6 +37,27 @@ export const SCENES = {
     steps: [{ click: "lark-doc" }, { click: "在本项目停用" }, { click: "同步" }],
     focus: '[role="dialog"]',
   },
+  // 全局瘦身（6.6）：快速勾选进托盘，再出按建议分组的瘦身计划。
+  "Global@tray": {
+    board: "Global",
+    steps: [{ click: "从未使用5" }],
+    focus: "main",
+  },
+  "Global@plan": {
+    board: "Global",
+    steps: [{ click: "从未使用5" }, { click: "预览计划" }],
+    focus: '[role="dialog"]',
+  },
+  // 资产库（6.4）：来源未知的 pr-review 收编。
+  "Library@unknown": {
+    board: "Library",
+    steps: [{ click: "pr-review" }],
+  },
+  "Library@who": {
+    board: "Library",
+    steps: [{ click: "5/6" }],
+    focus: "main",
+  },
   "Main@history": {
     board: "Main",
     steps: [{ click: "历史" }],

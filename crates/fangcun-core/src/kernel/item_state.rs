@@ -179,6 +179,11 @@ fn recent(item: &EffectiveItem, names: &[String], records: &[Record]) -> Vec<Ite
             wanted.push(name.trim_end_matches('）').to_owned());
         }
     }
+    recent_named(&wanted, records)
+}
+
+/// 记录里提到这些名字的，新的在前，最多 5 条。全局页、资产库页的「最近活动」也用它。
+pub(super) fn recent_named(wanted: &[String], records: &[Record]) -> Vec<ItemActivity> {
     let hits = |text: &str| {
         text.split(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_' || c == '@'))
             .flat_map(|t| t.split('@').next())

@@ -14,6 +14,7 @@ import type { Explanation } from "./bindings/Explanation";
 import type { GlobalItemRef } from "./bindings/GlobalItemRef";
 import type { GlobalOverview } from "./bindings/GlobalOverview";
 import type { HistoryEntry } from "./bindings/HistoryEntry";
+import type { LibraryOverview } from "./bindings/LibraryOverview";
 import type { ManifestEdit } from "./bindings/ManifestEdit";
 import type { ManifestView } from "./bindings/ManifestView";
 import type { ModeSuggestion } from "./bindings/ModeSuggestion";
@@ -42,6 +43,7 @@ export interface Commands {
   effective_context: (args: { projectRoot: string; tool: ToolId }) => EffectiveContext;
   why: (args: { projectRoot: string | null; asset: string }) => Explanation[];
   global_overview: (args: { tool: ToolId }) => GlobalOverview;
+  library_overview: () => LibraryOverview;
   activity: (args: { filter: RecordFilter }) => ActivityRecord[];
   plan_sync: (args: { projectRoot: string; edits: ManifestEdit[] }) => ChangePlan;
   suggest_mode: (args: { projectRoot: string }) => ModeSuggestion;
@@ -73,6 +75,7 @@ export const kernel = {
     call("effective_context", { projectRoot, tool }),
   why: (projectRoot: string | null, asset: string) => call("why", { projectRoot, asset }),
   globalOverview: (tool: ToolId) => call("global_overview", { tool }),
+  libraryOverview: () => call("library_overview"),
   activity: (filter: RecordFilter) => call("activity", { filter }),
   planSync: (projectRoot: string, edits: ManifestEdit[] = []) =>
     call("plan_sync", { projectRoot, edits }),

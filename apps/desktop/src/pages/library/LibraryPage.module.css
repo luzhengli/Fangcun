@@ -1,0 +1,417 @@
+/* 资产库（6.4，方寸 2）。尺寸照抄 prototype/project/Library.dc.html。 */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+
+.flex {
+  flex: 1;
+}
+
+.cap {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--tx-3);
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.lg {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* 工具栏「筛选资产 ⌘F」 */
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 1 220px;
+  min-width: 120px;
+  height: 28px;
+  padding: 0 5px 0 9px;
+  border-radius: 7px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--tx-3);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--tx-1);
+}
+
+.search input::placeholder {
+  color: var(--tx-3);
+}
+
+.search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* 概要 */
+.tiles {
+  padding: 18px 24px 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  border-bottom: 0.5px solid var(--line);
+}
+
+.tile {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 0.5px solid var(--line-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tileNum {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.tileNum[data-warn="true"] {
+  color: var(--warn);
+}
+
+.tileNote {
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+/* 吸顶筛选 */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--win);
+  border-bottom: 0.5px solid var(--line);
+}
+
+.srcLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tx-3);
+}
+
+.select {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 0.5px solid var(--line-2);
+  background: var(--raised);
+  color: var(--tx-1);
+  font: inherit;
+  font-size: 12px;
+}
+
+.hdr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 30px;
+  padding: 0 32px 0 44px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tx-3);
+}
+
+.cMain {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cWho {
+  flex: 0 0 120px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cVer {
+  flex: 0 0 120px;
+  font-size: 12px;
+  color: var(--tx-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cStatus {
+  flex: 0 0 110px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hdr .cVer,
+.hdr .cStatus {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+/* 列表 */
+.rows {
+  padding: 0 0 32px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 16px);
+  margin: 0 8px;
+  min-height: 50px;
+  padding: 0 12px 0 10px;
+  border-radius: 7px;
+  color: var(--tx-1);
+}
+
+.row:hover {
+  background: var(--fill-1);
+}
+
+.row[data-on="true"] {
+  background: var(--accent-weak);
+}
+
+.mainCell {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+.badge {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge[data-big="true"] {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.nameCol {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rname {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row[data-on="true"] .rname {
+  color: var(--accent);
+}
+
+.src {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 检查器 */
+.asideNum {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.advice {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tx-2);
+}
+
+.track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.node {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 0 14px;
+}
+
+.rail {
+  position: relative;
+  flex: 0 0 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.stem {
+  position: absolute;
+  top: 8px;
+  bottom: -8px;
+  width: 1.5px;
+  background: var(--line-2);
+}
+
+.knob {
+  position: relative;
+  z-index: 1;
+  margin-top: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.nodeBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.verLabel {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.verNote {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mode {
+  margin-left: 4px;
+  color: var(--tx-3);
+  font-weight: 400;
+}
+
+.users [data-drift="true"] .mode {
+  color: inherit;
+}
+
+.nobody {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 7px 12px;
+  font-size: 12px;
+}
+
+.fieldRow {
+  display: contents;
+}
+
+.fields dt {
+  color: var(--tx-3);
+}
+
+.fields dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-all;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.cli {
+  margin-top: 10px;
+}
+
+@media (max-width: 1100px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

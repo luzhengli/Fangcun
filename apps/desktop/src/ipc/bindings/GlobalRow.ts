@@ -2,6 +2,7 @@
 import type { AssetKind } from "./AssetKind";
 import type { Distribution } from "./Distribution";
 import type { GlobalStatus } from "./GlobalStatus";
+import type { ItemActivity } from "./ItemActivity";
 import type { ProjectUse } from "./ProjectUse";
 import type { TokenEstimate } from "./TokenEstimate";
 
@@ -44,4 +45,8 @@ actions: Array<string>,
 /**
  * 这一行的每一项都已收编进资产库，「从全局移除…」能用（7.5）。没收编的先「去资产库收编」。
  */
-inLibrary: boolean, };
+inLibrary: boolean, 
+/**
+ * 检查器「最近活动」：活动记录里提到它（或成员）的，新的在前。
+ */
+recent: Array<ItemActivity>, };

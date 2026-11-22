@@ -90,6 +90,13 @@ impl Library {
         Ok(entries)
     }
 
+    /// 每个版本存进来的时间，按哈希（6.4 版本轨道）。
+    pub fn version_dates(
+        &self,
+    ) -> Result<std::collections::BTreeMap<String, crate::model::Timestamp>> {
+        Ok(index::read_added(&self.index)?.into_iter().collect())
+    }
+
     /// 按内容哈希取正本：skill 是目录，指令是文件。没有就是 `None`。
     pub fn locate(&self, hash: &ContentHash) -> Result<Option<PathBuf>> {
         // 哈希来自锁文件，可能被手改过；只认十六进制，防止拼出库外的路径。

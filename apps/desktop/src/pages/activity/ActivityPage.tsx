@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router";
 import c from "@/components/controls.module.css";
 import { DecisionCard, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
@@ -130,6 +130,15 @@ export function ActivityPage() {
       });
     },
   });
+
+  // 命令面板「检查更新」带着 ?check=1 过来：进页就查一次（D-32）。
+  const navKey = useLocation().key;
+  const [checkedFor, setCheckedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (params.get("check") !== "1" || checkedFor === navKey) return;
+    setCheckedFor(navKey);
+    check.mutate();
+  }, [params, navKey, checkedFor, check]);
 
   const records = (activity.data ?? []).filter((r) => project !== "global" || r.project === null);
   const pending = records.filter((r) => r.status === "pending");

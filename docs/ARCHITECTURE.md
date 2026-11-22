@@ -232,6 +232,10 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **加入清单**（M1-22，`Kernel::plan_add`）：`manifest::add_skill`/`add_mcp` 用 `toml_edit` 加一项，别的不动；再 `resolve_lock`（新项联网解析、存库）和 `sync_into`，一份计划，最后把标题改回「把 X 加进 Y」（`sync_into` 会改标题）。已在清单里的出一份没有变更的计划。
 - **体检的处理进度**（M1-28）：`plan_finding` 的计划用 `PlanBuilder::finding` 记下发现编号，进 `Record.finding`。`doctor`/`rescan` 之后 `scanner::mark_handled` 按「这次扫描之后、状态仍是已应用」的记录标 `resolved` 和 `Finding.record`，`CheckupReport.progress` 是已处理 / 总数（尚未扫描的不算）。不另存状态，回滚自然回到待处理。
 - **测试**：批 6 的端到端测试在 `materializer/sync/tests/batch6.rs`，共用上一层的临时主目录和冒充 GitHub 的仓库，钥匙串用 `MemoryStore`。
+- **资产库页**（M1-42，`kernel/library_view.rs`）：`library_overview` 只读。「谁固定在哪一版」从已登记项目的锁算，链接 / 入库看项目里那一份是不是软链；全局层链到正本的算「全局层」。来源未知的行是扫描到的、`source` 为空、哈希和名字都不在库里、也没被锁住的 skill。版本存进来的时间从索引 `versions.added` 读（`Library::version_dates`）。
+- **按版本开关的功能**：`apps/desktop/src/app/features.ts`。v0.1 的 `FEATURES.bundles` 为假，套装相关的按钮按它隐藏（M1-35 接着用）。
+- **命令面板**（`components/CommandPalette.tsx`，开关在 `state/palette.ts`）：挂在 `AppShell`，`⌘K` 全局。要触发页面里的动作时用地址参数：项目页认 `?asset=`、`?tab=manifest|history`、`?do=sync`，资产库认 `?asset=`，活动页认 `?record=`、`?check=1`。页面按 `location.key` 判断是不是新的一次导航。
+- **「谁在用」与最近活动**：`components/WhoBar.tsx` 的 `WhoButton`、`WhoList`、`RecentList`，全局页和资产库页共用；展开哪些行由页面记着，和选中无关。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt。方寸 2 侧栏顶行和工具栏都高 52px，目标中线 26pt，现在是 x 20、y 24.25（还没实测）。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型

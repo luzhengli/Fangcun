@@ -48,6 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "checkup": checkup,
         "effective": effective,
         "global": global,
+        "library": kernel.library_overview()?,
         "activity": kernel.log(&RecordFilter::default())?,
     });
     std::fs::write(&out, serde_json::to_string(&snapshot)?)?;

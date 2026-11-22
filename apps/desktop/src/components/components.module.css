@@ -169,6 +169,18 @@
   box-shadow: inset 0 0 0 999px var(--veil);
 }
 
+.badgeRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.badgeText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .kind {
   font-size: 11px;
   font-weight: 600;

@@ -13,13 +13,18 @@
     },
     "Global": {
       "fixture": "global.ts",
-      "hash": "386f4e1ae610",
-      "version": "1795189731-cf46"
+      "hash": "286226be7105",
+      "version": "1795316474-22ff"
     },
     "Activity": {
       "fixture": "activity.ts",
       "hash": "a667ee93e015",
       "version": "1795196431-b5e5"
+    },
+    "Library": {
+      "fixture": "library.ts",
+      "hash": "ad2149e62c28",
+      "version": "1795316474-22ff"
     }
   }
 }

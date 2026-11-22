@@ -74,6 +74,31 @@ pub(super) fn read(file: &Path) -> Result<Vec<IndexedAsset>> {
     Ok(assets)
 }
 
+/// 每个版本存进来的时间，按哈希。资产库页的版本轨道用（6.4）。索引不存在时是空的。
+pub(super) fn read_added(file: &Path) -> Result<Vec<(String, Timestamp)>> {
+    if !file.exists() {
+        return Ok(Vec::new());
+    }
+    let conn =
+        Connection::open_with_flags(file, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(db(file))?;
+    conn.busy_timeout(Duration::from_secs(5))
+        .map_err(db(file))?;
+    let mut stmt = conn
+        .prepare("SELECT hash, added FROM versions")
+        .map_err(db(file))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                Timestamp(row.get::<_, String>(1)?),
+            ))
+        })
+        .map_err(db(file))?
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(db(file))?;
+    Ok(rows)
+}
+
 /// 记一个版本：资产没有就建，版本已有就不重复记。
 pub(super) fn record(
     file: &Path,

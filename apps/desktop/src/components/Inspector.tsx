@@ -15,6 +15,8 @@ interface Props {
   /** 类型小标签，例如「Skill」「同步 · 快照 #127」。 */
   kind: string;
   name: string;
+  /** 名称左边的类型方块（资产库，6.4）。 */
+  badge?: ReactNode;
   status?: { tone: Tone; label: string };
   intro?: ReactNode;
   /** 决定卡片（6.1）：排在「为什么」之后、字段表之前，只在要人决定时给。 */
@@ -31,6 +33,7 @@ interface Props {
 export function Inspector({
   kind,
   name,
+  badge,
   status,
   intro,
   decision,
@@ -61,8 +64,20 @@ export function Inspector({
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </button>
-        <span className={styles.kind}>{kind}</span>
-        <h2 className={styles.inspectorName}>{name}</h2>
+        {badge ? (
+          <div className={styles.badgeRow}>
+            {badge}
+            <div className={styles.badgeText}>
+              <span className={styles.kind}>{kind}</span>
+              <h2 className={styles.inspectorName}>{name}</h2>
+            </div>
+          </div>
+        ) : (
+          <>
+            <span className={styles.kind}>{kind}</span>
+            <h2 className={styles.inspectorName}>{name}</h2>
+          </>
+        )}
         {status && <StatusBadge tone={status.tone} label={status.label} />}
         {intro && <div className={styles.intro}>{intro}</div>}
       </div>

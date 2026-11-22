@@ -16,16 +16,20 @@ import type { Transport } from "../client";
 import type { Commands } from "../commands";
 import { activity } from "./activity";
 import { checkup } from "./checkup";
-import { globalClaude } from "./global";
+import { globalClaude, globalCodex } from "./global";
+import { libraryOverview } from "./library";
 import { effectiveClaude, effectiveCodex, effectiveRecent, projects, recentProject } from "./main";
 import { manifestView } from "./manifest";
 import {
+  addPlan,
+  adoptPlan,
   applyPlan,
   driftPlan,
   findingPlan,
   history,
   initPlan,
   isRegistered,
+  removeGlobalPlan,
   rollbackPlan,
   rollbackToPlan,
   syncPlan,
@@ -63,8 +67,35 @@ const handlers: Partial<Commands> = {
         ? effectiveCodex
         : effectiveClaude,
 
-  /** Global.dc.html 的 ROWS。只有 Claude Code 一侧，Codex 一侧原型只说了「另有 2 项」。 */
-  global_overview: () => globalClaude,
+  /** Global.dc.html 的 ROWS，按 `tools` 分给 Claude Code 与 Codex。 */
+  global_overview: ({ tool }) => (tool === "codex" ? globalCodex() : globalClaude()),
+  /** Global.dc.html 的 applyPlan：勾选的行从列表消失。 */
+  plan_remove_global: ({ tool, items }) => removeGlobalPlan(tool, items),
+
+  /** Library.dc.html 的 A、tiles。 */
+  library_overview: () => libraryOverview(),
+  /** Main.dc.html 的 palette ALL 里的四项资产。 */
+  search_assets: ({ query }) =>
+    (
+      [
+        ["tdd", "skill", "github:obra/superpowers"],
+        ["project-harness", "skill", "local:luyao-skills"],
+        ["lark-doc", "skill", "github:larksuite/skills"],
+        ["github", "mcp", null],
+      ] as const
+    )
+      .filter(([name]) => name.includes(query.toLowerCase()))
+      .map(([name, kind, source]) => ({
+        name,
+        kind,
+        source,
+        origin: "library" as const,
+        add: name,
+        installs: null,
+      })),
+  plan_add: ({ projectRoot, asset }) => addPlan(projectRoot, asset),
+  /** Library.dc.html 的 adopt：收编 pr-review。 */
+  plan_adopt: ({ asset }) => adoptPlan(asset),
 
   /** Activity.dc.html 的 EV。 */
   activity: ({ filter }) =>
