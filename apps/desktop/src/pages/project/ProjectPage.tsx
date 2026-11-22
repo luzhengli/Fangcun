@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router";
+import { FEATURES } from "@/app/features";
 import c from "@/components/controls.module.css";
 import { DecisionCard, Done, Options, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
@@ -32,6 +33,7 @@ import {
 } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { PageToolbar } from "@/shell/PageToolbar";
+import { usePalette } from "@/state/palette";
 import { applyInline, usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
 import { useStaged, useStagedEdits } from "@/state/staged";
@@ -164,12 +166,17 @@ function ProjectView({ root }: { root: string | undefined }) {
   // 从活动页的待处理过来时带着 ?asset=，选中那一项（6.7「去处理漂移」「查看差异」）。
   const navKey = useLocation().key;
   const [params] = useSearchParams();
-  const [seenNavKey, setSeenNavKey] = useState(navKey);
+  const [seenNavKey, setSeenNavKey] = useState<string | null>(null);
   const [wanted, setWanted] = useState<string | null>(params.get("asset"));
+  // 命令面板的动作带着 ?tab=、?do=sync 过来（6.1 ⌘K）。
+  const [doSync, setDoSync] = useState(params.get("do") === "sync");
   if (navKey !== seenNavKey) {
     setSeenNavKey(navKey);
     toCard();
     setWanted(params.get("asset"));
+    const wantTab = params.get("tab");
+    if (wantTab === "manifest" || wantTab === "history") setTab(wantTab);
+    setDoSync(params.get("do") === "sync");
   }
   const picked = selected !== null;
   useEffect(() => {
@@ -188,6 +195,13 @@ function ProjectView({ root }: { root: string | undefined }) {
 
   const data = context.data;
   const items = data?.items ?? [];
+  const syncReady = doSync && registered && data !== undefined;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 只在命令面板要求同步、数据到齐时开一次。
+  useEffect(() => {
+    if (!syncReady) return;
+    setDoSync(false);
+    openSync();
+  }, [syncReady]);
   if (wanted && data) {
     const hit = items.find((i) => i.name === wanted);
     setWanted(null);
@@ -238,8 +252,8 @@ function ProjectView({ root }: { root: string | undefined }) {
           type="button"
           className={styles.palette}
           aria-label="命令面板"
-          disabled
-          title="命令面板还没有实现（M1-42）"
+          title="搜索资产、项目、动作 ⌘K"
+          onClick={() => usePalette.getState().show()}
         >
           <Icon name="search" size={14} strokeWidth={1.6} />
           <span className={styles.paletteText}>搜索资产与动作</span>
@@ -1182,6 +1196,14 @@ function OverriddenBox({
   const winLayer = winner ? SCOPE_NAMES[winner.scope] : "其他";
   const globalWins = winner?.scope === "global" && item.scope !== "global";
   const version = item.version ? `${item.version} ` : "";
+  const tool = useUi((s) => s.tool);
+  // 从全局移除（M1-34、M1-02）：改的是全局那一份，多处、跨项目，进变更计划面板（6.1 决定卡片第 5 条）。
+  const removeGlobal = (w: EffectiveItem) =>
+    void usePlan.getState().preview({
+      load: () => kernel.planRemoveGlobal(tool, [{ kind: w.kind, name: w.name }]),
+      sub: () => "移出全局层，资产库保留正本 · 应用前留快照，可撤销",
+      done: () => `已从全局移除 ${w.name} · 已留快照`,
+    });
   return (
     <DecisionCard
       title={globalWins ? "被全局同名项挡住" : `被${winLayer}层同名项覆盖`}
@@ -1204,16 +1226,18 @@ function OverriddenBox({
         </>
       }
     >
-      {globalWins && (
+      {globalWins && winner && (
         <div className={styles.cardActions}>
-          <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
-            转成套装…
-          </button>
+          {FEATURES.bundles && (
+            <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
+              转成套装…
+            </button>
+          )}
           <button
             type="button"
             className={`${c.b} ${c.danger}`}
-            disabled
-            title="界面在批 11（M1-42），命令行可用 fangcun remove --global"
+            title="移出全局层，先出变更计划，列出受影响的项目。资产库保留正本"
+            onClick={() => removeGlobal(winner)}
           >
             从全局移除…
           </button>

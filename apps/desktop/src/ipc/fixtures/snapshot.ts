@@ -8,6 +8,7 @@
 import type { CheckupReport } from "../bindings/CheckupReport";
 import type { EffectiveContext } from "../bindings/EffectiveContext";
 import type { GlobalOverview } from "../bindings/GlobalOverview";
+import type { LibraryOverview } from "../bindings/LibraryOverview";
 import type { Overview } from "../bindings/Overview";
 import type { ProjectSummary } from "../bindings/ProjectSummary";
 import type { Record as ActivityRecord } from "../bindings/Record";
@@ -23,6 +24,7 @@ interface Snapshot {
   effective: Record<string, EffectiveContext>;
   global: Record<string, GlobalOverview>;
   activity: ActivityRecord[];
+  library?: LibraryOverview;
 }
 
 export function snapshotHandlers(): Partial<Commands> | null {
@@ -41,6 +43,7 @@ export function snapshotHandlers(): Partial<Commands> | null {
     effective_context: ({ projectRoot, tool }) =>
       pick(snapshot.effective[`${projectRoot}|${tool}`], `${projectRoot} 的 ${tool}`),
     global_overview: ({ tool }) => pick(snapshot.global[tool], `${tool} 的全局层`),
+    library_overview: () => pick(snapshot.library, "资产库"),
     activity: ({ filter }) =>
       snapshot.activity.filter(
         (r) =>

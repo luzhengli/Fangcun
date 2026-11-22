@@ -42,6 +42,7 @@ fn main() {
             commands::effective_context,
             commands::why,
             commands::global_overview,
+            commands::library_overview,
             commands::activity,
             commands::plan_sync,
             commands::suggest_mode,

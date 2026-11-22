@@ -12,7 +12,9 @@ use fangcun_core::adapter::ToolInfo;
 use fangcun_core::error::ErrorPayload;
 use fangcun_core::global::{GlobalItemRef, GlobalOverview};
 use fangcun_core::journal::{HistoryEntry, Record, RecordFilter};
-use fangcun_core::kernel::{AssetHit, ManifestView, Overview, ProjectSummary, UpstreamReport};
+use fangcun_core::kernel::{
+    AssetHit, LibraryOverview, ManifestView, Overview, ProjectSummary, UpstreamReport,
+};
 use fangcun_core::materializer::drift::DriftChoice;
 use fangcun_core::materializer::{Applied, ChangePlan};
 use fangcun_core::model::{SnapshotId, SyncMode, ToolId};
@@ -86,6 +88,12 @@ pub async fn global_overview(
     tool: ToolId,
 ) -> CommandResult<GlobalOverview> {
     state.run(move |kernel| kernel.global_overview(&tool)).await
+}
+
+/// 资产库页（6.4）。
+#[tauri::command]
+pub async fn library_overview(state: State<'_, AppState>) -> CommandResult<LibraryOverview> {
+    state.run(|kernel| kernel.library_overview()).await
 }
 
 /// 活动页（6.7）。

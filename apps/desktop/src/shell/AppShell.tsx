@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Outlet, useNavigate } from "react-router";
+import { CommandPalette } from "@/components/CommandPalette";
 import { PlanHost } from "@/components/PlanHost";
 import { RegisterHost } from "@/components/RegisterHost";
 import { insideTauri } from "@/ipc/client";
@@ -30,6 +31,7 @@ export function AppShell() {
       </div>
       <PlanHost />
       <RegisterHost />
+      <CommandPalette />
     </div>
   );
 }

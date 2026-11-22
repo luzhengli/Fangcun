@@ -7,9 +7,13 @@
 
 import type { Applied } from "../bindings/Applied";
 import type { ChangePlan } from "../bindings/ChangePlan";
+import type { GlobalItemRef } from "../bindings/GlobalItemRef";
 import type { HistoryEntry } from "../bindings/HistoryEntry";
 import type { ManifestEdit } from "../bindings/ManifestEdit";
 import type { SyncMode } from "../bindings/SyncMode";
+import type { ToolId } from "../bindings/ToolId";
+import { globalRowsNamed, removedGlobal } from "./global";
+import { libraryState } from "./library";
 
 const state = {
   synced: false,
@@ -17,6 +21,9 @@ const state = {
   next: 1,
   /** 回滚到的快照。为空时磁盘在最新一条。 */
   current: null as number | null,
+  /** 正在预览的「从全局移除」涉及的全局行，应用后从列表里拿掉。 */
+  removing: [] as string[],
+  lastRemoved: [] as string[],
 };
 
 /** Main.dc.html 的 plan：同步计划，只装排进来的改动（6.8）。 */
@@ -145,9 +152,17 @@ export function applyPlan(plan: ChangePlan): Applied {
   if (plan.title.startsWith("即将对")) state.synced = true;
   const registering = /^即将登记 (\S+)，/.exec(plan.title);
   if (registering?.[1]) state.registered.add(registering[1]);
+  if (plan.title.startsWith("收编 pr-review")) libraryState.adopted = true;
+  if (plan.title.startsWith("从全局层移除")) {
+    for (const id of state.removing) removedGlobal.add(id);
+    state.lastRemoved = [...state.removing];
+  }
   if (plan.title === "回滚到写入前") {
     state.synced = false;
     state.registered.clear();
+    libraryState.adopted = false;
+    for (const id of state.lastRemoved) removedGlobal.delete(id);
+    state.lastRemoved = [];
   }
   return { snapshots: [128], record: `fixture-${plan.id}` };
 }
@@ -235,4 +250,70 @@ export function driftPlan(choice: "promote" | "discard" | "fork"): ChangePlan {
     },
   };
   return { id: state.next++, blocked: false, ...plans[choice] };
+}
+
+/** Library.dc.html 的 adopt：pr-review 收编为本地来源，原位换成受管链接。 */
+export function adoptPlan(asset: string): ChangePlan {
+  const dirs = ["~/.claude/skills", "~/.agents/skills", "~/.codeium/windsurf/skills"];
+  return {
+    id: state.next++,
+    title: `收编 ${asset}：记为本地来源，原位换成链接`,
+    changes: [
+      {
+        op: "add",
+        path: "~/.fangcun/lib/sha256-d441…",
+        detail: `${asset} 存进资产库 · 记为本地来源`,
+      },
+      ...dirs.map((dir) => ({
+        op: "modify" as const,
+        path: `${dir}/${asset}`,
+        detail: "换成受管链接 → 资产库 d4410e2，事前备份",
+      })),
+    ],
+    notes: [{ tone: "info", text: "6 个项目照常加载。只换链接、不改清单" }],
+    blocked: false,
+  };
+}
+
+const SKDIR: Record<string, string> = {
+  "claude-code": "~/.claude/skills/",
+  codex: "~/.codex/skills/",
+};
+
+/** Global.dc.html 的瘦身计划：当前工具全局目录里的链接或配置项，逐个移出。 */
+export function removeGlobalPlan(tool: ToolId, items: GlobalItemRef[]): ChangePlan {
+  const rows = globalRowsNamed(items.map((i) => i.name));
+  state.removing = rows.map((r) => r.id);
+  const changes = rows.map((r) => ({
+    op: "remove" as const,
+    path:
+      r.kind === "skill" ? `${SKDIR[tool] ?? ""}${r.count > 1 ? "lark-*" : r.name}` : r.location,
+    detail:
+      r.kind === "skill"
+        ? `移出全局层（${r.members[0]}@${r.count > 1 ? `3f20c9a，${r.count} 个链接` : "0d81aa3"}），资产库保留正本`
+        : `移出全局层（${r.name}），资产库保留正本`,
+  }));
+  return {
+    id: state.next++,
+    title: rows.length === 1 ? `从全局层移除 ${rows[0]?.name}` : `从全局层移除 ${rows.length} 项`,
+    changes,
+    notes: [],
+    blocked: false,
+  };
+}
+
+/** 命令面板回车加入（6.9）：原型没画这一步的计划，按 `fangcun add` 的三处写入照写。 */
+export function addPlan(projectRoot: string, asset: string): ChangePlan {
+  const name = asset.split("@").pop() ?? asset;
+  return {
+    id: state.next++,
+    title: `即将对 ${projectRoot.split("/").pop()} 做 3 处变更`,
+    changes: [
+      { op: "modify", path: "fangcun.toml", detail: `[skills] 加入 ${name}` },
+      { op: "modify", path: "fangcun.lock", detail: `记下 ${name} 的版本与哈希` },
+      { op: "add", path: `.claude/skills/${name}`, detail: "链接到资产库正本" },
+    ],
+    notes: [],
+    blocked: false,
+  };
 }

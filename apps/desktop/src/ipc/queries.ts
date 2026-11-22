@@ -19,6 +19,7 @@ export const keys = {
     ["effective-context", projectRoot, tool] as const,
   why: (projectRoot: string | null, asset: string) => ["why", projectRoot, asset] as const,
   globalOverview: (tool: ToolId) => ["global-overview", tool] as const,
+  libraryOverview: ["library-overview"] as const,
   activity: (filter: RecordFilter) => ["activity", filter] as const,
   syncPlan: (projectRoot: string) => ["sync-plan", projectRoot] as const,
   settings: ["settings"] as const,
@@ -59,6 +60,10 @@ export function useGlobalOverview(tool: ToolId) {
     queryKey: keys.globalOverview(tool),
     queryFn: () => kernel.globalOverview(tool),
   });
+}
+
+export function useLibraryOverview() {
+  return useQuery({ queryKey: keys.libraryOverview, queryFn: kernel.libraryOverview });
 }
 
 export function useActivity(filter: RecordFilter) {

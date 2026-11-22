@@ -1,0 +1,160 @@
+/* 「谁在用」比例条与展开的项目名（6.4、6.6）。尺寸照抄原型 Global、Library 的 .who、.whol、.ptag。 */
+
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tx-2);
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+.who:hover {
+  background: var(--fill-1);
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fill-3);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.used {
+  flex: 0 0 22px;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.full {
+  flex: 1;
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+}
+
+.chev {
+  flex: none;
+  color: var(--tx-4);
+}
+
+.who:hover .chev,
+.who[aria-expanded="true"] .chev {
+  color: var(--tx-2);
+}
+
+.who[aria-expanded="true"] .chev {
+  transform: rotate(90deg);
+}
+
+.list {
+  min-width: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0 8px 4px;
+  padding: 2px 16px 10px var(--who-x, 48px);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  color: var(--tx-1);
+  white-space: nowrap;
+}
+
+.tag[data-t="warn"] {
+  background: var(--warn-weak);
+  box-shadow: none;
+  color: var(--warn);
+}
+
+.tag[data-t="all"] {
+  background: var(--accent-weak);
+  box-shadow: none;
+  color: var(--accent);
+}
+
+.ver {
+  font-size: 10.5px;
+}
+
+.lead {
+  margin-right: 2px;
+}
+
+.idle {
+  margin-left: 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chev {
+    transition: transform 160ms var(--ease);
+  }
+}
+
+/* 检查器「最近活动」：日期加一句话，点了到活动页那条记录。 */
+.acts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.acts a {
+  display: flex;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--tx-1);
+  text-decoration: none;
+}
+
+.actWhen {
+  flex: 0 0 44px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.acts a:hover .actText {
+  text-decoration: underline;
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--tx-3);
+}

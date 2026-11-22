@@ -1127,3 +1127,63 @@ fn promote_commits_to_the_local_source_and_repins_the_project() {
 
 // 批 6：MCP 入库、从全局移除、fangcun add、体检的处理进度。
 mod batch6;
+
+/// 资产库页（6.4、M1-42）：锁里固定的版本列出项目，全局层来源未知的等着收编，收编后进库。
+#[test]
+fn library_overview_lists_pins_and_unknowns() {
+    use crate::kernel::{LibraryStatus, SourceGroup, VersionTag};
+    let f = fixture("library-view");
+    let kernel = kernel(&f);
+    crate::registry::register_found(&f.home, std::slice::from_ref(&f.proj)).unwrap();
+    lock_and_sync(&kernel, &f, &manifest("link", TDD_DECL, false));
+    write(
+        &f.user_home.join(".agents/skills/stray/SKILL.md"),
+        "---\nname: stray\ndescription: 没有来源\n---\nbody\n",
+    );
+    let kernel = self::kernel(&f);
+
+    let view = kernel.library_overview().unwrap();
+    assert_eq!(view.project_total, 1);
+    let tdd = view
+        .rows
+        .iter()
+        .find(|r| r.name == "tdd")
+        .expect("tdd 在库里");
+    assert_eq!(tdd.group, SourceGroup::Github);
+    assert_eq!(tdd.status, LibraryStatus::Synced);
+    assert_eq!(tdd.used_by, 1);
+    assert!(tdd.has_scripts);
+    let locked = tdd
+        .versions
+        .iter()
+        .find(|v| v.tag == VersionTag::Locked)
+        .expect("有一版锁定中");
+    assert_eq!(locked.users[0].name, "proj");
+    assert_eq!(locked.users[0].mode, "链接");
+    assert!(tdd.store.is_some());
+
+    let stray = view
+        .rows
+        .iter()
+        .find(|r| r.name == "stray")
+        .expect("来源未知的一行");
+    assert!(stray.adoptable);
+    assert_eq!(stray.status, LibraryStatus::UnknownSource);
+    assert_eq!(stray.versions[0].tag, VersionTag::Unadopted);
+    assert_eq!(view.unknown, 1);
+
+    let plan = kernel.plan_adopt("stray").unwrap();
+    kernel.apply(&plan).unwrap();
+    let kernel = self::kernel(&f);
+    let view = kernel.library_overview().unwrap();
+    let stray = view.rows.iter().find(|r| r.name == "stray").unwrap();
+    assert!(!stray.adoptable, "收编后进了资产库");
+    assert_eq!(stray.status, LibraryStatus::Adopted);
+    assert_eq!(stray.summary, "没有来源");
+    assert!(
+        stray.versions[0].users.iter().any(|u| u.name == "全局层"),
+        "{:?}",
+        stray.versions
+    );
+    assert_eq!(view.unknown, 0);
+}

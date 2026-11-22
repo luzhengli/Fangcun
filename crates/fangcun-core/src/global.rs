@@ -114,6 +114,9 @@ pub struct GlobalRow {
     /// 这一行的每一项都已收编进资产库，「从全局移除…」能用（7.5）。没收编的先「去资产库收编」。
     #[serde(default)]
     pub in_library: bool,
+    /// 检查器「最近活动」：活动记录里提到它（或成员）的，新的在前。
+    #[serde(default)]
+    pub recent: Vec<crate::resolver::ItemActivity>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
@@ -514,6 +517,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             advice,
             actions,
             in_library: false,
+            recent: Vec::new(),
         });
     }
 
@@ -551,6 +555,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             advice,
             actions,
             in_library: false,
+            recent: Vec::new(),
         });
     }
 
@@ -621,6 +626,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             advice,
             actions,
             in_library: false,
+            recent: Vec::new(),
         });
     }
 
@@ -684,6 +690,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             advice,
             actions,
             in_library: false,
+            recent: Vec::new(),
         });
     }
 

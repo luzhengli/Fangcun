@@ -41,7 +41,12 @@ mod library_ops;
 pub use library_ops::{AssetHit, HitOrigin};
 mod upstream;
 pub use upstream::{Updatable, UpstreamReport};
+mod library_view;
 mod manifest_view;
+pub use library_view::{
+    LibraryOverview, LibraryRow, LibraryStatus, LibraryVersion, SourceCount, SourceGroup,
+    VersionTag, VersionUser,
+};
 pub use manifest_view::{ManifestFile, ManifestRow, ManifestSection, ManifestView};
 
 /// 内存里最多留多少份没应用的计划。
@@ -696,6 +701,12 @@ impl Kernel {
         let adapter = self.adapter(tool)?;
         let mut overview = crate::global::overview(&scan, &self.adapters, adapter);
         self.mark_in_library(&mut overview);
+        let records = self.journal.read(&RecordFilter::default())?;
+        for row in &mut overview.rows {
+            let mut names = row.members.clone();
+            names.push(row.name.clone());
+            row.recent = item_state::recent_named(&names, &records);
+        }
         Ok(overview)
     }
 
