@@ -28,6 +28,7 @@ import {
   useHistory,
   useManifestView,
   useProjects,
+  useReadOnly,
   useSyncPlan,
   useTools,
 } from "@/ipc/queries";
@@ -232,6 +233,7 @@ function ProjectView({ root }: { root: string | undefined }) {
       ? items.filter((i) => i.counted).reduce((n, i) => n + (i.resident ?? 0), 0) + delta
       : null;
   const openRegister = useRegister((s) => s.open);
+  const readOnly = useReadOnly();
   const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
 
   return (
@@ -264,7 +266,8 @@ function ProjectView({ root }: { root: string | undefined }) {
             type="button"
             className={pending > 0 ? `${c.b} ${c.primary}` : c.b}
             onClick={() => openSync()}
-            title="按清单与锁物化，先出变更计划"
+            disabled={readOnly}
+            title={readOnly ? "只读模式：在设置里关掉后才能同步" : "按清单与锁物化，先出变更计划"}
           >
             <Icon name="sync" size={14} strokeWidth={1.6} />
             同步
@@ -727,7 +730,7 @@ function ItemInspector({
           <span
             style={{
               width: `${Math.min(100, share)}%`,
-              background: share >= 30 ? "var(--warn-dot)" : "var(--bar-1)",
+              background: share >= 30 ? "var(--warn-dot)" : "var(--k1)",
             }}
           />
         </div>

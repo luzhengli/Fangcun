@@ -12,7 +12,7 @@ export const TONE_COLORS: Record<Tone, [text: string, dot: string]> = {
   ok: ["var(--ok)", "var(--ok-dot)"],
   warn: ["var(--warn)", "var(--warn-dot)"],
   info: ["var(--info)", "var(--info-dot)"],
-  unknown: ["var(--unknown)", "var(--unknown-dot)"],
+  unknown: ["var(--unk)", "var(--unk-dot)"],
   danger: ["var(--danger)", "var(--danger-dot)"],
 };
 

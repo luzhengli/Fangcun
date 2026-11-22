@@ -101,7 +101,7 @@ const R = {
     location: "AGENTS.md",
     declared: stack(["", "", "生效 · 正本", ""]),
     files: ["AGENTS.md"],
-    reason: "项目清单把 AGENTS.md 指定为正本，所以它对本项目生效。\n其他指令文件都从它生成。",
+    reason: "项目清单把 AGENTS.md 指定为正本，所以它对本项目生效。其他指令文件都从它生成。",
   }),
   claude: item({
     id: "claude",
@@ -114,8 +114,7 @@ const R = {
     location: "CLAUDE.md",
     declared: stack(["", "", "生效 · 生成的镜像", ""]),
     files: ["CLAUDE.md · 内容为 @AGENTS.md"],
-    reason:
-      "这份文件由方寸自动生成，内容只有一行对 AGENTS.md 的引用。\n要改指令请编辑 AGENTS.md，不要直接改它。",
+    reason: "这份文件由方寸自动生成，内容只有一行对 AGENTS.md 的引用。要改指令请编辑 AGENTS.md。",
   }),
   harness: item({
     id: "harness",
@@ -166,8 +165,7 @@ const R = {
       ".agents/skills/project-harness → 资产库",
       ".claude/skills/project-harness → .agents/skills/project-harness",
     ],
-    reason:
-      "项目清单固定使用 4d9b1eb 版本。\n但项目里的这份副本被改动过，和锁定的版本对不上，所以标为漂移。",
+    reason: "项目清单固定使用 4d9b1eb。项目里的这份副本被改过，和锁定的版本对不上，所以标为漂移。",
   }),
   tdd: item({
     id: "tdd",
@@ -221,7 +219,7 @@ const R = {
     declared: stack(["", "生效 · 来自「工程基线」", "", ""]),
     files: [".agents/skills/tdd → 资产库", ".claude/skills/tdd → .agents/skills/tdd"],
     reason:
-      "它来自本项目启用的套装「工程基线」。\n套装设定跟随上游 main 分支。上游出了新版本 b7e9f0，你确认后才会更新。",
+      "它来自本项目启用的套装「工程基线」，套装设定跟随上游 main。上游出了新版本 b7e9f0，你确认后才会更新。",
   }),
   fedp: item({
     id: "fedp",
@@ -244,8 +242,7 @@ const R = {
       ".agents/skills/frontend-design → 资产库",
       ".claude/skills/frontend-design → .agents/skills/frontend-design（被遮蔽，未加载）",
     ],
-    reason:
-      "项目清单里声明了它，但它没有生效。\n全局也装了一个同名 skill。Claude Code 同名时全局优先，这份项目版本被挡住，不会加载。",
+    reason: "项目清单声明了它，但它没有生效：全局也装了同名 skill，Claude Code 同名时全局优先。",
     overriddenBy: "fedg",
   }),
   lark: item({
@@ -265,7 +262,7 @@ const R = {
     declared: stack(["生效 · 16 项", "", "", ""]),
     files: ["~/.claude/skills/lark-*（16 个链接，全局）"],
     reason:
-      "它们装在全局目录里，而全局的东西会加载进每一个项目。\n本项目没有用到它们，近 30 天也从未触发，却一直占着上下文。",
+      "它们装在全局目录里，全局的东西会加载进每一个项目。本项目近 30 天从未触发，却一直占着上下文。",
   }),
   prrev: item({
     id: "prrev",
@@ -280,7 +277,7 @@ const R = {
     declared: stack(["生效 · 来源未知", "", "", ""]),
     files: ["~/.claude/skills/pr-review → ~/.agents/skills/pr-review"],
     reason:
-      "它装在全局目录里，所以对本项目也生效。\n方寸查不到它从哪来，无法判断版本，也没法提醒更新。",
+      "它装在全局目录里，所以对本项目也生效。方寸查不到它从哪来，无法判断版本，也没法提醒更新。",
   }),
   fedg: item({
     id: "fedg",
@@ -298,7 +295,7 @@ const R = {
     declared: stack(["生效 · v1.1.0", "", "同名 v1.3.0 · 被遮蔽", ""]),
     files: ["~/.claude/skills/frontend-design（全局，生效）"],
     reason:
-      "它装在全局目录里，所以对本项目生效。\n本项目也声明了同名的 v1.3.0，但 Claude Code 同名时全局优先，生效的是这一份。",
+      "它装在全局目录里，对本项目生效。本项目也声明了同名的 v1.3.0，但 Claude Code 同名时全局优先。",
   }),
   github: item({
     id: "github",
@@ -317,8 +314,7 @@ const R = {
     location: ".mcp.json · mcpServers.github",
     declared: stack(["", "", "生效 · 密钥在钥匙串", ""]),
     files: [".mcp.json → mcpServers.github（按键合并）", "Codex 配置 → github（按键合并）"],
-    reason:
-      "项目清单里声明了这个 MCP 服务，所以它对本项目生效。\nGitHub 令牌存在钥匙串里，配置文件只写引用，不写明文。",
+    reason: "项目清单声明了这个 MCP 服务。GitHub 令牌存在钥匙串里，配置文件只写引用，不写明文。",
   }),
 };
 

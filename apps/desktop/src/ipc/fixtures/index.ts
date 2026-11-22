@@ -125,6 +125,8 @@ const handlers: Partial<Commands> = {
   apply_plan: ({ plan }) => applyPlan(plan),
   /** 浏览器里没有系统的选文件夹面板，当作选了 luyao-skills。 */
   pick_directory: () => recentProject.id,
+  /** 浏览器里没有访达，什么也不做。 */
+  reveal_settings: () => null,
 
   /** Settings.dc.html：只读模式关，保留 30 天、每个项目至少 20 个。 */
   settings: () => settingsState,

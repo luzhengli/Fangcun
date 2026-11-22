@@ -1,12 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Change } from "@/ipc/bindings/Change";
 import type { ChangeOp } from "@/ipc/bindings/ChangeOp";
 import type { NoteTone } from "@/ipc/bindings/NoteTone";
 import { kernel } from "@/ipc/commands";
+import { useReadOnly } from "@/ipc/queries";
 import { usePlan } from "@/state/plan";
 import c from "./controls.module.css";
 import styles from "./PlanHost.module.css";
+import { useDialogFocus } from "./useDialogFocus";
 
 const OP: Record<ChangeOp, string> = { add: "+", modify: "~", remove: "−" };
 const NOTE: Record<NoteTone, string> = {
@@ -25,9 +27,12 @@ export function PlanHost() {
   const { request, plan, loading, applying, error, toast } = usePlan();
   const { close, setApplying, setError, showToast, preview } = usePlan.getState();
   const client = useQueryClient();
+  const readOnly = useReadOnly();
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialog, request !== null);
 
   const apply = async () => {
-    if (!plan || !request || plan.blocked || applying) return;
+    if (!plan || !request || plan.blocked || applying || readOnly) return;
     setApplying(true);
     try {
       const applied = await kernel.applyPlan(plan);
@@ -66,6 +71,7 @@ export function PlanHost() {
       {request && (
         <div className={styles.veil}>
           <div
+            ref={dialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="plan-title"
@@ -149,7 +155,10 @@ export function PlanHost() {
               <button
                 type="button"
                 className={`${c.b} ${c.primary}`}
-                disabled={!plan || plan.blocked || plan.changes.length === 0 || applying}
+                disabled={
+                  readOnly || !plan || plan.blocked || plan.changes.length === 0 || applying
+                }
+                title={readOnly ? "只读模式：在设置里关掉后才能应用" : undefined}
                 onClick={() => void apply()}
               >
                 {applying ? "正在应用…" : "应用"}

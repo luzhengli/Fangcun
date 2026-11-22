@@ -106,6 +106,11 @@ export function useSettings() {
   return useQuery({ queryKey: keys.settings, queryFn: kernel.settings });
 }
 
+/** 设置里开了只读模式（7.5）：「同步」「应用」变灰（6.1「设置」）。 */
+export function useReadOnly(): boolean {
+  return useSettings().data?.readOnly ?? false;
+}
+
 /** 设置页保存。只读开关一变，内核换了，别的查询都要重新取。 */
 export function useSaveSettings() {
   const client = useQueryClient();

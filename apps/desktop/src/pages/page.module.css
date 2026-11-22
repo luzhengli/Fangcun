@@ -68,7 +68,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-color: var(--line-2) transparent;
   padding-bottom: 24px;
 }
 
@@ -116,12 +116,12 @@
 
 button.row:hover,
 .row[data-hl="true"] {
-  box-shadow: inset 0 0 0 999px var(--veil);
+  box-shadow: inset 0 0 0 999px var(--fill-1);
 }
 
 .row[aria-pressed="true"],
 .row[aria-selected="true"] {
-  background: var(--bg-selected);
+  background: var(--accent-weak);
 }
 
 .name {
@@ -207,8 +207,8 @@ button.row:hover,
   height: 24px;
   padding: 0 10px;
   border-radius: 12px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg);
+  border: 1px solid var(--line-2);
+  background: var(--win);
   color: var(--tx-2);
   font-size: 12px;
 }
@@ -224,8 +224,8 @@ button.row:hover,
   height: 28px;
   padding: 0 12px;
   border-radius: 6px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg);
+  border: 1px solid var(--line-2);
+  background: var(--win);
   color: var(--tx-1);
 }
 
@@ -248,7 +248,7 @@ button.row:hover,
 .box {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--win);
   overflow: hidden;
 }
 
@@ -268,7 +268,7 @@ button.row:hover,
 .code {
   padding: 5px 8px;
   border-radius: 6px;
-  background: var(--code-bg);
+  background: var(--code);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 16px;
@@ -280,7 +280,7 @@ button.row:hover,
   margin: 0;
   padding: 10px 12px;
   border-radius: 6px;
-  background: var(--bg);
+  background: var(--win);
   border: 1px solid var(--line);
   font-size: 12px;
   line-height: 1.65;

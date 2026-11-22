@@ -61,7 +61,7 @@
 }
 
 .noteInfo {
-  background: var(--bg-subtle);
+  background: var(--sunken);
   border: 1px solid var(--line);
   color: var(--tx-2);
 }
@@ -141,7 +141,7 @@
   gap: 8px;
   padding: 12px 20px;
   border-top: 1px solid var(--line);
-  background: var(--bg-subtle);
+  background: var(--sunken);
 }
 
 .footNote {
@@ -158,8 +158,8 @@
 }
 
 .cancel {
-  border: 1px solid var(--line-strong);
-  background: var(--bg);
+  border: 1px solid var(--line-2);
+  background: var(--win);
   color: var(--tx-1);
 }
 
@@ -272,7 +272,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
-  background: var(--bg);
+  background: var(--win);
   border: 1px solid var(--line);
 }
 

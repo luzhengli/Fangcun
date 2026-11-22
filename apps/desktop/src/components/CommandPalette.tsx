@@ -11,6 +11,7 @@ import { useUi } from "@/state/ui";
 import styles from "./CommandPalette.module.css";
 import c from "./controls.module.css";
 import { Icon } from "./Icon";
+import { useDialogFocus } from "./useDialogFocus";
 
 interface Entry {
   key: string;
@@ -83,7 +84,9 @@ function Panel({ onClose }: { onClose: () => void }) {
     staleTime: 30_000,
   });
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
+  const panel = useRef<HTMLDivElement>(null);
+  // 打开时焦点进输入框（面板里第一个可聚焦的），关闭后回到打开前的地方。
+  useDialogFocus(panel, true);
 
   const items = context.data?.items ?? [];
   const go = (to: string) => {
@@ -272,6 +275,7 @@ function Panel({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-label="命令面板"
+        ref={panel}
         className={styles.panel}
         onKeyDown={onKey}
       >
