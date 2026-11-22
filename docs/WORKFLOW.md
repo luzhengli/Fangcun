@@ -49,6 +49,7 @@
 | 实现 <编号> | 本地 | 第 ④ 步 |
 | 收工 | 两边 | `AGENTS.md`「收工前必须做的事」 |
 | 复盘工作流 | 本地 | 本文「复盘」 |
+| 审计 harness | 本地 | `pnpm harness audit`，按结论给建议（self-harness） |
 
 ## 交接规则
 
@@ -115,7 +116,7 @@
 
 | 写什么 | 默认 |
 | --- | --- |
-| 能改哪些文件 | 只改任务涉及的代码。不改 `docs/` 的 STATUS、LOG、DECISIONS、WORKFLOW、BACKLOG（主会话收工时统一写）；不改设计文档和 `prototype/`。要改设计文档的，记成一条 D-xx 交回主会话 |
+| 能改哪些文件 | 只改任务涉及的代码。不改 `docs/` 的 STATUS、DECISIONS、WORKFLOW、BACKLOG 和 `.harness/`（主会话收工时统一写）；不改设计文档和 `prototype/`。要改设计文档的，记成一条 D-xx 交回主会话 |
 | Codex 的写入 | 只写证据目录，一律不许改仓库文件。它会把 Agent 写的任务书当成「人说」记进文档 |
 | 结果放哪 | 写在最后一条消息里。子代理常被拦着写报告文件，别指望 `report.md` |
 | 画布 | 子代理不发布，改好留在草稿目录（见「同步原型」） |
@@ -146,7 +147,8 @@
 
 ## 工具
 
-- **`pnpm workflow`**（`tools/workflow/status.mjs`）：一条命令看卡在哪，还会报出占着 1420 端口的进程和它跑了多久（忘了关的旧 `pnpm dev`，可能连着真实的 `~/.fangcun`）。`--fetch` 先拉远端，再列开着的 PR，标出 base 不是 main 的；`accept <画板…>` 记下示例数据已对齐的画板版本，记在 `apps/desktop/src/ipc/fixtures/prototype-sync.json`（按画板文件的哈希比，画板文件一变就算落后，哪怕只改了样式，看过没影响也 accept），第一次给某张画板配示例数据时加 `--fixture <文件名>`；`--ci` 给 CI 用；`find <关键词…>` 查一件事定没定过（W-12），先按文件报处数，超过 40 处时没列出的也报出章节和行号，`--all` 全列，不要用 `tail` 截。
+- **`pnpm workflow`**（`tools/workflow/status.mjs`）：通用部分交给 self-harness 的 `status`、`find`（配置在 `.harness/config.json`），本项目只加原型版本和示例数据。一条命令看卡在哪，还会报出占着 1420 端口的进程和它跑了多久（忘了关的旧 `pnpm dev`，可能连着真实的 `~/.fangcun`）。`--fetch` 先拉远端，再列开着的 PR，标出 base 不是 main 的；`accept <画板…>` 记下示例数据已对齐的画板版本，记在 `apps/desktop/src/ipc/fixtures/prototype-sync.json`（按画板文件的哈希比，画板文件一变就算落后，哪怕只改了样式，看过没影响也 accept），第一次给某张画板配示例数据时加 `--fixture <文件名>`；`--ci` 给 CI 用；`find <关键词…>` 查一件事定没定过（W-12），先按文件报处数，超过 40 处时没列出的也报出章节和行号，`--all` 全列，不要用 `tail` 截。
+- **`pnpm harness <命令>`**（`self-harness/scripts/harness.mjs`）：`audit` 体检常驻长度、文档、规则档位、判官缺口、断链；`metrics` 出度量，`--record` 记一笔到 `.harness/metrics.jsonl`；`check` 校验清单和边界词，在 `pnpm lint` 里。
 - **`check.js`**（`tools/prototype-preview/`）：`--only <画板,…>` 只渲染几张，`--src <目录>` 渲染草稿，`--out <目录>` 截图写到别处。
 - **截图场景**（`apps/desktop/scripts/scenes.mjs`）：`{ click: "文字", within: "选择器" }` 只在某个区域里找；匹配到不止一个又没写 `nth` 时打印提醒。
 - **`pnpm screens --compare [画板…]`**：在本机重渲原型、截应用，逐张写出「原型 · 应用 · 差异标红」三栏拼图到 `apps/desktop/screens/compare-<画板>.png`，打印差异像素占比。占比是相对信号：侧栏宽度差约 10px（滚动条预留）会让整片内容错开，所以只看变化、看拼图，不设阈值。
@@ -156,9 +158,11 @@
 
 工作流本身也按「发现问题 → 改进 → 记录」迭代。
 
-- **记摩擦**：谁遇到流程上的卡点（等人传话、重复劳动、返工、缺工具、规则互相打架），就在下面「摩擦记录」加一条 `- [ ] 日期 现象：谁卡住了，耽误了什么`。这是收工清单的一步。
+方法在 `self-harness/references/evolve.md`，这里只写本项目的约定。
+
+- **记摩擦**：谁遇到流程上的卡点（等人传话、重复劳动、返工、缺工具、规则互相打架），就在下面「摩擦记录」加一条 `- [ ] 日期 现象：谁卡住了，耽误了什么`。是 self-harness 方法本身的问题，结尾标〔方法〕，复盘时抄一份到 `self-harness/FRICTION.md`。这是收工清单的一步。
 - **什么时候复盘**：摩擦攒到 5 条（`pnpm workflow` 会提醒），或一个里程碑结束，或人说「复盘工作流」。
-- **怎么复盘**：把摩擦归类，每类出一个改进项进 BACKLOG「工作流」（W-xx），能做的当场做。做完在「改进记录」加一行，对应的摩擦勾掉并注明 W 编号。
+- **怎么复盘**：先 `pnpm harness metrics --record`。把摩擦归类，每类出一个改进项进 BACKLOG「工作流」（W-xx），先问能不能升档（脚本、lint、hook 优先于文字），能做的当场做。做完在「改进记录」加一行，对应的摩擦勾掉并注明 W 编号；`.harness/rules.json` 补违反记录、改档位。最后 `pnpm harness audit`。
 - **看什么**：一轮里人要介入几次、交接等了多久、同一件事返工几轮。
 - **原则**：能写成脚本或 CI 的，不写成要人记住的规则。规则变了，先改这份文档，再改 `AGENTS.md` 里的指针。
 
@@ -183,6 +187,9 @@
 | 2026-11-22 | W-21 | 「改画板时的写法」 | 悬停死循环、弹层自己打开、气泡被裁、键盘没法在原型里验 |
 | 2026-11-22 | W-22 | 交接规则第 7 条：`gh pr update-branch` | 重跑 CI 带不上 main 的修复 |
 | 2026-11-22 | W-23 | 交接规则第 8、9 条：先实测再问人；自主优化先出大方向；「调研」一节 | 原型搬本地用了三个会话；整体重做的任务先做了修补 |
+| 2026-11-22 | W-27 | 停写 LOG；STATUS 只留判断，事实由 `pnpm workflow` 算 | 手写的状态过期（STATUS 写 #45 待合并时已合）；LOG 与 PR 重复 |
+| 2026-11-22 | W-28 | 规则、判官盘成数据：`.harness/rules.json` 32 条、`oracles.json` 26 个维度 | 规则散在几份文档，不知道哪条有人守、哪条被违反过 |
+| 2026-11-22 | W-29 | self-harness 孵化：skill、`pnpm harness`（status、audit、metrics、find、check、init），`pnpm workflow` 改用它 | harness 的方法只活在本项目的文档里，换个项目要从头来 |
 
 ### 摩擦记录
 

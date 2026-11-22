@@ -9,12 +9,12 @@
 | 层 | 文件 | 什么时候读 |
 | --- | --- | --- |
 | 0 | `AGENTS.md`（本文件） | 每次，自动加载 |
-| 1 | `docs/STATUS.md` | 每次开工先读：现在在哪、下一步、卡在哪。再跑 `pnpm workflow --fetch` 看待人处理、没合并的分支、落后的示例数据 |
+| 1 | `docs/STATUS.md` | 每次开工先读：下一步、卡在哪（只有判断）。事实跑 `pnpm workflow --fetch` 看：开着的 PR、待人处理、没合并的分支、落后的示例数据 |
 | 2 | `docs/BACKLOG.md` | 要挑活或查某件事的状态时 |
 | 3 | `docs/product-design.md` 的对应章节 | 要设计或实现某个功能时，按下面的章节索引只读那一节。全文约 890 行，不要通读 |
 | 4 | `docs/ARCHITECTURE.md` | 要写代码时：代码怎么组织、不能破的规则、照着原型实现一个页面的步骤 |
 | 5 | `docs/WORKFLOW.md` | 要交接、同步原型、复盘工作流时：一轮迭代怎么走、口令、质量关 |
-| 6 | `docs/DECISIONS.md`、`docs/LOG.md` | 要查某个决定的来由、某天做了什么时 |
+| 6 | `docs/DECISIONS.md`；git log 与 PR | 要查某个决定的来由、某天做了什么时。`docs/LOG.md` 2026-11-22 起停写，只作历史 |
 
 ## 目录
 
@@ -23,13 +23,15 @@
 | `AGENTS.md` | 本文件，指令文件的正本 |
 | `CLAUDE.md` | 指向 `AGENTS.md` 的软链。不要单独编辑 |
 | `docs/product-design.md` | 产品设计方案（中文） |
-| `docs/STATUS.md` | 当前状态和下一步，每次收工整份改写 |
+| `docs/STATUS.md` | 下一步和卡在哪，只写判断，每次收工整份改写 |
 | `docs/BACKLOG.md` | 待办，按期分节，带状态标记 |
 | `docs/DECISIONS.md` | 决定记录，只追加 |
-| `docs/LOG.md` | 工作日志，只追加 |
+| `docs/LOG.md` | 旧的工作日志，2026-11-22 起停写 |
 | `docs/ARCHITECTURE.md` | 工程架构：模块、规则、IPC 约定、命令、实现要点 |
 | `docs/WORKFLOW.md` | 工作流：角色、一轮迭代、口令、交接规则、同步原型、质量关、复盘 |
-| `tools/workflow/` | `pnpm workflow`：工作流现在卡在哪 |
+| `tools/workflow/` | `pnpm workflow`：工作流现在卡在哪。通用部分来自 `self-harness` |
+| `self-harness/` | 在本仓库孵化的通用 skill：harness 的生命周期（开工、收工、审计、度量、复盘）。不写本项目专有的词，`pnpm lint` 守着 |
+| `.harness/` | 本项目给 self-harness 的数据：配置、规则清单、判官清单 |
 | `crates/fangcun-core/` | 内核（Rust）。全部业务逻辑在这里，桌面应用与命令行共用 |
 | `crates/fangcun-cli/` | 命令行 `fangcun` |
 | `apps/desktop/` | 桌面应用。`src-tauri/` 是 Tauri 外壳，`src/` 是 React 界面 |
@@ -50,7 +52,8 @@
 | `pnpm bindings` | 改了内核里导出给界面的类型后运行 |
 | `pnpm screens [画板…]` | 给应用截图，和 `prototype/screens/` 里同名的原型截图对比。加 `--compare` 出差异拼图 |
 | `pnpm window-shot` | 给真实的桌面窗口截图，量窗口按钮对齐 |
-| `pnpm workflow` | 看工作流卡在哪：待人处理、没合并的分支、原型待改、落后的示例数据 |
+| `pnpm workflow` | 看工作流卡在哪：开着的 PR、待人处理、没合并的分支、原型待改、落后的示例数据 |
+| `pnpm harness audit` | harness 体检：常驻长度、规则档位、判官缺口。`metrics` 出度量 |
 | `pnpm check` | 提交前跑：格式、lint、类型检查、全部测试、前端构建 |
 
 写代码时守 `docs/ARCHITECTURE.md`「不能破的规则」。最要紧的三条：业务逻辑只在内核；写用户的文件只经变更计划和 `Kernel::apply`，只写 7.5 的写入范围、写前留快照；界面只经 `ipc/` 取数据，颜色只用「墨格」token。
@@ -152,13 +155,13 @@
 
 ## 收工前必须做的事
 
-每次工作结束前按这个顺序更新，缺一项都算没做完。
+每次工作结束前按这个顺序更新，缺一项都算没做完。做了什么写在 PR 描述里，不另记日志。
 
-1. `docs/STATUS.md`：整份改写成现在的状态，不超过 40 行，只写现在在哪、下一步、卡在哪。它是给下一位接手者的交接说明。长期有效的实现知识写进 `docs/ARCHITECTURE.md`「实现要点」，不放这里。
+1. `docs/STATUS.md`：整份改写，不超过 40 行，只写判断：下一步、卡在哪、接手须知。分支、PR、计数这类事实 `pnpm workflow` 算得出来，不写。长期有效的实现知识写进 `docs/ARCHITECTURE.md`「实现要点」。
 2. `docs/BACKLOG.md`：改对应条目的状态标记。新发现的活加进去，不要只留在对话里。
-3. `docs/LOG.md`：在最上面加一条，三到五行。一个会话一条，不是一件事一条。
-4. `docs/DECISIONS.md`：人新定了什么，记原话和日期。自己做的取舍也记，标明是谁定的。
-5. `docs/WORKFLOW.md`「摩擦记录」：这次在流程上卡过的地方（等人传话、重复劳动、返工、缺工具），一条一行。没有就不写。
+3. `docs/DECISIONS.md`：人新定了什么，记原话和日期。自己做的取舍也记，标「Agent 定」。之后被人推翻的，在原条目后补「推翻」。
+4. `docs/WORKFLOW.md`「摩擦记录」：这次在流程上卡过的地方（等人传话、重复劳动、返工、缺工具），一条一行。是 self-harness 方法本身的问题，结尾标〔方法〕。没有就不写。
+5. 动了规则或质量关的，同步改 `.harness/rules.json`、`oracles.json`。
 
 ## 多 Agent 协作约定
 

@@ -20,8 +20,9 @@
     "prototype:preview": "python3 -m http.server 8000",
     "prototype:check": "node tools/prototype-preview/check.js",
     "workflow": "node tools/workflow/status.mjs",
+    "harness": "node self-harness/scripts/harness.mjs",
     "format": "cargo fmt --all && biome format --write",
-    "lint": "biome check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "lint": "biome check && node self-harness/scripts/harness.mjs check && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
     "typecheck": "pnpm --filter @fangcun/desktop typecheck",
     "test": "cargo test --workspace && pnpm --filter @fangcun/desktop test",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build:web"

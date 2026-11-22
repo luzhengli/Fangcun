@@ -91,6 +91,10 @@
   - B：`fangcun global rm <资产>…`，和 `fangcun secret rm` 一个写法。
   - C：`fangcun unglobal <资产>…`。
 
+- [ ] H-15 设计文档要不要承担「每条要求可追溯到判官」（W-35）：给第 5、6 节的要求编号，实现和测试标出守哪一条。文档会更像规格书，少一点叙述感。
+  - A（推荐）：只给第 5 节的验收和第 6 节各页的「要求」编号，叙述保持原样。
+  - B：整份改成规格书格式。
+  - C：先不做，继续靠 `find` 和 Agent 读文档。
 ## 原型待改
 
 设计确认后，要改原型的地方一条一处写在这里：画板、位置、改成什么、出处。云端会话按这里改画布，同步时勾掉。见 `docs/WORKFLOW.md` 第 ② 步。
@@ -318,6 +322,16 @@ v0.2：M1-19 简版套装、M1-21 套装页、M1-01 MCP 试启动。
 - [ ] W-24 并发相关的测试在 CI 里多跑几遍：资产库暂存目录名重用的 bug 本机一直过，合进 main 后才在别的 PR 的 CI 上偶发。可以给并发测试单独一步，循环跑 20 次，或用 `cargo nextest --retries 0` 加 `--test-threads` 打乱
 - [ ] W-25 设计参考取材：在 `tools/` 放一个无头 Playwright 脚本，给 URL 取正文和整页截图；或接 Refero、Mobbin 等的 MCP（要账号，先问人）。下次要做设计参考时做
 - [ ] W-26 预览器按需更新 DOM，不再每次 `setState` 整块重建：重建是悬停死循环、`mouseenter` 补发两条摩擦的根。改动大，下次画布上悬停交互多时再做；在那之前按 WORKFLOW「改画板时的写法」绕开
+- [x] W-27 停写 LOG，STATUS 只留判断：收工清单去掉 LOG 一步，STATUS 不写能由 `pnpm workflow` 算出来的事实；`docs/LOG.md` 留作历史。2026-11-22 人定，同日完成
+- [x] W-28 规则、判官盘成数据：`.harness/rules.json`（32 条，每条的档位、守卫、违反记录、升档方案）、`.harness/oracles.json`（26 个质量维度，机判 10、机证 5、人判 2、无 9）。2026-11-22 完成
+- [x] W-29 self-harness 在本仓库孵化：`self-harness/`（SKILL.md、方法六篇、Claude Code 与 Codex 适配、模板、`harness.mjs` 的 status、audit、metrics、find、check、init）；`.claude/skills/`、`.agents/skills/` 软链；`pnpm harness`；`pnpm workflow` 的通用部分改用它；`harness check`（清单格式、边界词）进 `pnpm lint`。2026-11-22 完成
+- [ ] W-30 在 Habitat（Web 项目）上验证 self-harness：先只读跑 `init`、`audit`，再和人商量要不要在那边落 `.harness/`。踩到的方法问题记进 `self-harness/FRICTION.md`。2026-11-22 只读试跑过一次（`--config` 放在 Habitat 之外，没在那边落盘）：入口 46 行，加上「每次进入」要读的六份，固定开销 17.5k 字符，是本项目的两倍；当场修了四处方法问题（skill 0.1.1），还剩两条见 `self-harness/FRICTION.md`
+- [ ] W-31 AGENTS.md 瘦到 120 行以内（现在约 190 行）：「原型怎么读」「同步」「多 Agent 协作约定」「Computer use」挪成触发层（skill 或 WORKFLOW 的指针），常驻只留阅读顺序、最硬的规则、谁说了算、命令、收工
+- [ ] W-32 规则升档第一批，按 `pnpm harness audit` 的候选：grep 级 lint 守 A-04、A-05、A-08、P-16；Rust 可见性守 A-02；测试守 A-06 的 CSP 与权限；Codex 包装脚本 `pnpm codex`（P-09）；「改画布」做成 skill（P-07、P-08）。升到机器档的规则从 AGENTS.md 删原文
+- [ ] W-33 BACKLOG 归档：已完成条目占 74%，按里程碑挪到 `docs/archive/`，`.harness/config.json` 的 `find` 加上归档文件
+- [ ] W-34 self-harness 抽成独立仓库：Habitat 验证过、方法改过一轮之后。抽出后本仓库按版本引用，本地改动按漂移处理
+- [ ] W-35 设计要求编号与可追溯：给第 5、6 节的要求编号，测试与截图场景标出守哪一条，`pnpm harness` 列出没有判官的要求。要改设计文档格式，见 H-15
+- [ ] W-36 人验收过的截图当基线：`pnpm screens` 除了和原型比，也和人认可过的上一版比（判官清单「人验收过的界面不退化」）
 
 ## 之后
 
