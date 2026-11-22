@@ -98,7 +98,7 @@ model  paths  error                        纯类型，不做 IO
 
 错误过 IPC 时是 `{ code, message }`。界面按 `code` 分支，`message` 原样展示。
 
-写入命令成对：`plan_*`（`plan_sync`、`plan_init`、`plan_adopt`、`plan_finding`、`plan_rollback`、`plan_rollback_record`）出计划，`apply_plan` 落盘。外壳另有三个不属于内核用例的命令：`pick_directory`（「添加项目…」，外壳用 tauri-plugin-dialog 弹选文件夹面板，capabilities 不开它的权限，界面调不到插件）、`settings` / `save_settings`（只读开关变了时 `AppState::reopen` 换一个新内核）。应用菜单「设置…」（⌘,）发 `open-settings` 事件，界面切到 `/settings`。
+写入命令成对：`plan_*`（`plan_sync`、`plan_init`、`plan_adopt`、`plan_finding`、`plan_rollback`、`plan_rollback_record`、`plan_drift`、`plan_remove_global`、`plan_add`）出计划，`apply_plan` 落盘。`search_assets` 是 ⌘K 的搜索，`market` 为真才联网。外壳另有三个不属于内核用例的命令：`pick_directory`（「添加项目…」，外壳用 tauri-plugin-dialog 弹选文件夹面板，capabilities 不开它的权限，界面调不到插件）、`settings` / `save_settings`（只读开关变了时 `AppState::reopen` 换一个新内核）。应用菜单「设置…」（⌘,）发 `open-settings` 事件，界面切到 `/settings`。
 
 内核事件（漂移、活动记录新增）：外壳启动时 `AppState::watch` 按 `Kernel::watch_paths` 开监听，有变化就 `Kernel::refresh_drift`，新的事件以 `kernel-event` 发给界面，`AppShell` 收到后让查询失效；`apply_plan` 之后重设监听目录。启动时另在后台做一次上游检查（`AppState::check_upstream_in_background`）。
 
@@ -222,6 +222,11 @@ CI 在 `.github/workflows/ci.yml`：跑 `pnpm check`，检查类型绑定与内�
 - **检查器的台账数据**（M1-31 至 33）：`kernel/item_state.rs` 给生效上下文填 `files`（台账）、`recent`（活动记录）、`secrets`；`kernel/manifest_view.rs` 出清单页签。
 - **漂移**（M1-15）：`materializer::drift::detect` 按台账判断（入库比实体目录，链接比正本目录名）。`Kernel::plan_drift` 的三种处理都走 `sync_into`（分叉传 `forked`，同步留着那一份、不再记账）。整目录改写用 `drift::replace_dir`，只列一行。回流用 `Sources::prepare_promote` / `finish_promote`，计划体里的 `promotions` 在写完文件后执行。待处理记录带 `subject`，`Kernel::log` 读的时候按现状结算（`settle_pending`），侧栏待处理数也走它。
 - **更新**（M1-16）：`Kernel::check_upstream` 写 `~/.fangcun/state/upstream.toml`，新版本各记一条待处理；`still_behind` 用锁里的哈希判断还要不要升。升级走 `apply_upgrades`（改 pin 和锁）再 `sync_into`；界面暂存的是 `ManifestEdit::Upgrade`，`plan_sync_with` 里处理，勾选的其他项目用 `upgrade_into`。差异在 `library::diff`，脚本按路径、可执行位、`#!`、扩展名判断。
+- **资产库里的 MCP**（M1-20，`library::mcp`）：正本是 `McpSpec`（command、args、env）的 TOML 字节，字段顺序固定、`env` 排序，所以哈希就是版本。`Library::ingest_mcp` 不收带明文的（`secrets::looks_like_secret`）；调用方先 `McpSpec::from_config` 把明文换成 `secret:<服务>-<变量>` 引用（和登记反推同一个名字），明文用 `PlanBuilder::store_secret` 在应用时进钥匙串。`fangcun adopt <名字>` 没有同名 skill 时走 `adopt::plan_mcp`，工具配置不动。
+- **从全局移除**（M1-34，`materializer::global_remove`）：先查「已收编」（skill 的内容哈希在库里；MCP 换成引用后的那一版在库里），否则 `Error::NotAdopted`（`not-adopted`）。skill 按磁盘现在的样子（`State::read`）判断软链还是实体目录，不信扫描缓存：收编后没重扫时扫描里还是实体目录，照它逐个删会删到资产库里。MCP 用 `sync::ConfigDoc` 按键删，一个文件只写一次；配置里用户写的明文用 `PlanBuilder::redact` 在快照里换占位，回滚从钥匙串取回。受影响的项目取 `global::overview` 的 `usage`。全局页的 `GlobalRow.inLibrary` 由 `Kernel::mark_in_library` 补上，`global` 模块本身不碰资产库。
+- **加入清单**（M1-22，`Kernel::plan_add`）：`manifest::add_skill`/`add_mcp` 用 `toml_edit` 加一项，别的不动；再 `resolve_lock`（新项联网解析、存库）和 `sync_into`，一份计划，最后把标题改回「把 X 加进 Y」（`sync_into` 会改标题）。已在清单里的出一份没有变更的计划。
+- **体检的处理进度**（M1-28）：`plan_finding` 的计划用 `PlanBuilder::finding` 记下发现编号，进 `Record.finding`。`doctor`/`rescan` 之后 `scanner::mark_handled` 按「这次扫描之后、状态仍是已应用」的记录标 `resolved` 和 `Finding.record`，`CheckupReport.progress` 是已处理 / 总数（尚未扫描的不算）。不另存状态，回滚自然回到待处理。
+- **测试**：批 6 的端到端测试在 `materializer/sync/tests/batch6.rs`，共用上一层的临时主目录和冒充 GitHub 的仓库，钥匙串用 `MemoryStore`。
 - **窗口按钮**：`tauri.conf.json` 的 `trafficLightPosition.y` 按 tao 的算法，按钮中心约在 y + 1.75pt；对齐的目标是工具栏里后退、侧栏按钮的中心，实测 19.25pt（几何中线 19.5pt），见 DECISIONS「窗口按钮的位置」。用 `pnpm window-shot` 量。
 
 ## 还没定的工程选型

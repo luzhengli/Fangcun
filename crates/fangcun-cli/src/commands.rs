@@ -4,10 +4,11 @@
 
 use std::path::{Path, PathBuf};
 
+use fangcun_core::global::GlobalItemRef;
 use fangcun_core::journal::{FileOp, Record, RecordFilter, RecordStatus, Trigger};
 use fangcun_core::materializer::{ChangeOp, ChangePlan};
 use fangcun_core::model::{
-    AssetKind, NoteTone, ProjectId, Scope, SnapshotId, SyncMode, TokenEstimate,
+    AssetKind, NoteTone, ProjectId, Scope, SnapshotId, SyncMode, TokenEstimate, ToolId,
 };
 use fangcun_core::resolver::{EffectiveContext, Explanation, scope_name};
 use fangcun_core::scanner::{CheckupReport, FindingCategory, FindingStatus, format_k};
@@ -32,10 +33,24 @@ pub fn run(cli: Cli) -> Result<()> {
         }
         Command::Status => print_status(&kernel, &cwd)?,
         Command::Add { asset } => {
-            let _plan = kernel.plan_add(&cwd, &asset)?;
+            let plan = kernel.plan_add(&project_root_of(&cwd), &asset)?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Adopt { asset } => {
             let plan = kernel.plan_adopt(&asset)?;
+            confirm_and_apply(&kernel, &plan, cli.yes)?;
+        }
+        Command::Remove {
+            assets,
+            global: _,
+            tool,
+        } => {
+            let items: Vec<GlobalItemRef> = assets
+                .into_iter()
+                .map(|name| GlobalItemRef { kind: None, name })
+                .collect();
+            let tool = tool.map(ToolId);
+            let plan = kernel.plan_remove_global(tool.as_ref(), &items)?;
             confirm_and_apply(&kernel, &plan, cli.yes)?;
         }
         Command::Lock => {
@@ -380,6 +395,10 @@ fn print_doctor(report: &CheckupReport) {
         "「用到」依据本机近 30 天的 {} 份会话记录，不上传。",
         report.sessions_read
     );
+    println!(
+        "处理进度 {} / {}",
+        report.progress.handled, report.progress.total
+    );
     println!();
     if report.findings.is_empty() {
         println!("没有发现。");
@@ -403,7 +422,11 @@ fn print_doctor(report: &CheckupReport) {
                 location.path, location.detail, location.note
             );
         }
-        println!("  → {}（M1 开放）", finding.action);
+        match (finding.status, finding.ready) {
+            (FindingStatus::Resolved, _) => println!("  已处理 · 已留快照"),
+            (_, true) => println!("  → {}", finding.action),
+            (_, false) => println!("  → {}（还没接上）", finding.action),
+        }
         println!();
     }
 }

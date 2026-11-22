@@ -514,5 +514,6 @@ fn updatable_record(
             asset: asset.to_owned(),
             version: Some(to.to_owned()),
         }),
+        finding: None,
     }
 }

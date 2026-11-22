@@ -15,11 +15,12 @@ use std::path::{Path, PathBuf};
 
 use super::ledger::{Adopted, AdoptedLink};
 use super::{PlanBuilder, State, WriteScope};
+use crate::library::mcp::McpSpec;
 use crate::library::{Library, Origin};
 use crate::model::{AssetKind, ContentHash, PlanNote, SourceRef};
 use crate::paths::FangcunHome;
-use crate::scanner::SkillCopy;
 use crate::scanner::fsutil::display_path;
+use crate::scanner::{McpEntry, SkillCopy};
 use crate::{Error, Result};
 
 pub struct AdoptInput<'a> {
@@ -65,6 +66,11 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         }
         if input.scope.check(&copy.dir).is_err() {
             out_of_scope.insert(display_path(&copy.dir, input.user_home));
+            continue;
+        }
+        // 扫描结果可能是旧的（收编过一次、还没重新体检）：磁盘上已经是软链的不再动，
+        // 否则逐个删的会是链接那头资产库里的文件。
+        if State::read(&copy.dir)? != State::Dir {
             continue;
         }
         places.entry(copy.dir.clone()).or_insert(copy);
@@ -175,8 +181,128 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
     Ok(())
 }
 
+/// 收编 MCP 的输入（M1-20）。
+pub struct McpAdoptInput<'a> {
+    pub name: &'a str,
+    /// 扫描到的、叫这个名字的全部 MCP 配置（全局层、项目层、个人层，各工具）。
+    pub entries: Vec<&'a McpEntry>,
+    pub user_home: &'a Path,
+    pub library: &'a Library,
+    pub secrets: &'a dyn crate::secrets::SecretStore,
+}
+
+/// 收编一个 MCP 服务：每种写法存一版进资产库，`env` 里的明文先换成 `secret:` 引用，
+/// 明文在应用时存进钥匙串（9.3「MCP 的明文密钥」）。
+///
+/// 工具的配置原样不动：MCP 没有「受管链接」可换，Agent 读到的内容不变；收编后全局层的这一项
+/// 就能从全局移除（7.5）。和 skill 一样，资产库在出计划时就存（方寸自己的缓存）。
+pub fn plan_mcp(input: &McpAdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
+    let name = input.name;
+    if input.entries.is_empty() {
+        return Err(Error::NotFound(format!("叫 {name} 的 skill 或 MCP")));
+    }
+    let mut versions: BTreeMap<ContentHash, Vec<String>> = BTreeMap::new();
+    let mut remote = std::collections::BTreeSet::new();
+    let mut plain: BTreeMap<String, crate::secrets::SecretValue> = BTreeMap::new();
+    let mut clashes = std::collections::BTreeSet::new();
+    for entry in &input.entries {
+        let place = format!(
+            "{} · {}",
+            display_path(&entry.file, input.user_home),
+            entry.key
+        );
+        let Some(command) = &entry.command else {
+            remote.insert(place);
+            continue;
+        };
+        let (spec, found) = McpSpec::from_config(name, command, &entry.args, &entry.env);
+        for (secret, value) in found {
+            match plain.get(&secret) {
+                Some(existing) if *existing != value => {
+                    clashes.insert(secret);
+                }
+                Some(_) => {}
+                None => {
+                    plain.insert(secret, value);
+                }
+            }
+        }
+        let version = input.library.ingest_mcp(name, &spec, &Origin::default())?;
+        let places = versions.entry(version.hash).or_default();
+        if !places.contains(&place) {
+            places.push(place);
+        }
+    }
+    if versions.is_empty() {
+        return Err(Error::NotFound(format!(
+            "{name} 没有可以收编的配置：只有远程服务（url），资产库还不支持"
+        )));
+    }
+
+    let mut stored = Vec::new();
+    for (secret, value) in plain {
+        if clashes.contains(&secret) {
+            continue;
+        }
+        match input.secrets.get(&secret) {
+            Ok(Some(existing)) if existing == value => stored.push(secret),
+            Ok(Some(_)) => builder.note(PlanNote::warning(format!(
+                "钥匙串里已经有 {secret}，值和配置里的不同，没有替换。要换用 fangcun secret set {secret}"
+            ))),
+            Ok(None) => {
+                builder.store_secret(&secret, value);
+                stored.push(secret);
+            }
+            Err(e) => builder.note(PlanNote::warning(format!(
+                "{e}。{secret} 没有存进钥匙串，之后用 fangcun secret set {secret}"
+            ))),
+        }
+    }
+    for secret in &clashes {
+        builder.note(PlanNote::warning(format!(
+            "{name} 的几处配置里 {secret} 的值不一样，没有存进钥匙串。用 fangcun secret set {secret} 定一个"
+        )));
+    }
+
+    let places: usize = versions.values().map(Vec::len).sum();
+    builder.set_title(format!(
+        "收编 MCP {name}：{places} 处配置归并为 {} 份正本",
+        versions.len()
+    ));
+    let list: Vec<String> = versions
+        .iter()
+        .map(|(hash, at)| {
+            format!(
+                "{name}@{}（{}）",
+                &hash.0[..hash.0.len().min(7)],
+                at.join("、")
+            )
+        })
+        .collect();
+    builder.note(PlanNote::info(format!(
+        "已存进资产库：{}。工具的配置原样不动",
+        list.join("；")
+    )));
+    if !stored.is_empty() {
+        builder.note(PlanNote::danger(format!(
+            "{} 个明文密钥在资产库里换成了 secret: 引用：{}",
+            stored.len(),
+            stored.join("、")
+        )));
+    }
+    if !remote.is_empty() {
+        let list: Vec<&str> = remote.iter().map(String::as_str).collect();
+        builder.note(PlanNote::info(format!(
+            "{} 处是远程服务（url），资产库还不支持，没有收编：{}",
+            list.len(),
+            list.join("、")
+        )));
+    }
+    Ok(())
+}
+
 /// 删掉目录里的全部东西（不跟随软链），子目录先删里面的。返回删了几个文件。
-fn remove_tree(builder: &mut PlanBuilder, dir: &Path) -> Result<usize> {
+pub(crate) fn remove_tree(builder: &mut PlanBuilder, dir: &Path) -> Result<usize> {
     let mut count = 0;
     let mut entries: Vec<PathBuf> = std::fs::read_dir(dir)
         .map(|e| e.flatten().map(|e| e.path()).collect())

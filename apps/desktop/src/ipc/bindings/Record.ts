@@ -53,4 +53,8 @@ output: string | null,
  * 待处理的记录（漂移、可更新）指向哪项资产。读的时候按现状判断还待不待处理，
  * 处理过了显示「已记录」（6.7「待处理」）。
  */
-subject?: Subject | null, };
+subject?: Subject | null, 
+/**
+ * 体检报告一键动作留下的记录：处理的是哪条发现（M1-28）。没回滚就算已处理。
+ */
+finding?: string | null, };

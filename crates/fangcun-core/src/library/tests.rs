@@ -155,7 +155,7 @@ fn keeps_versions_and_never_duplicates_content() {
 }
 
 #[test]
-fn stores_instructions_as_files_and_defers_mcp() {
+fn stores_instructions_as_files_and_rejects_a_non_mcp_file_as_mcp() {
     let f = fixture("instruction");
     let file = f.base.join("AGENTS.md");
     fs::write(&file, "# 规则\r\n").unwrap();
@@ -178,7 +178,7 @@ fn stores_instructions_as_files_and_defers_mcp() {
     let refused = f
         .library
         .ingest("github", AssetKind::Mcp, &file, &Origin::default());
-    assert!(matches!(refused, Err(Error::NotImplemented(_))));
+    assert!(matches!(refused, Err(Error::Parse { .. })), "{refused:?}");
 }
 
 #[test]
@@ -226,4 +226,49 @@ fn staging_names_are_never_reused() {
     fs::remove_dir(&first).unwrap();
     let second = f.library.staging().unwrap();
     assert_ne!(first, second, "删掉的暂存目录名不能再发给别人");
+}
+
+#[test]
+fn mcp_is_stored_with_references_and_plaintext_is_refused() {
+    let f = fixture("mcp");
+    let env = vec![("GITHUB_TOKEN".to_owned(), "ghp_abcdefghijklmnop".to_owned())];
+    let raw = mcp::McpSpec {
+        command: "npx".to_owned(),
+        args: vec!["-y".to_owned()],
+        env: env.iter().cloned().collect(),
+    };
+    let refused = f.library.ingest_mcp("github", &raw, &Origin::default());
+    assert!(matches!(refused, Err(Error::Secret(_))), "{refused:?}");
+    assert!(f.library.entries().unwrap().is_empty());
+
+    let (spec, plain) = mcp::McpSpec::from_config("github", "npx", &["-y".to_owned()], &env);
+    assert_eq!(plain.len(), 1);
+    let version = f
+        .library
+        .ingest_mcp("github", &spec, &Origin::default())
+        .unwrap();
+    let stored = f.library.locate(&version.hash).unwrap().unwrap();
+    let text = fs::read_to_string(&stored).unwrap();
+    assert!(
+        text.contains("secret:github-token") && !text.contains("ghp_"),
+        "{text}"
+    );
+    assert_eq!(
+        f.library.read_mcp(&version.hash).unwrap(),
+        Some(spec.clone())
+    );
+
+    // 同样的内容再存一次，不多一个版本；经文件入库走同一条路。
+    let file = f.base.join("github.toml");
+    fs::write(&file, spec.to_bytes().unwrap()).unwrap();
+    let again = f
+        .library
+        .ingest("github", AssetKind::Mcp, &file, &Origin::default())
+        .unwrap();
+    assert_eq!(again.hash, version.hash);
+    let entries = f.library.entries().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].kind, AssetKind::Mcp);
+    assert_eq!(entries[0].versions.len(), 1);
+    assert!(entries[0].has_scripts);
 }

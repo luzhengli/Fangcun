@@ -58,6 +58,9 @@ fn main() {
             commands::plan_finding,
             commands::plan_drift,
             commands::check_upstream,
+            commands::plan_remove_global,
+            commands::search_assets,
+            commands::plan_add,
         ])
         .run(tauri::generate_context!())
         .expect("启动方寸失败");

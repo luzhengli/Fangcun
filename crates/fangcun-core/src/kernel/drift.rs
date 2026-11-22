@@ -565,5 +565,6 @@ fn drift_record(root: &Path, drifted: &Drifted, info: &DriftInfo, trigger: Trigg
             asset: drifted.asset.clone(),
             version: None,
         }),
+        finding: None,
     }
 }

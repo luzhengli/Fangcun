@@ -40,4 +40,8 @@ advice: string,
 /**
  * 建议下面的按钮：转成套装…、从全局移除…、去资产库收编。M1 才能执行。
  */
-actions: Array<string>, };
+actions: Array<string>, 
+/**
+ * 这一行的每一项都已收编进资产库，「从全局移除…」能用（7.5）。没收编的先「去资产库收编」。
+ */
+inLibrary: boolean, };
