@@ -83,6 +83,18 @@ pub struct Finding {
     pub foot: String,
     /// 一键动作已经能用（M1-26）：界面据此决定按钮亮不亮，点了调 `Kernel::plan_finding`。
     pub ready: bool,
+    /// 已处理时，处理它的那条活动记录（M1-28）。界面的「撤销」凭它出回滚计划
+    /// （`Kernel::plan_rollback_record`）；回滚之后这一条回到待处理。
+    pub record: Option<String>,
+}
+
+/// 页头的「处理进度 N / 总数」（6.2、M1-28）。「尚未扫描」的不算在总数里。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CheckupProgress {
+    pub handled: u32,
+    pub total: u32,
 }
 
 /// 哪些发现的一键动作已经接上了内核用例。和 `Kernel::plan_finding` 的分派一致。
@@ -106,6 +118,7 @@ pub struct CheckupReport {
     /// 全局层里找不到来源的 skill 数。
     pub unknown_source: u32,
     pub findings: Vec<Finding>,
+    pub progress: CheckupProgress,
 }
 
 /// 一个 skill 在全局层，近 30 天被几个项目用到时算「很少用到」。与全局页一致。
@@ -162,8 +175,52 @@ pub fn diagnose(scan: &Scan) -> CheckupReport {
         assets_found: count_u32(skill_dirs.len()) + others,
         duplicate_copies,
         unknown_source: count_u32(unknown.len()),
+        progress: CheckupProgress {
+            handled: 0,
+            total: count_u32(
+                findings
+                    .iter()
+                    .filter(|f| f.status != FindingStatus::NotScanned)
+                    .count(),
+            ),
+        },
         findings,
     }
+}
+
+/// 体检的处理进度（M1-28）：这次扫描之后、由体检的一键动作留下、没被回滚的记录，
+/// 把对应的发现标成「已处理」。回滚了的那条记录读出来是「已回滚」，发现就回到待处理；
+/// 重新体检是一份新报告，进度从头算（DECISIONS 2026-11-21 批 6）。
+///
+/// `records` 是 `Journal::read` 的结果（已按回滚记录结算过状态）。
+pub fn mark_handled(report: &mut CheckupReport, records: &[crate::journal::Record]) {
+    for finding in &mut report.findings {
+        if finding.status == FindingStatus::NotScanned {
+            continue;
+        }
+        let handled = records.iter().find(|r| {
+            r.finding.as_deref() == Some(finding.id.as_str())
+                && r.status == crate::journal::RecordStatus::Applied
+                && r.at >= report.scanned_at
+        });
+        match handled {
+            Some(record) => {
+                finding.status = FindingStatus::Resolved;
+                finding.record = Some(record.id.clone());
+            }
+            None => {
+                finding.status = FindingStatus::Pending;
+                finding.record = None;
+            }
+        }
+    }
+    report.progress.handled = count_u32(
+        report
+            .findings
+            .iter()
+            .filter(|f| f.status == FindingStatus::Resolved)
+            .count(),
+    );
 }
 
 fn count_u32(n: usize) -> u32 {
@@ -257,6 +314,7 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
             .collect();
         findings.push(Finding {
             ready: false,
+            record: None,
             id: format!("duplicate:{name}"),
             category: FindingCategory::Duplicate,
             title,
@@ -307,6 +365,7 @@ fn repos(scan: &Scan, findings: &mut Vec<Finding>) {
         .collect();
     findings.push(Finding {
         ready: false,
+        record: None,
         id: "duplicate:repos".to_owned(),
         category: FindingCategory::Duplicate,
         title: format!("{} 个仓库存放着相同的 skill", shared.len()),
@@ -431,6 +490,7 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         let users: Vec<String> = projects.iter().map(|p| super::project_name(p)).collect();
         findings.push(Finding {
             ready: false,
+        record: None,
             id: format!("global-tax:{}", group.label),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个 {} skill 加载进了每一个项目", group.members.len(), group.label),
@@ -480,6 +540,7 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
             .collect();
         findings.push(Finding {
             ready: false,
+        record: None,
             id: "global-tax:never-used".to_owned(),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个全局 skill 近 30 天没有项目用到", never_used.len()),
@@ -535,6 +596,7 @@ fn inconsistent(scan: &Scan, findings: &mut Vec<Finding>) {
         .collect();
     findings.push(Finding {
         ready: false,
+        record: None,
         id: "inconsistent:global-skills".to_owned(),
         category: FindingCategory::Inconsistent,
         title: format!("{} 个全局 skill 在各工具间分发不齐", all.len()),
@@ -629,6 +691,7 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
         }
         findings.push(Finding {
             ready: false,
+            record: None,
             id: format!("detached:{}", lock.path.display()),
             category: FindingCategory::Detached,
             title: "全局锁文件与实际目录不一致".to_owned(),
@@ -641,43 +704,8 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
     }
 }
 
-/// 常见密钥的前缀。
-const SECRET_PREFIXES: &[&str] = &[
-    "ghp_",
-    "gho_",
-    "ghs_",
-    "github_pat_",
-    "sk-",
-    "sk_live_",
-    "xoxb-",
-    "xoxp-",
-    "AKIA",
-    "glpat-",
-    "AIza",
-];
-
-/// 看起来像明文密钥：已知前缀，或变量名像密钥而值不是引用。
-pub fn looks_like_secret(name: &str, value: &str) -> bool {
-    let value = value.trim();
-    if value.is_empty() || value.starts_with('$') || value.starts_with("secret:") {
-        return false;
-    }
-    if SECRET_PREFIXES.iter().any(|p| value.starts_with(p)) && value.len() >= 12 {
-        return true;
-    }
-    let upper = name.to_ascii_uppercase();
-    let secret_name = [
-        "TOKEN",
-        "SECRET",
-        "PASSWORD",
-        "API_KEY",
-        "APIKEY",
-        "ACCESS_KEY",
-    ]
-    .iter()
-    .any(|k| upper.contains(k));
-    secret_name && value.len() >= 12 && !value.contains(' ')
-}
+/// 看起来像明文密钥。判断挪到了 `secrets`（资产库入库也要用），这里转出。
+pub use crate::secrets::looks_like_secret;
 
 fn secrets(scan: &Scan, findings: &mut Vec<Finding>) {
     let mut hits: Vec<(&McpEntry, &str)> = Vec::new();
@@ -719,6 +747,7 @@ fn secrets(scan: &Scan, findings: &mut Vec<Finding>) {
         .collect();
     findings.push(Finding {
         ready: false,
+        record: None,
         id: "secret:mcp".to_owned(),
         category: FindingCategory::Secret,
         title: format!("{} 处已提交的 MCP 配置里有明文密钥", hits.len()),

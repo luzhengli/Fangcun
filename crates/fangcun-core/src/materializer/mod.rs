@@ -14,6 +14,7 @@
 
 pub mod adopt;
 pub mod drift;
+pub mod global_remove;
 pub mod ledger;
 pub mod rollback;
 mod scope;
@@ -100,6 +101,11 @@ pub(crate) struct PlanBody {
     pub promotions: Vec<crate::library::source::Promotion>,
     /// 处理的是哪项资产（漂移、升级）：记进活动记录，待处理那条据此算已处理。
     pub subject: Option<crate::journal::Subject>,
+    /// 体检报告的一键动作处理的是哪条发现（M1-28）：记进活动记录，体检的处理进度据此算。
+    pub finding: Option<String>,
+    /// 存快照前另外要换成占位的明文（规则 9）：例如从全局移除的 MCP 配置里用户自己写的密钥，
+    /// 值已经在钥匙串里（或这份计划会存进去），回滚时从钥匙串取回。
+    pub redactions: Vec<snapshot::Redaction>,
 }
 
 /// 一个要存进钥匙串的密钥。
@@ -164,6 +170,7 @@ pub(crate) fn secret_record(
         command: Some(command),
         output: None,
         subject: None,
+        finding: None,
     }
 }
 
@@ -254,6 +261,8 @@ impl PlanBuilder {
                 secrets: Vec::new(),
                 promotions: Vec::new(),
                 subject: None,
+                finding: None,
+                redactions: Vec::new(),
             },
             changes: Vec::new(),
             notes: Vec::new(),
@@ -319,6 +328,17 @@ impl PlanBuilder {
             asset: asset.into(),
             version,
         });
+    }
+
+    /// 这份计划是体检报告里哪条发现的一键动作（M1-28）。
+    pub fn finding(&mut self, id: impl Into<String>) {
+        self.body.finding = Some(id.into());
+    }
+
+    /// 存快照前把这个明文换成 `secret:` 占位，回滚时从钥匙串取回。调用方保证钥匙串里是这个值，
+    /// 或者这份计划会用 [`PlanBuilder::store_secret`] 存进去。
+    pub fn redact(&mut self, name: &str, value: crate::secrets::SecretValue) {
+        self.body.redactions.push((name.to_owned(), value));
     }
 
     /// 回流（9.3）：写本地来源目录（它这次算在写入范围里，快照单独一个范围），应用后挪分支。
@@ -542,7 +562,8 @@ pub(crate) fn apply(plan: &ChangePlan, ctx: &ApplyContext<'_>) -> Result<Applied
 
     // 3. 快照：每个范围一个。方寸写在个人层的明文换成占位（规则 9）。
     let all: Vec<&Path> = body.actions.iter().map(|a| a.path.as_path()).collect();
-    let redactions = ledger::redactions(ctx.home, ctx.user_home, &all);
+    let mut redactions = ledger::redactions(ctx.home, ctx.user_home, &all);
+    redactions.extend(body.redactions.iter().cloned());
     let mut snapshots = Vec::new();
     let mut saved = Vec::new();
     for (group, actions) in &groups {
@@ -736,6 +757,7 @@ fn record(
         command: body.command.clone(),
         output: None,
         subject: body.subject.clone(),
+        finding: body.finding.clone(),
     }
 }
 

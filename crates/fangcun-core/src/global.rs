@@ -111,6 +111,9 @@ pub struct GlobalRow {
     pub advice: String,
     /// 建议下面的按钮：转成套装…、从全局移除…、去资产库收编。M1 才能执行。
     pub actions: Vec<String>,
+    /// 这一行的每一项都已收编进资产库，「从全局移除…」能用（7.5）。没收编的先「去资产库收编」。
+    #[serde(default)]
+    pub in_library: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
@@ -130,6 +133,16 @@ pub struct OtherToolCount {
     pub tool: ToolId,
     pub tool_name: String,
     pub count: u32,
+}
+
+/// 「从全局移除…」选中的一项（M1-34）：名字可以带 `*` 通配，例如 `lark-*`。
+/// 不写类型时 skill 和 MCP 同名的都算。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GlobalItemRef {
+    pub kind: Option<AssetKind>,
+    pub name: String,
 }
 
 /// 全局页（6.6）。
@@ -500,6 +513,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             distribution: skill_distribution(&ctx, &names),
             advice,
             actions,
+            in_library: false,
         });
     }
 
@@ -536,6 +550,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             ),
             advice,
             actions,
+            in_library: false,
         });
     }
 
@@ -605,6 +620,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             distribution,
             advice,
             actions,
+            in_library: false,
         });
     }
 
@@ -667,6 +683,7 @@ pub fn overview(scan: &Scan, adapters: &AdapterRegistry, adapter: &Adapter) -> G
             distribution,
             advice,
             actions,
+            in_library: false,
         });
     }
 

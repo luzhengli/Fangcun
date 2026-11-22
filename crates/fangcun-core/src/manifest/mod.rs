@@ -16,7 +16,7 @@ mod lock;
 mod render;
 mod schema;
 
-pub use edit::{ManifestEdit, apply_edits, remove_skill, set_skill_pin};
+pub use edit::{ManifestEdit, add_mcp, add_skill, apply_edits, remove_skill, set_skill_pin};
 pub use interop::{
     ExportedSkillsLock, SkillsLock, SkillsLockEntry, export_skills_lock, read_skills_lock,
 };

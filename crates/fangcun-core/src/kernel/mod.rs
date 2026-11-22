@@ -37,6 +37,8 @@ use crate::{Error, Result};
 
 mod drift;
 mod item_state;
+mod library_ops;
+pub use library_ops::{AssetHit, HitOrigin};
 mod upstream;
 pub use upstream::{Updatable, UpstreamReport};
 mod manifest_view;
@@ -435,6 +437,7 @@ impl Kernel {
             command: Some("fangcun doctor".to_owned()),
             output: Some(format!("{} 条发现 · 只读", report.findings.len())),
             subject: None,
+            finding: None,
         }
     }
 
@@ -515,12 +518,14 @@ impl Kernel {
 
     /// `fangcun doctor`、体检报告页。用最近一次扫描，还没扫过就先扫。
     pub fn doctor(&self) -> Result<CheckupReport> {
-        Ok(crate::scanner::diagnose(&self.scan_and_record(true)))
+        let report = crate::scanner::diagnose(&self.scan_and_record(true));
+        Ok(self.with_progress(report))
     }
 
     /// 「重新体检」：重新扫描全盘，换掉缓存。
     pub fn rescan(&self) -> Result<CheckupReport> {
-        Ok(crate::scanner::diagnose(&self.rescan_inner()))
+        let report = crate::scanner::diagnose(&self.rescan_inner());
+        Ok(self.with_progress(report))
     }
 
     pub fn overview(&self) -> Result<Overview> {
@@ -689,7 +694,9 @@ impl Kernel {
     pub fn global_overview(&self, tool: &ToolId) -> Result<GlobalOverview> {
         let scan = self.scan();
         let adapter = self.adapter(tool)?;
-        Ok(crate::global::overview(&scan, &self.adapters, adapter))
+        let mut overview = crate::global::overview(&scan, &self.adapters, adapter);
+        self.mark_in_library(&mut overview);
+        Ok(overview)
     }
 
     /// `fangcun log`、活动页。
@@ -709,18 +716,6 @@ impl Kernel {
             .filter(|r| r.status == crate::journal::RecordStatus::Pending)
             .count();
         Ok(u32::try_from(n).unwrap_or(u32::MAX))
-    }
-
-    /// 体检报告的一键动作（6.2、M1-26）：按发现的编号分派到对应的写入用例。
-    /// 「重复」收编进资产库；其余几类等各自的条目（M1-19、M1-17 等）接上。
-    pub fn plan_finding(&self, finding_id: &str) -> Result<ChangePlan> {
-        if !crate::scanner::finding_ready(finding_id) {
-            return Err(Error::NotImplemented("kernel::plan_finding"));
-        }
-        match finding_id.split_once(':') {
-            Some(("duplicate", asset)) => self.plan_adopt(asset),
-            _ => Err(Error::NotImplemented("kernel::plan_finding")),
-        }
     }
 
     /// 项目页「历史」页签（6.3、M1-14）：这个项目的快照，从新到旧，标出当前磁盘状态。
@@ -787,6 +782,7 @@ impl Kernel {
                 format!("{} 处不一致", mismatches.len())
             }),
             subject: None,
+            finding: None,
         };
         let _ = self.journal.record(record);
         if ok {
@@ -1083,46 +1079,6 @@ impl Kernel {
         };
         let record = crate::materializer::secret_record(op, name, title, project, self.origin);
         let _ = self.journal.record(record);
-    }
-
-    /// `fangcun add <资产>`：加入清单。
-    pub fn plan_add(&self, _project_root: &Path, _asset: &str) -> Result<ChangePlan> {
-        self.require_write("add")?;
-        Err(Error::NotImplemented("Kernel::plan_add"))
-    }
-
-    /// `fangcun adopt <资产>`：收编进资产库。
-    ///
-    /// 扫描到的、叫这个名字的副本（全局层和各项目）存进资产库，工具目录里的实体目录换成
-    /// 指向正本的软链。规则见 `materializer::adopt`。
-    pub fn plan_adopt(&self, asset: &str) -> Result<ChangePlan> {
-        self.require_write("adopt")?;
-        let scan = self.scan();
-        let mut copies: Vec<&crate::scanner::SkillCopy> = Vec::new();
-        for collected in scan.global.values() {
-            copies.extend(collected.skills.iter().filter(|s| s.name == asset));
-        }
-        for per_tool in scan.project_items.values() {
-            for collected in per_tool.values() {
-                copies.extend(collected.skills.iter().filter(|s| s.name == asset));
-            }
-        }
-        let library = Library::open(&self.home)?;
-        let scope = self.write_scope()?;
-        let mut builder = PlanBuilder::new(String::new(), RecordKind::Adopt, SnapshotScope::Global)
-            .command(format!("fangcun adopt {asset}"));
-        crate::materializer::adopt::plan(
-            &crate::materializer::adopt::AdoptInput {
-                name: asset,
-                copies,
-                home: &self.home,
-                user_home: &self.user_home,
-                scope: &scope,
-                library: &library,
-            },
-            &mut builder,
-        )?;
-        Ok(self.issue(builder))
     }
 
     /// `fangcun lock`：重新解析清单，更新锁。
@@ -1638,6 +1594,16 @@ mod tests {
             kernel.plan_init(root, true, None).err(),
             kernel.plan_add(root, "tdd").err(),
             kernel.plan_adopt("tdd").err(),
+            kernel.plan_finding("duplicate:tdd").err(),
+            kernel
+                .plan_remove_global(
+                    None,
+                    &[crate::global::GlobalItemRef {
+                        kind: None,
+                        name: "tdd".to_owned(),
+                    }],
+                )
+                .err(),
             kernel.plan_lock(root).err(),
             kernel.plan_export_skills_lock(root).err(),
             kernel.plan_sync(root).err(),

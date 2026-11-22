@@ -49,6 +49,21 @@ pub enum Command {
         asset: String,
     },
 
+    /// 从全局层移除（只对已收编进资产库的项，6.6、7.5）
+    Remove {
+        /// 资产，可以写几个，名字可以带 * 通配
+        #[arg(required = true)]
+        assets: Vec<String>,
+
+        /// 从全局层移除。目前只支持这一种
+        #[arg(long, required = true)]
+        global: bool,
+
+        /// 只动这个工具的全局层，例如 claude-code。不写时是全部完整支持的工具
+        #[arg(long)]
+        tool: Option<String>,
+    },
+
     /// 重新解析清单，更新锁
     Lock,
 
@@ -139,7 +154,7 @@ mod tests {
         Cli::command().debug_assert();
     }
 
-    /// 设计文档第 5 节列出的十三个命令，顺序一致。
+    /// 设计文档第 5 节列出的十三个命令，顺序一致；另加 `remove`（批 6，Agent 定，待写进第 5 节）。
     #[test]
     fn subcommands_match_the_design_doc() {
         let names: Vec<String> = Cli::command()
@@ -149,8 +164,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                "doctor", "init", "status", "add", "adopt", "lock", "export", "sync", "update",
-                "rollback", "log", "why", "secret"
+                "doctor", "init", "status", "add", "adopt", "remove", "lock", "export", "sync",
+                "update", "rollback", "log", "why", "secret"
             ]
         );
     }
@@ -163,6 +178,8 @@ mod tests {
             "fangcun status",
             "fangcun add tdd",
             "fangcun adopt project-harness",
+            "fangcun remove lark-* --global",
+            "fangcun remove frontend-design context7 --global --tool claude-code",
             "fangcun lock",
             "fangcun export skills-lock",
             "fangcun sync",

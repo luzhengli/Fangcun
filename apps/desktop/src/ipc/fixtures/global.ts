@@ -86,6 +86,7 @@ function R(
     overridden: shadowed.length,
     conflicts: conflict.length,
     hasScripts: x.script ?? false,
+    inLibrary: status !== "unknown-source",
     command: null,
     usage: x.fulltext
       ? []

@@ -22,4 +22,9 @@ foot: string,
 /**
  * 一键动作已经能用（M1-26）：界面据此决定按钮亮不亮，点了调 `Kernel::plan_finding`。
  */
-ready: boolean, };
+ready: boolean, 
+/**
+ * 已处理时，处理它的那条活动记录（M1-28）。界面的「撤销」凭它出回滚计划
+ * （`Kernel::plan_rollback_record`）；回滚之后这一条回到待处理。
+ */
+record: string | null, };

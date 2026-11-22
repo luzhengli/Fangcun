@@ -61,6 +61,92 @@ pub fn check_name(name: &str) -> Result<()> {
     }
 }
 
+/// 常见密钥的前缀。
+const SECRET_PREFIXES: &[&str] = &[
+    "ghp_",
+    "gho_",
+    "ghs_",
+    "github_pat_",
+    "sk-",
+    "sk_live_",
+    "xoxb-",
+    "xoxp-",
+    "AKIA",
+    "glpat-",
+    "AIza",
+];
+
+/// 看起来像明文密钥：已知前缀，或变量名像密钥而值不是引用。
+pub fn looks_like_secret(name: &str, value: &str) -> bool {
+    let value = value.trim();
+    if value.is_empty() || value.starts_with('$') || value.starts_with(SECRET_PREFIX) {
+        return false;
+    }
+    if SECRET_PREFIXES.iter().any(|p| value.starts_with(p)) && value.len() >= 12 {
+        return true;
+    }
+    let upper = name.to_ascii_uppercase();
+    let secret_name = [
+        "TOKEN",
+        "SECRET",
+        "PASSWORD",
+        "API_KEY",
+        "APIKEY",
+        "ACCESS_KEY",
+    ]
+    .iter()
+    .any(|k| upper.contains(k));
+    secret_name && value.len() >= 12 && !value.contains(' ')
+}
+
+/// 明文换成引用时取的名字：服务名加变量名，小写、用 `-` 连接；变量名已经以服务名开头时不重复，
+/// 例如 github 的 `GITHUB_TOKEN` 是 `github-token`（7.4 的写法）。
+pub fn reference_name(server: &str, var: &str) -> String {
+    let slug = |s: &str| -> String {
+        s.chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_lowercase()
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>()
+            .split('-')
+            .filter(|p| !p.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    };
+    let (server, var) = (slug(server), slug(var));
+    if var == server || var.starts_with(&format!("{server}-")) {
+        var
+    } else {
+        format!("{server}-{var}")
+    }
+}
+
+/// 把一个 MCP 服务 `env` 里看起来像明文密钥的值换成 `secret:<名称>` 引用（7.4、9.3）。
+/// 返回换过的 `env` 和换下来的明文（名称、值），明文由调用方在应用时存进钥匙串。
+pub fn split_env<'a>(
+    server: &str,
+    env: impl IntoIterator<Item = (&'a String, &'a String)>,
+) -> (BTreeMap<String, String>, Vec<(String, SecretValue)>) {
+    let mut out = BTreeMap::new();
+    let mut plain: Vec<(String, SecretValue)> = Vec::new();
+    for (var, value) in env {
+        if looks_like_secret(var, value) {
+            let name = reference_name(server, var);
+            out.insert(var.clone(), format!("{SECRET_PREFIX}{name}"));
+            if !plain.iter().any(|(n, _)| *n == name) {
+                plain.push((name, SecretValue::new(value.clone())));
+            }
+        } else {
+            out.insert(var.clone(), value.clone());
+        }
+    }
+    (out, plain)
+}
+
 /// 快照里代替明文的占位，回滚时换回钥匙串里的值。
 pub fn marker(name: &str) -> String {
     format!("«fangcun-secret:{name}»")

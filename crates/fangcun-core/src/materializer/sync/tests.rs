@@ -1124,3 +1124,6 @@ fn promote_commits_to_the_local_source_and_repins_the_project() {
         "---\nname: harness\n---\nh2\n"
     );
 }
+
+// 批 6：MCP 入库、从全局移除、fangcun add、体检的处理进度。
+mod batch6;

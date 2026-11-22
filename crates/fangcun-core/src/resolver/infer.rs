@@ -511,18 +511,15 @@ fn infer_mcp(input: &InferInput<'_>, out: &mut Inferred) {
                 )));
                 continue;
             }
-            let mut env = BTreeMap::new();
+            let (env, plain) =
+                crate::secrets::split_env(&entry.name, entry.env.iter().map(|(k, v)| (k, v)));
             for (key, value) in &entry.env {
                 if looks_like_secret(key, value) {
-                    let reference = secret_name(&entry.name, key);
                     secrets.push(format!("{} 的 {key}", entry.name));
-                    env.insert(key.clone(), format!("secret:{reference}"));
-                    out.secrets
-                        .entry(reference)
-                        .or_insert_with(|| crate::secrets::SecretValue::new(value.clone()));
-                } else {
-                    env.insert(key.clone(), value.clone());
                 }
+            }
+            for (reference, value) in plain {
+                out.secrets.entry(reference).or_insert(value);
             }
             let decl = McpDecl {
                 command: command.clone(),
@@ -555,32 +552,6 @@ fn infer_mcp(input: &InferInput<'_>, out: &mut Inferred) {
             secrets.len(),
             secrets.join("、")
         )));
-    }
-}
-
-/// 密钥引用的名字：服务名加变量名，小写、用 `-` 连接；变量名已经以服务名开头时不重复，
-/// 例如 github 的 `GITHUB_TOKEN` 是 `github-token`（7.4 的写法）。
-fn secret_name(server: &str, var: &str) -> String {
-    let slug = |s: &str| -> String {
-        s.chars()
-            .map(|c| {
-                if c.is_ascii_alphanumeric() {
-                    c.to_ascii_lowercase()
-                } else {
-                    '-'
-                }
-            })
-            .collect::<String>()
-            .split('-')
-            .filter(|p| !p.is_empty())
-            .collect::<Vec<_>>()
-            .join("-")
-    };
-    let (server, var) = (slug(server), slug(var));
-    if var == server || var.starts_with(&format!("{server}-")) {
-        var
-    } else {
-        format!("{server}-{var}")
     }
 }
 

@@ -137,6 +137,9 @@ pub struct Record {
     /// 处理过了显示「已记录」（6.7「待处理」）。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subject: Option<Subject>,
+    /// 体检报告一键动作留下的记录：处理的是哪条发现（M1-28）。没回滚就算已处理。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub finding: Option<String>,
 }
 
 /// 待处理记录指向的资产。
@@ -405,6 +408,7 @@ mod tests {
             command: None,
             output: None,
             subject: None,
+            finding: None,
         }
     }
 
