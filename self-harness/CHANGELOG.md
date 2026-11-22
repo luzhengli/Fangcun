@@ -7,7 +7,7 @@
 - 固定开销 = 自动加载 + 开工必读：配置加 `startup`，audit、metrics 一起算。证据：Web 项目入口 46 行，固定开销却是 17.5k 字符；桌面项目开工也要先读状态文件。两个项目都出现。
 - 入口文件按真实路径去重（CLAUDE.md 软链到 AGENTS.md 时不算两遍）；探测把根目录的 markdown 算进文档。
 - 全部命令加 `--config <文件>`，在别的项目上先只读试跑。
-- description 末尾写版本和作者（luyao）；`harness check` 比对它和 CHANGELOG 的版本。
+- frontmatter 加 `metadata.author`（luyao）、`metadata.version`；`harness check` 比对它和 CHANGELOG 的版本。
 - 删除候选不含写了升档方案 `next` 的规则：没人守的规则「没被违反」可能只是没被发现。
 
 ## 0.1.0 · 2026-11-22
