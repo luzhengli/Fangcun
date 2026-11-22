@@ -11,160 +11,248 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600&amp;display=swap">
 <style>
 body{margin:0}
-.fc{--bg:#FFFFFF;--bg-sidebar:#F2F2F0;--bg-subtle:#F8F8F6;--bg-hover:#EDEDEA;--bg-selected:#E8EDFC;--veil:rgba(0,0,0,.04);--line:#E6E6E2;--line-strong:#D0D0CB;--tx-1:#1D1D1F;--tx-2:#55555A;--tx-3:#6B6B70;--accent:#3552D4;--accent-weak:#ECF0FD;--on-accent:#FFFFFF;--bar-1:#3552D4;--bar-2:#8FA3EC;--bar-3:#C9D3F6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E7F5EC;--warn:#985200;--warn-dot:#E58A00;--warn-weak:#FDF1E0;--info:#3552D4;--info-dot:#4C6EF5;--info-weak:#ECF0FD;--danger:#BA2D28;--danger-dot:#E5484D;--danger-weak:#FCEBEA;--unknown:#6B43C2;--unknown-dot:#8E62F0;--unknown-weak:#F2EDFD;--muted-dot:#A3A3A8;--code-bg:#F4F4F2;--add-bg:#E3F4E8;--del-bg:#FBE7E6;--shadow-pop:0 16px 40px rgba(0,0,0,.16),0 0 0 1px rgba(0,0,0,.06);--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Inter,"Noto Sans SC","Helvetica Neue",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace}
-.fc.dark{--bg:#1C1C1E;--bg-sidebar:#232325;--bg-subtle:#202022;--bg-hover:#2A2A2D;--bg-selected:#27304F;--veil:rgba(255,255,255,.05);--line:#323235;--line-strong:#46464B;--tx-1:#ECECEE;--tx-2:#B0B0B6;--tx-3:#93939A;--accent:#7D93FF;--accent-weak:#252D4A;--on-accent:#0F1530;--bar-1:#7D93FF;--bar-2:#4E62B8;--bar-3:#323E74;--ok:#5BCB85;--ok-weak:#17301F;--warn:#F2A33A;--warn-weak:#33260F;--info:#8DA2FF;--info-weak:#232B48;--danger:#FF7B76;--danger-weak:#3A1D1C;--unknown:#B394FF;--unknown-weak:#2B2240;--code-bg:#252527;--add-bg:#173020;--del-bg:#3A1D1C;--shadow-pop:0 16px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08)}
-.fc button{font:inherit;cursor:pointer}
-.fc input{font:inherit}
-.fc :focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.fc-h:hover{box-shadow:inset 0 0 0 999px var(--veil)}
-.fc-btn:hover{filter:brightness(.95)}
-.fc.dark .fc-btn:hover{filter:brightness(1.15)}
-.fc a{color:var(--accent)}
-.fc a:hover{color:var(--tx-1)}
-.fc-navbtn{margin-left:auto}
-.fc-navc{flex:0 0 56px!important;padding-left:8px!important;padding-right:8px!important}
-.fc-navc>div>a,.fc-navc>div>div{justify-content:center;padding-left:0!important;padding-right:0!important}
-.fc-navc>div:first-child{display:none!important}
-.fc-hidden{display:none!important}
-.fc-navc .fc-navbtn{margin-left:0}
-.fc-navc a span,.fc-navc>div>div>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.fc-navc .fc-navhide{display:none!important}
-.fc-shell{height:100vh;min-height:640px;overflow:hidden}
-.fc-col{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
-@media (max-width: 900px){.fc-shell{height:auto;overflow:visible;flex-wrap:wrap!important}.fc-split{flex-wrap:wrap!important}.fc-col{overflow:visible}}
-.fc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fc{--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Inter","Noto Sans SC",sans-serif;--mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;--win:#FFFFFF;--side:#F5F6F8;--insp:#FBFBFC;--raised:#FFFFFF;--sunken:#F6F7F9;--fill-1:rgba(30,41,59,.04);--fill-2:rgba(30,41,59,.07);--fill-3:rgba(30,41,59,.11);--line:rgba(30,41,59,.08);--line-2:rgba(30,41,59,.14);--tx-1:#17181C;--tx-2:#474B55;--tx-3:#686D7B;--tx-4:#A8ADB8;--accent:#3552D4;--accent-2:#2A44BA;--accent-weak:#EDF1FD;--accent-line:rgba(53,82,212,.38);--on-accent:#FFFFFF;--k1:#2B43B5;--k2:#5873DE;--k3:#C3CDF6;--ok:#1B7A43;--ok-dot:#2EA457;--ok-weak:#E8F5EC;--warn:#9A5000;--warn-dot:#F08C00;--warn-weak:#FFF2DF;--info:#2F4BC9;--info-dot:#4C6EF5;--info-weak:#EEF2FF;--danger:#B42318;--danger-dot:#E5484D;--danger-weak:#FDECEC;--unk:#6B43C2;--unk-dot:#8E62F0;--unk-weak:#F3EEFE;--muted-dot:#A1A6B0;--code:#F6F7F9;--add:#E9F6EE;--del:#FDEDEC;--shadow-1:0 0 0 .5px rgba(30,41,59,.14),0 1px 2px rgba(30,41,59,.06);--shadow-pop:0 18px 50px rgba(15,23,42,.16),0 0 0 .5px rgba(30,41,59,.14);--hatch:rgba(255,255,255,.24);--shadow-tip:0 6px 20px rgba(15,23,42,.12),0 0 0 .5px rgba(30,41,59,.16);--ease:cubic-bezier(.2,.8,.2,1);--tool-cc:#D97757}
+.fc.dark{--win:#17181B;--side:#1D1E22;--insp:#1A1B1E;--raised:#25262B;--sunken:#131417;--fill-1:rgba(255,255,255,.045);--fill-2:rgba(255,255,255,.075);--fill-3:rgba(255,255,255,.11);--line:rgba(255,255,255,.07);--line-2:rgba(255,255,255,.13);--tx-1:#EEEFF2;--tx-2:#C2C5CC;--tx-3:#9499A4;--tx-4:#5D616A;--accent:#7D93FF;--accent-2:#94A6FF;--accent-weak:#232B4A;--accent-line:rgba(125,147,255,.5);--on-accent:#0E1430;--k1:#7D93FF;--k2:#5468C6;--k3:#37437C;--ok:#5BCB85;--ok-dot:#34C46A;--ok-weak:#16301F;--warn:#F5A742;--warn-dot:#F59E0B;--warn-weak:#35270F;--info:#93A6FF;--info-dot:#6F8BFF;--info-weak:#222B4C;--danger:#FF7B76;--danger-dot:#FF5F57;--danger-weak:#3A1D1C;--unk:#B79BFF;--unk-dot:#A07CFF;--unk-weak:#2C2342;--muted-dot:#6B6F78;--code:#1F2024;--add:#17301F;--del:#3A1D1C;--shadow-1:0 0 0 .5px rgba(255,255,255,.1),0 1px 2px rgba(0,0,0,.4);--shadow-pop:0 18px 50px rgba(0,0,0,.55),0 0 0 .5px rgba(255,255,255,.12);--hatch:rgba(0,0,0,.32);--shadow-tip:0 8px 24px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.14)}
+.fc,.fc *{box-sizing:border-box}
+:where(.fc button){font:inherit;color:inherit;cursor:default;-webkit-user-select:none;user-select:none}
+:where(.fc input){font:inherit;color:inherit}
+.fc :focus{outline:none}
+.fc :focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-line)!important}
+.fc ::selection{background:var(--accent-weak)}
+:where(.fc a){color:var(--accent);text-decoration:none}
+:where(.fc a:hover){color:var(--accent-2)}
+.scroll>*{flex-shrink:0}
+.scroll{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--fill-3) transparent}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 12px;border-radius:7px;border:0;background:var(--raised);box-shadow:var(--shadow-1);font-size:13px;font-weight:500;line-height:1;color:var(--tx-1);white-space:nowrap;text-decoration:none;transition:transform 120ms var(--ease),background-color 120ms}
+.b:hover{background:var(--sunken);color:var(--tx-1)}
+.b:active{transform:scale(.97)}
+.b:disabled,.b[aria-disabled="true"]{color:var(--tx-4);background:transparent;box-shadow:0 0 0 .5px var(--line);transform:none}
+.b-p{background:var(--accent);color:var(--on-accent);box-shadow:0 1px 2px rgba(42,68,186,.28),inset 0 .5px 0 rgba(255,255,255,.16)}
+.b-p:hover{background:var(--accent-2);color:var(--on-accent)}
+.b-p .kbd{background:rgba(255,255,255,.16);border-color:transparent;color:inherit}
+.b-q{background:transparent;box-shadow:none;color:var(--tx-2)}
+.b-q:hover{background:var(--fill-1);color:var(--tx-1)}
+.b-d{color:var(--danger)}
+.b-d:hover{background:var(--danger-weak);color:var(--danger)}
+.b-s{height:24px;padding:0 9px;gap:4px;font-size:12px;border-radius:6px}
+.b-i{padding:0 8px 0 7px}
+.ib{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--tx-2)}
+.ib:hover{background:var(--fill-1);color:var(--tx-1)}
+.ib[aria-pressed="true"]{background:var(--fill-2);color:var(--tx-1)}
+.ib:disabled{color:var(--tx-4)}
+.ib:disabled:hover{background:transparent}
+.ib-s{width:22px;height:22px;border-radius:6px;color:var(--tx-3)}
+.seg{display:inline-flex;align-items:center;padding:1px;gap:2px;border-radius:8px;background:transparent}
+.seg>button{height:26px;padding:0 10px;border:0;border-radius:7px;background:transparent;font-size:12px;font-weight:500;color:var(--tx-3);display:inline-flex;align-items:center;gap:6px;transition:background-color 120ms,color 120ms}
+.seg>button:hover{color:var(--tx-1);background:var(--fill-1)}
+.seg>button[aria-pressed="true"]{background:var(--raised);color:var(--tx-1);box-shadow:var(--shadow-1)}
+.seg>button[aria-pressed="true"] .cnt{color:var(--tx-2)}
+.tip{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--tx-4)}
+.tip:hover{color:var(--tx-2);background:var(--fill-1)}
+.tip[aria-expanded="true"]{position:relative;z-index:11;color:var(--accent);background:var(--accent-weak)}
+.tipw{position:relative;display:inline-flex;flex:none;vertical-align:middle}
+.tipb{position:absolute;top:calc(100% + 6px);left:-6px;z-index:11;display:block;width:max-content;max-width:280px;padding:8px 10px;border-radius:10px;background:var(--raised);box-shadow:var(--shadow-tip);color:var(--tx-1);font-family:var(--font);font-size:12px;font-weight:400;line-height:1.55;letter-spacing:0;text-transform:none;text-align:left;white-space:normal;word-break:normal;cursor:auto}
+.tipb[data-al="r"]{left:auto;right:-6px}
+.tipb .mono{font-size:11px;color:var(--tx-2)}
+.tip-veil{position:fixed;inset:0;z-index:10;padding:0;border:0;background:transparent;cursor:default}
+.who{display:inline-flex;align-items:center;gap:8px;width:100%;height:28px;margin:0 -6px;padding:0 6px;border:0;border-radius:6px;background:transparent;color:var(--tx-2);text-align:left}
+.who:hover{background:var(--fill-1)}
+.who .chev{flex:none;color:var(--tx-4)}
+.who:hover .chev,.who[aria-expanded="true"] .chev{color:var(--tx-2)}
+.who[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.whol{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:0 8px 4px;padding:2px 16px 10px var(--whol-x,48px);font-size:11px;color:var(--tx-3)}
+.ptag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:5px;font-size:11.5px;font-weight:500;background:var(--raised);box-shadow:inset 0 0 0 .5px var(--line-2);color:var(--tx-1);white-space:nowrap}
+.ptag .ver{font-size:10.5px}
+.ptag[data-t="warn"]{background:var(--warn-weak);box-shadow:none;color:var(--warn)}
+.ptag[data-t="all"]{background:var(--accent-weak);box-shadow:none;color:var(--accent)}
+.tool-b{gap:4px;padding:0 6px 0 7px;color:var(--tx-1)}
+.lg{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--tx-3);white-space:nowrap}
+.cnt{font-family:var(--mono);font-size:11px;color:var(--tx-3);font-weight:400}
+.cap{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--tx-3)}
+.mono{font-family:var(--mono)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.kbd{display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--tx-3);background:var(--fill-1);border:.5px solid var(--line-2)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;font-size:12px;font-weight:500;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:transparent;box-shadow:inset 0 0 0 .5px var(--line-2);color:var(--tx-2);white-space:nowrap}
+.ver{font-family:var(--mono);font-size:11px;color:var(--tx-3);white-space:nowrap}
+.side{flex:0 0 236px;display:flex;flex-direction:column;background:var(--side);border-right:.5px solid var(--line)}
+.nav{display:flex;align-items:center;gap:9px;width:100%;height:28px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--tx-1);text-align:left;font-size:13px}
+.nav:hover{background:var(--fill-1)}
+.nav[data-on="y"]{background:var(--accent-weak);font-weight:600}
+.nav[data-on="y"]:hover{background:var(--accent-weak)}
+.nav svg{flex:none;color:var(--tx-3)}
+.nav[data-on="y"] svg,.nav[data-on="p"] svg{color:var(--accent)}
+.nav[data-on="p"]{font-weight:600}
+.row{position:relative;display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:0 8px;min-height:34px;padding:0 12px 0 10px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--tx-1)}
+.row:hover,.row[data-hl="y"]{background:var(--fill-1)}
+.row[data-on="y"]{background:var(--accent-weak)}
+.row[data-on="y"] .rname{color:var(--accent)}
+.row[data-struck="y"] .rname{text-decoration:line-through;color:var(--tx-3)}
+.blk{position:relative;display:flex;flex-direction:column;justify-content:center;min-width:3px;height:100%;padding:0 8px;border:0;border-radius:6px;overflow:hidden;text-align:left;color:#fff;transition:width 240ms var(--ease),opacity 160ms,filter 120ms}
+.blk:hover,.blk[data-hl="y"]{filter:brightness(1.08) saturate(1.1)}
+.blk[data-glob="y"]{background-image:repeating-linear-gradient(-45deg,var(--hatch) 0 2px,transparent 2px 7px)}
+.blk[data-ring="warn"],.blk[data-ring="info"]{min-width:14px}
+.blk-dot{position:absolute;top:5px;left:50%;margin-left:-3.5px;width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 1.5px var(--win);pointer-events:none}
+.blk[data-ring="warn"] .blk-dot{background:var(--warn-dot)}
+.blk[data-ring="info"] .blk-dot{background:var(--info-dot)}
+.blk[data-ring="none"] .blk-dot{display:none}
+.blk[data-ring="warn"]:has(span+span) .blk-dot,.blk[data-ring="info"]:has(span+span) .blk-dot{left:auto;right:6px;margin:0}
+.blk[data-on="y"]{box-shadow:inset 0 0 0 2px var(--tx-1)}
+.axis>span{transition:width 240ms var(--ease)}
+.chev{transition:transform 150ms var(--ease)}
+.sec>button[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;border:.5px solid var(--line-2);background:var(--raised)}
+.opt:hover{border-color:var(--accent-line)}
+.opt[data-on="y"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-weak)}
+.veil{animation:fade 160ms ease-out}
+.sheet{animation:drop 220ms var(--ease);transform-origin:50% 0}
+.toast{animation:rise 220ms var(--ease)}
+@keyframes fade{from{opacity:0}}
+@keyframes drop{from{opacity:0;transform:translateY(-6px) scale(.985)}}
+@keyframes rise{from{opacity:0;transform:translate(-50%,10px)}}
+.list{container-type:inline-size}
+@container (max-width: 700px){.c-layer,.c-status{order:3}.rmain{flex-basis:calc(100% - 120px)!important}.row{flex-wrap:wrap;padding-top:6px;padding-bottom:6px;row-gap:2px}.c-layer{margin-left:26px}.hdr .c-layer,.hdr .c-status{display:none!important}}
+.segx>button{flex:none}
+.segx::-webkit-scrollbar{display:none}
+@container (max-width: 600px){.actcount,.actsnap{display:none!important}}
+@media (prefers-reduced-motion: reduce){.fc *{animation:none!important;transition:none!important}}
+.tb-lead{display:none;align-items:center}
+.tb-lead[data-show="y"]{display:inline-flex}
+.peek-veil{display:none}
+.nav .kbd{height:16px;font-size:10px;background:transparent}
+.wl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.wl>li{display:flex;align-items:flex-start;gap:8px;min-height:22px;font-size:12px}
+.op{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:18px;border-radius:4px;font-size:11px;font-weight:600}
+.op[data-op="+"]{color:var(--ok);background:var(--ok-weak)}
+.op[data-op="~"]{color:var(--warn);background:var(--warn-weak)}
+.op[data-op="−"]{color:var(--danger);background:var(--danger-weak)}
+.crumb{display:inline-flex;align-items:center;gap:2px;align-self:flex-start;height:20px;margin:0 0 2px -6px;padding:0 6px;border:0;border-radius:5px;background:transparent;font-size:11px;color:var(--tx-3)}
+.crumb:hover{background:var(--fill-1);color:var(--tx-1)}
+@media (max-width: 960px){.side{display:none!important}.side[data-peek="y"]{display:flex!important;position:absolute;left:0;top:0;bottom:0;z-index:8;box-shadow:var(--shadow-pop)}.tb-lead{display:inline-flex!important}.peek-veil{display:block;position:absolute;inset:0;z-index:7;border:0;background:rgba(0,0,0,.18)}}
 </style>
 </helmet>
-<div class="{{rootClass}}" style="position: relative; display: flex; flex-direction: column; background: var(--bg); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
-
-  <!-- 窗口工具栏：和其他页面同一条 -->
-  <div role="toolbar" aria-label="窗口工具栏" style="flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px; box-sizing: border-box; background: var(--bg-sidebar); border-bottom: 1px solid var(--line);">
-    <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin-right: 16px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
-    <a href="Main.dc.html" class="fc-h" aria-label="后退" title="后退" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--tx-2);"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"></path></svg></a>
-    <button type="button" disabled="" aria-label="前进" style="width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--tx-3); opacity: .55; cursor: default;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg></button>
-    <button type="button" class="fc-h" onClick="{{toggleNav}}" aria-label="{{navLabel}}" aria-expanded="{{navExpanded}}" title="{{navLabel}}" style="{{navBtnStyle}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="2"></rect><path d="M6.5 2.5v11"></path></svg></button>
-    <span style="flex: 1;"></span>
-  </div>
-
-  <div class="fc-split" style="flex: 1; display: flex; flex-wrap: nowrap; min-height: 0;">
-
-    <!-- 导航：进设置时折成图标栏 -->
-    <nav aria-label="主导航" class="fc-col" style="{{railStyle}}">
-      <a href="Main.dc.html" class="fc-h" title="项目" style="{{navItemStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg>
-        <span class="{{labelClass}}" style="flex: 1;">项目</span>
-      </a>
-      <a href="Library.dc.html" class="fc-h" title="资产库" style="{{navItemStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg>
-        <span class="{{labelClass}}" style="flex: 1;">资产库</span>
-      </a>
-      <a href="Bundles.dc.html" class="fc-h" title="套装" style="{{navItemStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path></svg>
-        <span class="{{labelClass}}" style="flex: 1;">套装</span>
-      </a>
-      <a href="Global.dc.html" class="fc-h" title="全局" style="{{navItemStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" style="flex: none; color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M2.5 8h11M8 2.5c1.6 1.7 2.4 3.5 2.4 5.5S9.6 11.8 8 13.5C6.4 11.8 5.6 10 5.6 8S6.4 4.2 8 2.5z"></path></svg>
-        <span class="{{labelClass}}" style="flex: 1;">全局</span>
-      </a>
-      <a href="Activity.dc.html" class="fc-h" title="活动" style="{{navItemStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><circle cx="8" cy="8" r="5.5"></circle><path d="M8 5v3l2 1.5"></path></svg>
-        <span class="{{labelClass}}" style="flex: 1;">活动</span>
-      </a>
-      <a href="Settings.dc.html" aria-current="page" class="fc-h" title="设置（⌘,）" style="{{settingsStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--accent);"><circle cx="8" cy="8" r="2"></circle><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05"></path><circle cx="8" cy="8" r="4.5"></circle></svg>
-        <span class="{{labelClass}}" style="flex: 1;">设置</span>
-      </a>
-      <a href="Checkup.dc.html" class="fc-h" title="重新体检" style="{{checkupStyle}}">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: var(--tx-2);"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg>
-        <span class="{{labelClass}}">重新体检</span>
-      </a>
-    </nav>
-
-    <!-- 设置目录 -->
-    <aside aria-label="设置目录" class="fc-col" style="flex: 0 0 216px; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 16px 10px; display: flex; flex-direction: column; gap: 12px;">
-      <h1 style="margin: 0; padding: 0 8px; font-size: 15px; font-weight: 600;">设置</h1>
+<div class="{{rootClass}}" tabindex="-1" onKeyDown="{{rootKey}}" style="outline: none; position: relative; display: flex; height: 100vh; min-height: 640px; overflow: hidden; background: var(--win); color: var(--tx-1); font-family: var(--font); font-size: 13px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+  <sc-if value="{{navOpen}}" hint-placeholder-val="{{true}}">
+  <nav aria-label="主导航" class="side" data-peek="{{navPeek}}">
+    <div style="display: flex; align-items: center; height: 52px; padding: 0 12px 0 20px; flex: none;">
+      <span aria-hidden="true" style="display: inline-flex; gap: 8px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.12);"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.12);"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.12);"></span></span>
+      <span style="flex: 1;"></span>
+      <button type="button" class="ib" onClick="{{toggleNav}}" aria-label="隐藏侧栏" title="隐藏侧栏 ⌃⌘S"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"></rect><path d="M6 2.75v10.5"></path></svg></button>
+    </div>
+    <div class="scroll" style="flex: 1; padding: 2px 10px 12px; display: flex; flex-direction: column; gap: 14px;">
       <div style="display: flex; flex-direction: column; gap: 1px;">
-        <button type="button" aria-current="page" class="fc-h" style="width: 100%; border: 0; text-align: left; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);"><circle cx="8" cy="8" r="2"></circle><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05"></path><circle cx="8" cy="8" r="4.5"></circle></svg>
-          <span>通用</span>
-        </button>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h2.6l1.4 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"></path></svg><span style="flex: 1;">项目</span><span class="cnt">6</span></a>
+        <a href="Library.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 5 8 2.5 13.5 5v6L8 13.5 2.5 11z"></path><path d="M2.5 5 8 7.5 13.5 5M8 7.5v6"></path></svg><span style="flex: 1;">资产库</span><span class="cnt">38</span></a>
+        <a href="Bundles.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5 14 5.5 8 8.5 2 5.5z"></path><path d="M2 8.5l6 3 6-3"></path><path d="M2 11l6 3 6-3"></path></svg><span style="flex: 1;">套装</span><span class="cnt">3</span></a>
+        <a href="Global.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.75"></circle><path d="M2.25 8h11.5M8 2.25c1.6 1.7 2.4 3.6 2.4 5.75S9.6 12.05 8 13.75C6.4 12.05 5.6 10.15 5.6 8S6.4 3.95 8 2.25z"></path></svg><span style="flex: 1;">全局</span><span class="cnt">31</span></a>
+        <a href="Activity.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.75"></circle><path d="M8 4.75V8l2.25 1.5"></path></svg><span style="flex: 1;">活动</span><span style="min-width: 18px; height: 16px; padding: 0 5px; border-radius: 8px; background: var(--warn-weak); color: var(--warn); font-size: 11px; font-weight: 600; line-height: 16px; text-align: center;">2</span></a>
       </div>
-    </aside>
-
-    <!-- 设置内容 -->
-    <main id="general" class="fc-col" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; padding: 40px 32px 48px;">
-      <div style="max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;">
-        <h2 style="margin: 0 0 18px; font-size: 22px; font-weight: 600;">通用</h2>
-
-        <h3 style="margin: 0; font-size: 13px; font-weight: 600;">写入</h3>
-        <div style="border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line);">
-          <div style="display: flex; align-items: center; gap: 24px; padding: 14px 16px;">
-            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-              <span id="ro-label" style="font-weight: 500;">只读模式</span>
-              <span style="font-size: 12px; color: var(--tx-2);">打开后拒绝一切写入，只记体检。命令行同款：<span style="font-family: var(--mono); font-size: 11px;">fangcun --read-only &lt;命令&gt;</span></span>
-            </div>
-            <button type="button" role="switch" aria-checked="{{roChecked}}" aria-labelledby="ro-label" onClick="{{toggleRo}}" style="{{switchStyle}}"><span aria-hidden="true" style="{{knobStyle}}"></span></button>
-          </div>
-        </div>
-
-        <h3 style="margin: 22px 0 0; font-size: 13px; font-weight: 600;">快照</h3>
-        <div style="border-radius: 10px; background: var(--bg-subtle); border: 1px solid var(--line);">
-          <div style="display: flex; align-items: center; gap: 24px; padding: 14px 16px; border-bottom: 1px solid var(--line);">
-            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-              <label for="days" style="font-weight: 500;">保留天数</label>
-              <span style="font-size: 12px; color: var(--tx-2);">快照和它的备份保留多久。过期后记录仍在，回滚按钮置灰。</span>
-            </div>
-            <span style="display: inline-flex; align-items: center; gap: 8px;">
-              <input id="days" type="number" min="1" max="365" value="{{days}}" onChange="{{onDays}}" style="width: 64px; height: 26px; box-sizing: border-box; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-align: right; font-variant-numeric: tabular-nums;">
-              <span style="width: 14px; color: var(--tx-2);">天</span>
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 24px; padding: 14px 16px;">
-            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-              <label for="keep" style="font-weight: 500;">每个项目至少保留</label>
-              <span style="font-size: 12px; color: var(--tx-2);">{{keepNote}}</span>
-            </div>
-            <span style="display: inline-flex; align-items: center; gap: 8px;">
-              <input id="keep" type="number" min="1" max="500" value="{{keep}}" onChange="{{onKeep}}" style="width: 64px; height: 26px; box-sizing: border-box; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--tx-1); text-align: right; font-variant-numeric: tabular-nums;">
-              <span style="width: 14px; color: var(--tx-2);">个</span>
-            </span>
-          </div>
-        </div>
-
-        <p style="margin: 18px 0 0; font-size: 12px; color: var(--tx-3);">设置存在 <span style="font-family: var(--mono); font-size: 11px;">~/.fangcun/settings.toml</span>，可以手改。</p>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <div class="cap" style="padding: 0 8px 4px;">已登记</div>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--warn-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">evals_studio</span><span style="font-size: 11px; font-weight: 600; color: var(--warn);">漂移</span></a>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ok-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">agent-lab</span><span style="font-size: 11px; font-weight: 600; color: var(--ok);"></span></a>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--info-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">fangcun</span><span style="font-size: 11px; font-weight: 600; color: var(--info);">可更新</span></a>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ok-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">blog-site</span><span style="font-size: 11px; font-weight: 600; color: var(--ok);"></span></a>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ok-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">notes-kit</span><span style="font-size: 11px; font-weight: 600; color: var(--ok);"></span></a>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--ok-dot);"></span><span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">client-acme</span><span style="font-size: 11px; font-weight: 600; color: var(--ok);"></span></a>
       </div>
-    </main>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <div class="cap" style="padding: 0 8px 4px;">近 30 天 · 未登记</div>
+        <a href="Main.dc.html" class="nav" data-on="n" style="color: var(--tx-2);"><span aria-hidden="true" style="width: 7px; height: 7px; border-radius: 50%; flex: none; border: 1.25px solid var(--muted-dot);"></span><span style="flex: 1;">luyao-skills</span></a>
+        <button type="button" class="nav" title="选一个目录登记" style="color: var(--tx-2); margin-top: 2px;"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M8 3.25v9.5M3.25 8h9.5"></path></svg><span style="flex: 1;">添加项目…</span></button>
+      </div>
+    </div>
+    <div style="flex: none; display: flex; flex-direction: column; gap: 1px; padding: 6px 10px 10px; border-top: .5px solid var(--line);">
+      <a href="Settings.dc.html" class="nav" data-on="y" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2.1"></circle><path d="M8 1.75v1.6M8 12.65v1.6M1.75 8h1.6M12.65 8h1.6M3.58 3.58l1.13 1.13M11.29 11.29l1.13 1.13M3.58 12.42l1.13-1.13M11.29 4.71l1.13-1.13"></path><circle cx="8" cy="8" r="4.3"></circle></svg><span style="flex: 1;">设置</span><span class="kbd">⌘,</span></a>
+      <a href="Checkup.dc.html" class="nav" data-on="n" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 8h3l1.5-3.5 3 7 1.5-3.5h4"></path></svg><span style="flex: 1;">重新体检</span></a>
+      <span title="不需要账号，不上传任何数据" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px 0; font-size: 11px; color: var(--tx-3); white-space: nowrap;"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.75 13.25 4v4c0 3-2.25 5.25-5.25 6.25C5 13.25 2.75 11 2.75 8V4z"></path></svg>本地优先 · 零遥测</span>
+    </div>
+  </nav>
+  </sc-if>
+  <sc-if value="{{navPeekOn}}" hint-placeholder-val="{{false}}"><button type="button" class="peek-veil" onClick="{{toggleNav}}" aria-label="收起侧栏"></button></sc-if>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+    <header style="flex: none; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 12px; border-bottom: .5px solid var(--line-2); background: var(--win);">
+      <span class="tb-lead" data-show="{{navClosedYN}}">
+        <span aria-hidden="true" style="display: inline-flex; gap: 8px; margin: 0 10px 0 8px;"><span style="width: 12px; height: 12px; border-radius: 6px; background: #FF5F57;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #FEBC2E;"></span><span style="width: 12px; height: 12px; border-radius: 6px; background: #28C840;"></span></span>
+        <button type="button" class="ib" onClick="{{toggleNav}}" aria-label="显示侧栏" title="显示侧栏 ⌃⌘S"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"></rect><path d="M6 2.75v10.5"></path></svg></button>
+      </span>
+      <div style="display: inline-flex;"><button type="button" class="ib" disabled="" aria-label="后退"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5"></path></svg></button><button type="button" class="ib" disabled="" aria-label="前进"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5"></path></svg></button></div>
+      <div style="min-width: 0; display: flex; flex-direction: column; line-height: 1.2;"><h1 style="margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap;">设置</h1><span style="font-size: 11px; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">⌘, · 改完立即生效</span></div>
+      <span style="flex: 1;"></span>
+
+    </header>
+    <div style="flex: 1; min-height: 0; display: flex;">
+      <nav aria-label="设置目录" style="flex: 0 0 200px; border-right: .5px solid var(--line-2); padding: 14px 10px; display: flex; flex-direction: column; gap: 1px;">
+        <a href="Settings.dc.html" class="nav" data-on="y" style="color: var(--tx-1);"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2"></circle><circle cx="8" cy="8" r="4.75"></circle><path d="M8 1.5v1.75M8 12.75v1.75M1.5 8h1.75M12.75 8h1.75"></path></svg><span>通用</span></a>
+      </nav>
+      <main class="scroll" style="flex: 1; min-width: 0;">
+        <div style="max-width: 640px; margin: 0 auto; padding: 28px 24px 48px; display: flex; flex-direction: column; gap: 22px;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 600;">通用</h2>
+
+          <section style="display: flex; flex-direction: column; gap: 6px;">
+            <h3 class="cap" style="margin: 0; padding: 0 4px;">写入</h3>
+            <div style="border-radius: 12px; background: var(--raised); border: .5px solid var(--line-2);">
+              <label style="display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 10px 16px;">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">只读模式</span><span style="font-size: 12px; line-height: 1.5; color: var(--tx-3);" title="命令行同款：fangcun --read-only &lt;命令&gt;">拒绝一切写入，只体检和查看</span></span>
+                <button type="button" role="switch" aria-label="只读模式" aria-checked="{{roAria}}" onClick="{{toggleRo}}" style="{{sw}}"><span style="{{knob}}"></span></button>
+              </label>
+              <sc-if value="{{ro}}" hint-placeholder-val="{{false}}"><div style="display: flex; gap: 8px; align-items: center; margin: 0 16px 12px; padding: 8px 12px; border-radius: 8px; border: .5px solid var(--line-2); font-size: 12px; color: var(--tx-2);"><span class="dot" style="background: var(--muted-dot);"></span>只读中 ·「同步」「应用」变灰</div></sc-if>
+            </div>
+          </section>
+
+          <section style="display: flex; flex-direction: column; gap: 6px;">
+            <h3 class="cap" style="margin: 0; padding: 0 4px;">快照</h3>
+            <div style="border-radius: 12px; background: var(--raised); border: .5px solid var(--line-2);">
+              <div style="display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 10px 16px;">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">保留天数</span><span style="font-size: 12px; line-height: 1.5; color: var(--tx-3);">过期后记录还在，不能再回滚</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 0; border-radius: 7px; border: .5px solid var(--line-2); background: var(--raised); overflow: hidden;"><button type="button" class="ib" onClick="{{daysDown}}" aria-label="减少" style="width: 26px; height: 26px; border-radius: 0;">−</button><span class="num" style="min-width: 40px; text-align: center; font-size: 13px;">{{days}}</span><button type="button" class="ib" onClick="{{daysUp}}" aria-label="增加" style="width: 26px; height: 26px; border-radius: 0;">+</button></span><span style="font-size: 12px; color: var(--tx-3); width: 14px;">天</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 10px 16px; border-top: .5px solid var(--line);">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">每个项目至少保留</span><span style="font-size: 12px; line-height: 1.5; color: var(--tx-3);">超过天数也不清理</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 0; border-radius: 7px; border: .5px solid var(--line-2); background: var(--raised); overflow: hidden;"><button type="button" class="ib" onClick="{{keepDown}}" aria-label="减少" style="width: 26px; height: 26px; border-radius: 0;">−</button><span class="num" style="min-width: 40px; text-align: center; font-size: 13px;">{{keep}}</span><button type="button" class="ib" onClick="{{keepUp}}" aria-label="增加" style="width: 26px; height: 26px; border-radius: 0;">+</button></span><span style="font-size: 12px; color: var(--tx-3); width: 14px;">个</span>
+              </div>
+            </div>
+            <span style="padding: 0 4px; font-size: 12px; color: var(--tx-3);">{{snapNote}}</span>
+          </section>
+
+          <section style="display: flex; flex-direction: column; gap: 6px;">
+            <h3 class="cap" style="margin: 0; padding: 0 4px;">隐私</h3>
+            <div style="border-radius: 12px; background: var(--raised); border: .5px solid var(--line-2);">
+              <div style="display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 10px 16px;"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--ok)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true" style="flex: none;"><path d="M8 1.75 13.25 4v4c0 3-2.25 5.25-5.25 6.25C5 13.25 2.75 11 2.75 8V4z"></path><path d="m5.75 8 1.6 1.6 3-3.2" stroke-linecap="round"></path></svg><span style="flex: 1; display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 500;">本地优先 · 零遥测</span><span style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 1.5; color: var(--tx-3);">不需要账号，不上报使用数据<span class="tipw" onMouseEnter="{{tp.stats.enter}}" onMouseLeave="{{tp.stats.leave}}"><button type="button" class="tip" aria-label="统计说明" aria-expanded="{{tp.stats.tf}}" aria-controls="tip-stats" aria-describedby="tip-stats" onClick="{{tp.stats.click}}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6"></circle><path d="M8 7.25v3.5"></path><circle cx="8" cy="5.1" r=".55" fill="currentColor" stroke="none"></circle></svg></button><sc-if value="{{tp.stats.pin}}" hint-placeholder-val="{{false}}"><button type="button" class="tip-veil" tabindex="-1" aria-label="关闭说明" onClick="{{tipClose}}"></button></sc-if><sc-if value="{{tp.stats.on}}" hint-placeholder-val="{{false}}"><span role="tooltip" id="tip-stats" class="tipb" data-al="l">「谁在用」的统计来自本机的会话记录，不离开这台电脑。联网只为检查你声明的上游来源。</span></sc-if></span></span></span></div>
+            </div>
+          </section>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px; font-size: 12px; color: var(--tx-3);"><span style="flex: 1;" title="可以手改，改完这里立即生效"><span class="mono">~/.fangcun/settings.toml</span> · 可手改</span><button type="button" class="b b-s">在访达显示</button></div>
+        </div>
+      </main>
+    </div>
   </div>
+
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false,"section":"外观"},"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
-    const s = Object.assign({ ro: false, days: 30, keep: 20, navOpen: false }, this.state || {});
+    const s = Object.assign({ ro: false, days: 30, keep: 20, navOpen: true }, this.state || {});
     const set = (o) => this.setState(o);
     const dark = this.props.dark ?? false;
-    const num = (v, d) => { const n = parseInt(v, 10); return n > 0 ? n : d; };
-    const open = s.navOpen;
-    return {
-      rootClass: 'fc fc-shell' + (dark ? ' dark' : ''),
-      // 进设置时导航折成 56px 图标栏；工具栏的侧栏开关可以临时展开。
-      railStyle: 'flex: 0 0 ' + (open ? '216px' : '56px') + '; box-sizing: border-box; background: var(--bg-sidebar); border-right: 1px solid var(--line); padding: 12px ' + (open ? '10px' : '8px') + ' 16px; display: flex; flex-direction: column; gap: 1px;',
-      navItemStyle: 'display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; color: var(--tx-1); text-decoration: none;' + (open ? '' : ' justify-content: center;'),
-      settingsStyle: 'margin-top: auto; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; background: var(--bg-hover); color: var(--tx-1); text-decoration: none; font-weight: 500;' + (open ? '' : ' justify-content: center;'),
-      checkupStyle: 'margin-top: 6px; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 ' + (open ? '8px' : '0') + '; border-radius: 6px; color: var(--tx-1); text-decoration: none;' + (open ? '' : ' justify-content: center;'),
-      labelClass: open ? '' : 'fc-sr',
-      navLabel: open ? '折叠侧栏' : '展开侧栏', navExpanded: open ? 'true' : 'false',
-      navBtnStyle: 'width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; color: var(--tx-2); background: ' + (open ? 'var(--bg-hover)' : 'transparent') + ';',
-      toggleNav: () => set({ navOpen: !open }),
-      roChecked: s.ro ? 'true' : 'false',
-      toggleRo: () => set({ ro: !s.ro }),
-      switchStyle: 'flex: none; position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; transition: background .15s; background: ' + (s.ro ? 'var(--accent)' : 'var(--line-strong)') + ';',
-      knobStyle: 'position: absolute; top: 2px; left: ' + (s.ro ? '18px' : '2px') + '; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s;',
-      days: s.days, keep: s.keep,
-      onDays: (e) => set({ days: num(e.target.value, 30) }),
-      onKeep: (e) => set({ keep: num(e.target.value, 20) }),
-      keepNote: '超过 ' + s.days + ' 天也不清理，每个项目留下最近的这么多个。'
-    };
+    // ⓘ 说明气泡：同一时刻只开一个。点击固定，悬停临时显示；再点、点别处、Esc 关
+    const tipOf = (id) => { const on = s.tip === id; return { on, tf: on ? 'true' : 'false', pin: on && !!s.tipPin,
+      click: () => set(on && s.tipPin ? { tip: null, tipPin: false, tipHush: id } : { tip: id, tipPin: true, tipHush: null }),
+      enter: () => { if (s.tip !== id && s.tipHush !== id && !s.tipPin) set({ tip: id, tipPin: false }); },
+      leave: () => { if (on && !s.tipPin) set({ tip: null }); else if (!on && s.tipHush === id) set({ tipHush: null }); } }; };
+    const tipClose = () => set({ tip: null, tipPin: false });
+    const tipEsc = () => set({ tip: null, tipPin: false, tipHush: s.tip });
+    return { tp: { stats: tipOf('stats') }, tipClose, rootKey: (e) => { if (e.defaultPrevented) return; if (e.key === 'Escape' && s.tip) { e.preventDefault(); tipEsc(); return; } if (typeof pageKey === 'function') pageKey(e); },
+      rootClass: 'fc' + (dark ? ' dark' : ''), navOpen: s.navOpen || !!s.navPeek, navClosedYN: s.navOpen ? 'n' : 'y', navPeek: s.navPeek ? 'y' : 'n', navPeekOn: !!s.navPeek, toggleNav: () => { const narrow = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 960px)').matches; if (narrow) set({ navPeek: !s.navPeek }); else set({ navOpen: !s.navOpen, navPeek: false }); },
+      ro: s.ro, roAria: s.ro ? 'true' : 'false', toggleRo: () => set({ ro: !s.ro }),
+      sw: 'flex: none; position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; transition: background-color 160ms; background: ' + (s.ro ? 'var(--accent)' : 'var(--fill-3)') + ';',
+      knob: 'position: absolute; top: 2px; left: ' + (s.ro ? 18 : 2) + 'px; width: 18px; height: 18px; border-radius: 9px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left 160ms cubic-bezier(.2,.8,.2,1);',
+      days: String(s.days), keep: String(s.keep),
+      daysDown: () => set({ days: Math.max(1, s.days - 1) }), daysUp: () => set({ days: Math.min(365, s.days + 1) }),
+      keepDown: () => set({ keep: Math.max(1, s.keep - 1) }), keepUp: () => set({ keep: Math.min(200, s.keep + 1) }),
+      snapNote: s.days + ' 天后清理 · 每个项目至少留 ' + s.keep + ' 个' };
   }
 }
 </script>

@@ -123,6 +123,7 @@ src/
 
 - **两种状态分开放。** 内核的数据走 TanStack Query，键集中在 `ipc/queries.ts`。只属于窗口的状态（侧栏折叠、待应用的同步计划）放 `state/`。
 - **样式用 CSS Modules 加 token。** 不引入第二套设计系统。原型是行内样式，实现时改写成模块样式，尺寸照抄。
+- **token 的旧名字**：2026-11-22 原型换成方寸 2 的 token（`--win`、`--side`、`--insp`、`--raised`、`--fill-1…3`、`--k1…3` 等）。`tokens.css` 末尾有一段旧名字别名（`--bg`、`--bg-sidebar`、`--line-strong` 等指到新 token），只给还没重做的界面用。新代码只用新名字；某个页面按方寸 2 重做完，就把它用到的旧名字换掉，全部换完删掉别名段。
 - **页面自己摆「列表 + 检查器」。** 骨架只管工具栏和侧栏，因为套装页的左栏和别的页不一样。
 - **跨页面的组件先写一次。** `components/` 里已有：检查器 `Inspector`（6.1 统一结构，含 `Section`、`ReadOnlyAction`）、状态 `StatusDot`/`StatusBadge`（圆点加短标签，语气见 `tone.ts`）、层级刻度 `ScopeTicks`、预算条 `BudgetBar`、目标工具 `ToolSwitch`、变更计划弹窗与提示条 `PlanHost`、登记弹窗 `RegisterHost`（后两个挂在 `AppShell` 上，全应用一份）。
 - **写入一律走 `state/plan.ts`。** 页面调 `usePlan().preview({ load, done, after?, back?, undoable? })`：`load` 向内核要计划，`PlanHost` 弹窗、应用、让查询失效、出提示条；提示条的「撤销」先出 `plan_rollback_record` 的计划。登记先经 `state/register.ts` 问物化方式。
