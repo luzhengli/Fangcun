@@ -26,7 +26,8 @@ const KIND_NAME: Record<AssetKind, string> = { skill: "Skill", mcp: "MCP", instr
 /** 6.6「建议」表：标签与颜色。 */
 function statusOf(row: GlobalRow): { tone: Tone; label: string } {
   const map: Record<GlobalStatus, { tone: Tone; label: string }> = {
-    "suggest-bundle": { tone: "info", label: "建议转套装" },
+    // v0.1 套装隐藏，标签只写事实（9.3、M1-35）。
+    "suggest-bundle": { tone: "info", label: FEATURES.bundles ? "建议转套装" : "少数在用" },
     "never-used": { tone: "warn", label: "从未使用" },
     overridden: { tone: "neutral", label: `被覆盖 ${row.overridden} 处` },
     "same-name-conflict": { tone: "neutral", label: `同名冲突 ${row.conflicts} 处` },
@@ -110,7 +111,13 @@ export function GlobalPage() {
   const limit = Math.max(data?.budget.limit ?? 20000, 1);
   const sum = (list: GlobalRow[]) => list.reduce((n, r) => n + (r.resident ?? 0), 0);
   const totalCost = sum(all);
-  const keepCost = sum(all.filter((r) => actOf(r) === "keep" || actOf(r) === "adopt"));
+  // 「照建议瘦身后」只算有动作的建议。v0.1 套装隐藏，少数在用的项算留下（9.3、M1-35）。
+  const keepCost = sum(
+    all.filter(
+      (r) =>
+        actOf(r) === "keep" || actOf(r) === "adopt" || (actOf(r) === "bundle" && !FEATURES.bundles),
+    ),
+  );
   const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
   // 全部项目名：指令文件没有用到可数，展开时列出每个项目。
   const projectNames = [...new Set(all.flatMap((r) => r.usage.map((u) => u.name)))];
@@ -293,7 +300,7 @@ export function GlobalPage() {
                 <button
                   type="button"
                   className={`${c.b} ${c.small}`}
-                  title="勾选只有 1–2 个项目用到的项（建议转套装）"
+                  title="勾选只有 1–2 个项目用到的项"
                   onClick={() => pickWhere((r) => actOf(r) === "bundle")}
                 >
                   <span className={styles.dot} style={{ background: "var(--info-dot)" }} />
@@ -534,7 +541,9 @@ function GlobalInspector({
   const freed = act === "bundle" ? total - users.length : total;
   const advice =
     act === "bundle"
-      ? `转成套装，只给 ${users.join("、")} 启用`
+      ? FEATURES.bundles
+        ? `转成套装，只给 ${users.join("、")} 启用`
+        : `只有 ${users.join("、")} 用到，其余 ${freed} 个项目每个多付 ${formatK(row.resident ?? 0)} 常驻（估算）`
       : act === "remove" && row.conflicts === 0 && row.overridden === 0
         ? ""
         : row.advice;
@@ -551,7 +560,7 @@ function GlobalInspector({
         <DecisionCard
           title={CARD_TITLE[act]}
           metric={
-            act === "bundle" || act === "remove" ? (
+            (act === "bundle" && FEATURES.bundles) || act === "remove" ? (
               <>
                 −{formatK(cost)} <span className={styles.times}>× {freed} 个项目</span>
               </>
@@ -574,7 +583,7 @@ function GlobalInspector({
                   去收编
                 </Link>
               </>
-            ) : act === "bundle" ? (
+            ) : act === "bundle" && !FEATURES.bundles ? undefined : act === "bundle" ? (
               <>
                 <button
                   type="button"

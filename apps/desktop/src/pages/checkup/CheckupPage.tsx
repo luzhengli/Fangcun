@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { FEATURES } from "@/app/features";
 import c from "@/components/controls.module.css";
 import { DecisionCard, Done, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
@@ -366,15 +367,18 @@ function FindingCard({ finding: f, onDone }: { finding: Finding; onDone: () => v
       foot={
         <>
           <span className={styles.footNote}>{writes ? "写前留快照 · 可撤销" : f.foot}</span>
-          <button
-            type="button"
-            className={`${c.b} ${c.primary}`}
-            disabled={!writes || !plan.data || plan.data.blocked || busy}
-            title={writes ? f.foot : "这一类的一键处理还没接上，先在命令行或对应页面处理"}
-            onClick={() => void apply()}
-          >
-            {busy ? "正在写入…" : f.action}
-          </button>
+          {/* v0.1 套装隐藏：全局税的「创建套装」不显示（9.3、M1-35）。 */}
+          {(FEATURES.bundles || f.category !== "global-tax") && (
+            <button
+              type="button"
+              className={`${c.b} ${c.primary}`}
+              disabled={!writes || !plan.data || plan.data.blocked || busy}
+              title={writes ? f.foot : "这一类的一键处理还没接上，先在命令行或对应页面处理"}
+              onClick={() => void apply()}
+            >
+              {busy ? "正在写入…" : f.action}
+            </button>
+          )}
         </>
       }
     >

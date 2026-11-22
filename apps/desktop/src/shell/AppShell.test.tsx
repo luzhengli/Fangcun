@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
+import { FEATURES } from "@/app/features";
 import { routes } from "@/app/router";
 import { useUi } from "@/state/ui";
 
@@ -21,13 +22,17 @@ describe("窗口骨架（6.1）", () => {
     useUi.setState({ sidebarCollapsed: false });
   });
 
-  it("侧栏有五个导航项，顺序是项目、资产库、套装、全局、活动；底部是设置和重新体检", () => {
+  it("侧栏导航顺序是项目、资产库、（套装）、全局、活动；底部是设置和重新体检", () => {
     renderApp();
     const nav = screen.getByRole("navigation", { name: "主导航" });
     const labels = within(nav)
       .getAllByRole("link")
       .map((link) => link.textContent);
-    expect(labels.slice(0, 5)).toEqual(["项目", "资产库", "套装", "全局", "活动"]);
+    // v0.1 套装隐藏（9.3、M1-35），FEATURES.bundles 打开时才有「套装」。
+    const expected = FEATURES.bundles
+      ? ["项目", "资产库", "套装", "全局", "活动"]
+      : ["项目", "资产库", "全局", "活动"];
+    expect(labels.slice(0, expected.length)).toEqual(expected);
     expect(within(nav).getByRole("link", { name: /^设置/ })).toHaveAttribute("href", "/settings");
     expect(within(nav).getByRole("button", { name: "重新体检" })).toBeInTheDocument();
   });

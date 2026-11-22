@@ -322,13 +322,14 @@ fn advice(
         |r| format!("{} 常驻", format_k(r)),
     );
     match status {
+        // v0.1 套装隐藏（9.3、M1-35）：只写事实，不给转套装的建议和按钮。v0.2 放出套装时改回。
         GlobalStatus::SuggestBundle => (
             format!(
-                "只有 {} 用到。转成套装后，其余 {} 个项目每个省下 {saving}。",
+                "只有 {} 用到，其余 {} 个项目每个多付 {saving}（估算）。",
                 used_names.join("、"),
                 total.saturating_sub(used_names.len())
             ),
-            vec!["转成套装…".to_owned(), "从全局移除…".to_owned()],
+            Vec::new(),
         ),
         GlobalStatus::NeverUsed => (
             format!("近 30 天没有项目触发。从全局移除后，每个项目省下 {saving}。"),
@@ -343,10 +344,10 @@ fn advice(
         ),
         GlobalStatus::SameNameConflict => (
             format!(
-                "{} 个项目在项目层放了同名项，但{conflict_rule}。转成套装或从全局移除后，项目层那一份才单独生效。",
+                "{} 个项目在项目层放了同名项，但{conflict_rule}。从全局移除后，项目层那一份才单独生效。",
                 same.conflicts.len()
             ),
-            vec!["转成套装…".to_owned(), "从全局移除…".to_owned()],
+            vec!["从全局移除…".to_owned()],
         ),
         GlobalStatus::UnknownSource => (
             "内容哈希与任何来源都不匹配。先去资产库收编，再决定留还是走。".to_owned(),

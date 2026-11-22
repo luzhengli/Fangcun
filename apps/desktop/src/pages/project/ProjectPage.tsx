@@ -1159,9 +1159,11 @@ function DisableBox({
       foot={
         <>
           <span className={styles.footNote}>只写本项目的清单</span>
-          <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
-            改为套装…
-          </button>
+          {FEATURES.bundles && (
+            <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
+              改为套装…
+            </button>
+          )}
           <button
             type="button"
             className={`${c.b} ${c.primary}`}

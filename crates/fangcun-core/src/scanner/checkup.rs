@@ -508,17 +508,25 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         let users: Vec<String> = projects.iter().map(|p| super::project_name(p)).collect();
         findings.push(Finding {
             ready: false,
-        record: None,
-        metric: Some(format_k(TokenEstimate(resident))),
-        metric_note: Some("每个项目都在缴".to_owned()),
+            record: None,
+            metric: Some(format_k(TokenEstimate(resident))),
+            metric_note: Some("每个项目都在缴".to_owned()),
             impact: Some(format!("每个项目 −{}", format_k(TokenEstimate(resident)))),
-            brief: if users.is_empty() { "近 30 天没有项目用到".to_owned() } else { format!("只有 {} 用到", users.join("、")) },
+            brief: if users.is_empty() {
+                "近 30 天没有项目用到".to_owned()
+            } else {
+                format!("只有 {} 用到", users.join("、"))
+            },
             id: format!("global-tax:{}", group.label),
             category: FindingCategory::GlobalTax,
-            title: format!("{} 个 {} skill 加载进了每一个项目", group.members.len(), group.label),
+            title: format!(
+                "{} 个 {} skill 加载进了每一个项目",
+                group.members.len(),
+                group.label
+            ),
             status: FindingStatus::Pending,
             intro: format!(
-                "来源 {}。名称与描述常驻每个项目的上下文，近 30 天{}。把它们从全局层移到套装，只给需要的项目。",
+                "来源 {}。名称与描述常驻每个项目的上下文，近 30 天{}。",
                 group.source.as_deref().unwrap_or("未知"),
                 if users.is_empty() {
                     "没有项目触发过".to_owned()
