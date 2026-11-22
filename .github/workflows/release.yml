@@ -10,6 +10,13 @@ name: 发布
 on:
   push:
     tags: ["v*"]
+  # 改了发布相关的文件时，PR 上完整构建一遍、产物传成附件，不建 Release，免得第一次跑就在正式发版时。
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - packaging/**
+      - apps/desktop/src-tauri/tauri.conf.json
+      - apps/desktop/src-tauri/Info.plist
 
 permissions:
   contents: write
@@ -42,13 +49,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 标签、桌面应用、命令行三处的版本号要一样（R-01）。
+      # 标签、桌面应用、命令行三处的版本号要一样（R-01）。PR 上没有标签，只比后两处。
       - name: 版本号和标签一致
         id: version
         run: |
-          tag="${GITHUB_REF_NAME}"
           app=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
           cli=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          tag="v${app}"
+          [ "${GITHUB_REF_TYPE}" = "tag" ] && tag="${GITHUB_REF_NAME}"
           echo "标签 ${tag}，桌面应用 ${app}，命令行 ${cli}"
           if [ "${tag}" != "v${app}" ] || [ "${app}" != "${cli}" ]; then
             echo "::error::版本号对不上：标签 ${tag}、tauri.conf.json ${app}、Cargo.toml ${cli}"
@@ -98,7 +106,16 @@ jobs:
           tar -C dist/cli -czf "dist/out/fangcun-${v}-macos-universal.tar.gz" fangcun LICENSE-MIT LICENSE-APACHE
           (cd dist/out && shasum -a 256 *.dmg *.tar.gz > SHA256SUMS && cat SHA256SUMS)
 
+      - name: PR 上只传附件
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fangcun-${{ steps.version.outputs.version }}-macos-universal
+          path: dist/out/
+          retention-days: 7
+
       - name: 草稿 Release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

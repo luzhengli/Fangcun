@@ -50,6 +50,7 @@
 | 收工 | 两边 | `AGENTS.md`「收工前必须做的事」 |
 | 复盘工作流 | 本地 | 本文「复盘」 |
 | 审计 harness | 本地 | `pnpm harness audit`，按结论给建议（self-harness） |
+| 发版 vX.Y.Z | 本地 | 本文「发版」 |
 
 ## 交接规则
 
@@ -129,6 +130,18 @@
 - 要 JS 渲染的页面（Apple HIG 等），网页抓取只拿到标题，改用无头 Playwright 取正文和截图。
 - 被 Cloudflare 人机验证挡住的站（openai.com），去不设验证的地方找同样的东西：GitHub 仓库、VS Code 扩展页、文档站。
 - 设计参考站（Nicelydone、Refero、Mobbin 等）的公开页要登录，MCP 没接，见 BACKLOG W-25。
+
+## 发版
+
+v0.1 起用 GitHub Releases 与自建 Homebrew tap 分发（9.3）。人说「发版 vX.Y.Z」时：
+
+1. 版本号三处一致：`apps/desktop/src-tauri/tauri.conf.json`、根 `Cargo.toml` 的工作区版本、`apps/desktop/package.json`。改了就走 PR 合进 main。
+2. 在 main 上推标签 `vX.Y.Z`。`.github/workflows/release.yml` 核对版本、跑 `pnpm check`、构建 universal 的 dmg 与命令行压缩包，建**草稿** Release。
+3. 人在 GitHub 上看草稿，补「这一版」的说明，点「Publish release」。
+4. `.github/workflows/tap.yml` 随之把 formula 与 cask 写进 `luzhengli/homebrew-fangcun`。要 Secret `TAP_TOKEN`（只对 tap 仓库有写权限），缺了会报错。
+5. 装一遍核对：`brew install --cask luzhengli/fangcun/fangcun`、`brew install luzhengli/fangcun/fangcun`。
+
+改了发布相关的文件（流水线、`packaging/`、`tauri.conf.json`、`Info.plist`）时，PR 上会完整构建一遍，产物在那次运行的附件里，发版前先看它过没过。有 Apple Developer 账号后加签名公证的 Secrets，见 `release.yml` 开头。
 
 ## 质量关
 
@@ -233,3 +246,5 @@
 - [x] 2026-11-22 截图场景按看得见的文字点，原型两张画板的同一个控件读屏名不一样（全局写「谁在用 1 / 6」、资产库写「谁在用 5/6」），应用照全局写，资产库场景要改成点「5/6」才走得通；原型里不能点的文字（全局页末尾「另有 2 项只被 Codex 加载」）也没法写场景。→ W-21、P-14
 - [x] 2026-11-22 `pnpm workflow accept` 只认 `prototype-sync.json` 里登记过的画板，Library 第一次有示例数据时要先手加一项再 accept。→ W-16
 - [x] 2026-11-22 批 11 的 PR 没合并就接着做批 12，只能把分支叠在批 11 上；人合并 #45 后批 12 要变基，PR 的对比基准也要改。→ W-15、W-16
+- [ ] 2026-11-22 命令行冒烟测试靠临时手写：macOS 没有 `timeout`、zsh 不按空格拆变量，前两次白跑；这次冒烟抓到了记录编号撞号的 bug，说明它是个有用的判官，却没进 CI。可以做成 `pnpm smoke`，在隔离的 HOME 里跑第 5 节的每条命令，进 CI（W-37）
+- [ ] 2026-11-22 菜单栏、Dock 里的名字、中文应用菜单这类只有打开应用才看得见的东西，Agent 没有判官：桌面操作按规矩交给 Codex，而那条路在本机不通，只能攒到 R-06 让人看

@@ -10,6 +10,13 @@
     },
     {
       "group": "正确性",
+      "dimension": "活动记录编号唯一（回滚按编号找记录）",
+      "oracle": "record_ids_stay_unique_across_kernels",
+      "grade": "机判",
+      "when": "提交前、CI"
+    },
+    {
+      "group": "正确性",
       "dimension": "写入范围、只读、写前快照",
       "oracle": "内核测试",
       "grade": "机判",
@@ -136,6 +143,13 @@
       "oracle": "没有",
       "grade": "无",
       "next": "人验收的截图存基线，pnpm screens 对基线比"
+    },
+    {
+      "group": "正确性",
+      "dimension": "发布产物能构建（universal dmg、命令行）",
+      "oracle": "release.yml 在改了发布文件的 PR 与标签上跑",
+      "grade": "机判",
+      "when": "PR、发版"
     },
     {
       "group": "体验",
