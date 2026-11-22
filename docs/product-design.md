@@ -271,7 +271,8 @@ MVP 的范围是六项能力。每项都直接对应第 2 节的痛点。
 fangcun doctor                # 只读体检
 fangcun init --from-existing  # 登记项目，从目录现状反推清单与锁
 fangcun status                # 当前项目的同步状态与漂移
-fangcun add <资产>             # 加入清单
+fangcun add <资产>             # 加入清单，同一份计划里更新锁并同步。<资产> 写 <来源>@<名字> 或资产库里的名字，都不是时搜 skills.sh
+fangcun remove <资产>… --global  # 从全局层移除，只对已收编的。--tool 指定工具，名字可带 *
 fangcun adopt <资产>           # 收编进资产库
 fangcun lock                  # 重新解析清单，更新锁
 fangcun export skills-lock    # 把锁导出成 skills-lock.json，与 skills 命令行互通
