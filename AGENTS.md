@@ -178,6 +178,7 @@
 - 思考级别固定 `max`（用户指定）；只观察用 `-s read-only`，需落盘证据用 `-s workspace-write` 并限定证据目录：
   ```sh
   codex exec -m gpt-6.1-terra -c model_reasoning_effort="max" -s workspace-write -C "$PWD" \
-    -o <证据目录>/codex-last-message.md "<任务书>"
+    -o <证据目录>/codex-last-message.md "<任务书>" < /dev/null
   ```
+  不接 `< /dev/null` 会卡在读标准输入。任务书写明「只写证据目录，不改仓库文件」，其余见 `docs/WORKFLOW.md`「任务书」。
 - 同时仅一个负责人操作桌面；无头脚本（check/Playwright）不算 computer use。Codex 或该模型不可用时停止并报告。

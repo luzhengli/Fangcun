@@ -7,6 +7,9 @@
 //   { click: "文字" }       点第一个文字等于它的按钮、链接、页签、开关、菜单项、label；
 //                           没有完全相等的，再找包含它的。
 //   { click: "文字", nth: 1 }  第几个匹配（从 0 数）。
+//   { click: "文字", within: "main" }  只在这个 CSS 选择器的区域里找。页面上同一个文字出现在
+//                           几处（侧栏的「漂移」标签和检查器里的「漂移」）时用它。
+// 匹配到不止一个、又没写 nth 时，点第一个，并打印一行提醒，免得点错了还以为截对了。
 // focus：拼图里单独放大对比的区域，默认是检查器。找不到这个区域时只出整页拼图。
 
 export const SCENES = {
@@ -99,8 +102,8 @@ export const DEFAULT_FOCUS = 'aside[aria-label="检查器"]';
  */
 export async function runStep(page, step) {
   if (step.click === undefined) return `不认识的步骤：${JSON.stringify(step)}`;
-  const ok = await page.evaluate(
-    ({ text, nth }) => {
+  const found = await page.evaluate(
+    ({ text, nth, within }) => {
       const pick =
         'button, a, [role="tab"], [role="switch"], [role="menuitem"], [role="menuitemradio"], label';
       const visible = (el) => {
@@ -114,7 +117,9 @@ export async function runStep(page, step) {
         )
           .replace(/\s+/g, " ")
           .trim();
-      const all = [...document.querySelectorAll(pick)].filter(visible);
+      const root = within ? document.querySelector(within) : document;
+      if (!root) return { error: `找不到区域 ${within}` };
+      const all = [...root.querySelectorAll(pick)].filter(visible);
       // 开关一类没有文字，用 aria-labelledby 指向的文字。
       const labelled = (el) => {
         const id = el.getAttribute("aria-labelledby");
@@ -125,13 +130,19 @@ export async function runStep(page, step) {
       const loose = all.filter((el) => textOf(el).includes(text));
       const list = exact.length > 0 ? exact : loose;
       const el = list[nth ?? 0];
-      if (!el) return false;
+      if (!el) return { error: null, count: 0 };
       el.click();
-      return true;
+      return { count: list.length, exact: exact.length > 0 };
     },
-    { text: step.click, nth: step.nth },
+    { text: step.click, nth: step.nth, within: step.within },
   );
-  if (!ok) return `找不到可点的「${step.click}」`;
+  if (found.error) return found.error;
+  if (found.count === 0)
+    return `找不到可点的「${step.click}」${step.within ? `（在 ${step.within} 里）` : ""}`;
+  if (found.count > 1 && step.nth === undefined)
+    console.warn(
+      `  提醒：「${step.click}」${found.exact ? "完全相等" : "包含它"}的有 ${found.count} 个，点了第一个。不对就加 within 或 nth。`,
+    );
   await page.waitForTimeout(150);
   return null;
 }
