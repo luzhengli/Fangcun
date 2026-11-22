@@ -19,22 +19,23 @@ const state = {
   current: null as number | null,
 };
 
-/** Main.dc.html 的 plan：evals_studio 的四处变更。 */
+/** Main.dc.html 的 plan：同步计划，只装排进来的改动（6.8）。 */
 export function syncPlan(projectRoot: string, edits: ManifestEdit[] = []): ChangePlan {
   const name = projectRoot.split("/").pop() ?? projectRoot;
-  const changes: ChangePlan["changes"] = state.synced
-    ? []
-    : [
-        { op: "add", path: ".agents/skills/tdd", detail: "链接到 tdd@a1b2c3" },
-        { op: "add", path: ".claude/skills/tdd", detail: "相对链接到 .agents/skills/tdd" },
-        { op: "modify", path: ".mcp.json", detail: "新增键 mcpServers.github" },
-        { op: "remove", path: ".trae/project-harness", detail: "改由资产库管理，已备份" },
-      ];
+  // 方寸 2（D-35）：磁盘已经和清单一致，计划只装排进来的改动；没有暂存时是空计划。
+  const changes: ChangePlan["changes"] = [];
   // 暂存的「在本项目停用」：清单加一节，Claude Code 的开关加 16 个键（原型 larkOff）。
   for (const edit of edits) {
     // 升级 tdd（Main.dc.html 的 tddQueued）：本项目改链接，勾选的项目各一行。
     if (edit.op === "upgrade") {
-      changes[0] = { op: "add", path: ".agents/skills/tdd", detail: "链接到 tdd@b7e9f0" };
+      changes.push(
+        {
+          op: "modify",
+          path: ".agents/skills/tdd",
+          detail: "链接改指 tdd@b7e9f0，含新脚本 run-tests.sh",
+        },
+        { op: "modify", path: "fangcun.lock", detail: "tdd 记下 b7e9f0 的内容哈希" },
+      );
       for (const other of edit.projects) {
         const name = other.split("/").pop();
         changes.push({

@@ -1,0 +1,232 @@
+/* 决定卡片（6.1、6.10）：材质是 --raised，发丝线分层，不垫灰。尺寸照抄原型 Main 检查器。 */
+
+.card {
+  /* 检查器是纵向 flex 容器，卡片带 overflow: hidden，不加这一行会被压到 0 高。 */
+  flex: none;
+  margin: 0 -4px;
+  border-radius: 12px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 4px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.metric {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx-2);
+}
+
+.card[data-tone="warn"] .metric {
+  color: var(--warn);
+}
+
+.card[data-tone="info"] .metric {
+  color: var(--info);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 14px 12px;
+}
+
+.text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tx-2);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 0.5px solid var(--line);
+}
+
+.footNote {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.doneDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok-dot);
+}
+
+/* 会写入 · N 处 */
+.writes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.writesHead {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--tx-3);
+}
+
+.writeList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.writeList > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.op {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.op[data-op="add"] {
+  color: var(--ok);
+  background: var(--ok-weak);
+}
+
+.op[data-op="modify"] {
+  color: var(--warn);
+  background: var(--warn-weak);
+}
+
+.op[data-op="remove"] {
+  color: var(--danger);
+  background: var(--danger-weak);
+}
+
+.writeText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.path {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 18px;
+  word-break: break-all;
+}
+
+.detail {
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.blocked {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--warn-weak);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--warn);
+}
+
+/* 处理方式：单选卡片 */
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.options > legend {
+  padding: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--tx-3);
+}
+
+.opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 0.5px solid var(--line-2);
+  background: var(--raised);
+}
+
+.opt:hover {
+  border-color: var(--accent-line);
+}
+
+.opt[data-on="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-weak);
+}
+
+.opt[data-off="true"] {
+  opacity: 0.6;
+}
+
+.opt input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.optText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.optTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.optDesc {
+  font-size: 12px;
+  color: var(--tx-3);
+}

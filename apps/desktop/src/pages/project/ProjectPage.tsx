@@ -1,15 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router";
-import { BudgetBar } from "@/components/BudgetBar";
 import c from "@/components/controls.module.css";
+import { DecisionCard, Done, Options, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
+import { InfoTip } from "@/components/InfoTip";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
 import { StatusDot } from "@/components/StatusDot";
 import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, toneOfState } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
+import type { Change } from "@/ipc/bindings/Change";
 import type { DriftChoice } from "@/ipc/bindings/DriftChoice";
 import type { DriftInfo } from "@/ipc/bindings/DriftInfo";
 import type { EffectiveContext } from "@/ipc/bindings/EffectiveContext";
@@ -30,11 +32,12 @@ import {
 } from "@/ipc/queries";
 import { projectPath } from "@/shell/nav";
 import { PageToolbar } from "@/shell/PageToolbar";
-import { usePlan } from "@/state/plan";
+import { applyInline, usePlan } from "@/state/plan";
 import { useRegister } from "@/state/register";
 import { useStaged, useStagedEdits } from "@/state/staged";
 import { useUi } from "@/state/ui";
 import page from "../page.module.css";
+import { ContextMap } from "./ContextMap";
 import styles from "./ProjectPage.module.css";
 
 const GROUPS: { kind: AssetKind; label: string }[] = [
@@ -105,17 +108,53 @@ function ProjectView({ root }: { root: string | undefined }) {
   const clearStaged = useStaged((s) => s.clear);
   const syncPlan = useSyncPlan(root, registered, staged);
   const preview = usePlan((s) => s.preview);
-  const openSync = () =>
-    root &&
+  const unstage = useStaged((s) => s.unstage);
+  // 同步计划按原因分组（6.8）：每条暂存的改动单独出一份计划，减掉没暂存时的差异，就是它那一组。
+  const openSync = (edits: ManifestEdit[] = staged) => {
+    if (!root) return;
+    let of: (change: Change) => string = () => "清单里还没同步的改动";
     preview({
-      load: () => kernel.planSync(root, staged),
+      load: async () => {
+        const key = (ch: Change) => `${ch.op}:${ch.path}`;
+        const [full, base, ...each] = await Promise.all([
+          kernel.planSync(root, edits),
+          kernel.planSync(root, []),
+          ...edits.map((e) => kernel.planSync(root, [e])),
+        ]);
+        const baseKeys = new Set(base.changes.map(key));
+        const cause = new Map<string, string>();
+        edits.forEach((e, i) => {
+          for (const ch of each[i]?.changes ?? [])
+            if (!baseKeys.has(key(ch)) && !cause.has(key(ch)))
+              cause.set(key(ch), causeOf(e, items));
+        });
+        of = (ch) => cause.get(key(ch)) ?? "清单里还没同步的改动";
+        return full;
+      },
+      title: (plan) =>
+        plan.changes.length > 0
+          ? `同步 ${data?.projectName ?? ""} · ${plan.changes.length} 处变更`
+          : `同步 ${data?.projectName ?? ""}`,
+      sub: (plan) =>
+        plan.changes.length > 0 ? "应用前留快照 · 可在「历史」回滚" : "没有排进来的变更",
+      group: {
+        of: (ch) => of(ch),
+        remove: (c) => {
+          const left = edits.filter((e) => causeOf(e, items) !== c);
+          for (const e of edits) if (causeOf(e, items) === c) unstage(root, e);
+          openSync(left);
+        },
+      },
       done: (applied, plan) =>
         `已同步 ${plan.changes.length} 处变更 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
       after: () => clearStaged(root),
     });
+  };
   const [tab, setTab] = useState<Tab>("effective");
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [hover, setHover] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "pending">("all");
   // 回到项目卡片（6.3）：点列表空白处、Esc、再点一次侧栏里同一个项目。
   const toCard = () => {
     setSelected(null);
@@ -162,6 +201,22 @@ function ProjectView({ root }: { root: string | undefined }) {
   const tools = useTools();
   const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
   const pending = syncPlan.data?.changes.length ?? 0;
+  const pendingItems = items.filter((i) => i.state && PENDING[i.state]);
+  // 排进计划还没同步的停用、恢复：常驻不提前扣，只算「同步后约 N」（6.3）。
+  const residentOf = (e: ManifestEdit) =>
+    e.op === "upgrade"
+      ? 0
+      : items
+          .filter((i) => i.disable && i.disable.names.join("\n") === e.names.join("\n"))
+          .reduce((n, i) => n + (i.resident ?? 0), 0);
+  const delta = staged.reduce(
+    (n, e) => n + (e.op === "disable" ? -residentOf(e) : e.op === "enable" ? residentOf(e) : 0),
+    0,
+  );
+  const afterSync =
+    delta !== 0
+      ? items.filter((i) => i.counted).reduce((n, i) => n + (i.resident ?? 0), 0) + delta
+      : null;
   const openRegister = useRegister((s) => s.open);
   const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
 
@@ -194,7 +249,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           <button
             type="button"
             className={pending > 0 ? `${c.b} ${c.primary}` : c.b}
-            onClick={openSync}
+            onClick={() => openSync()}
             title="按清单与锁物化，先出变更计划"
           >
             <Icon name="sync" size={14} strokeWidth={1.6} />
@@ -211,49 +266,73 @@ function ProjectView({ root }: { root: string | undefined }) {
             登记…
           </button>
         )}
+        <button
+          type="button"
+          className={c.icon}
+          aria-pressed={inspectorOpen}
+          aria-label="检查器"
+          title="显示或隐藏检查器 ⌥⌘0"
+          onClick={() => setInspectorOpen(!inspectorOpen)}
+        >
+          <Icon name="inspector" strokeWidth={1.4} />
+        </button>
       </PageToolbar>
 
       {data && (
-        <div className={page.band}>
-          <BudgetBar
-            budget={data.budget}
-            lead={
-              <>
-                <span className={styles.budgetLead}>常驻上下文</span>
-                <span className={styles.budgetTotal}>
-                  {formatK(data.budget.instructions + data.budget.skills + data.budget.mcp)}
-                </span>
-                <span className={styles.budgetLimit}>
-                  / {registered ? "项目预算" : "默认预算"} {formatLimit(data.budget.limit)} tokens ·
-                  估算值
-                </span>
-              </>
-            }
-          />
-        </div>
+        <ContextMap
+          items={items}
+          limit={data.budget.limit}
+          registered={registered}
+          selectedId={current?.id}
+          hoverId={hover}
+          onHover={setHover}
+          onPick={(id) => {
+            setTab("effective");
+            setSelected(id);
+            setInspectorOpen(true);
+          }}
+          after={afterSync}
+        />
       )}
 
-      {registered && (
-        <div role="tablist" aria-label="项目视图" className={page.tabs}>
-          {(
-            [
-              ["effective", "生效上下文"],
-              ["manifest", "清单"],
-              ["history", "历史"],
-            ] as const
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              onClick={() => setTab(key)}
-            >
-              {label}
+      <div className={styles.viewBar}>
+        {registered && (
+          <div aria-label="项目视图" className={c.seg} role="tablist">
+            {(
+              [
+                ["effective", "生效上下文"],
+                ["manifest", "清单"],
+                ["history", "历史"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        <span className={styles.flex} />
+        {(tab === "effective" || !registered) && data && (
+          <fieldset aria-label="筛选" className={c.seg}>
+            <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
+              全部 <span className={c.count}>{items.length}</span>
             </button>
-          ))}
-        </div>
-      )}
+            <button
+              type="button"
+              aria-pressed={filter === "pending"}
+              onClick={() => setFilter("pending")}
+            >
+              待处理 <span className={c.count}>{pendingItems.length}</span>
+            </button>
+          </fieldset>
+        )}
+      </div>
 
       <div className={page.split}>
         {/* 点空白处回到项目卡片只是快捷方式，键盘用 Esc。 */}
@@ -282,6 +361,9 @@ function ProjectView({ root }: { root: string | undefined }) {
             <EffectiveList
               context={data}
               staged={staged}
+              filter={filter}
+              hoverId={hover}
+              onHover={setHover}
               selectedId={current?.id}
               onPick={(id) => {
                 setSelected(id);
@@ -312,6 +394,8 @@ function ProjectView({ root }: { root: string | undefined }) {
               root={root}
               context={data}
               summary={summary}
+              staged={staged}
+              onSync={() => openSync()}
               onPick={(id) => {
                 setSelected(id);
                 setTab("effective");
@@ -321,6 +405,7 @@ function ProjectView({ root }: { root: string | undefined }) {
           )}
         {(tab === "effective" || !registered) && inspectorOpen && current && data && (
           <ItemInspector
+            key={current.id}
             item={current}
             context={data}
             root={registered ? root : undefined}
@@ -334,18 +419,43 @@ function ProjectView({ root }: { root: string | undefined }) {
   );
 }
 
+/** 一条暂存改动在同步计划里的原因（6.8），例如「在本项目停用 lark-doc 等 16 项」。 */
+function causeOf(e: ManifestEdit, items: EffectiveItem[]): string {
+  if (e.op === "upgrade") {
+    const to = items.find((i) => i.name === e.asset)?.update?.to;
+    const others = e.projects.length > 0 ? `，另 ${e.projects.length} 个项目` : "";
+    return `升级 ${e.asset}${to ? ` 到 ${to}` : ""}${others}`;
+  }
+  const what = e.names.length > 1 ? `${e.names[0]} 等 ${e.names.length} 项` : (e.names[0] ?? "");
+  return `${e.op === "disable" ? "在本项目停用" : "在本项目恢复"} ${what}`;
+}
+
 function EffectiveList({
   context,
   staged,
+  filter,
+  hoverId,
+  onHover,
   selectedId,
   onPick,
 }: {
   context: EffectiveContext;
   staged: ManifestEdit[];
+  filter: "all" | "pending";
+  hoverId: string | null;
+  onHover: (id: string | null) => void;
   selectedId: string | undefined;
   onPick: (id: string) => void;
 }) {
   const missing = context.observedMissing.map((k) => OBSERVED_LABEL[k]);
+  const shown = (i: EffectiveItem) => filter === "all" || (i.state !== null && PENDING[i.state]);
+  if (filter === "pending" && !context.items.some(shown))
+    return (
+      <div className={page.empty}>
+        <p className={styles.emptyTitle}>没有待处理的项</p>
+        <p>漂移、可更新、脚本变更都处理完了。</p>
+      </div>
+    );
   return (
     <div>
       <div className={page.colHead}>
@@ -355,7 +465,7 @@ function EffectiveList({
         <span className={`${styles.colCost} ${page.cost}`}>常驻</span>
       </div>
       {GROUPS.map(({ kind, label }) => {
-        const rows = context.items.filter((i) => i.kind === kind);
+        const rows = context.items.filter((i) => i.kind === kind && shown(i));
         if (rows.length === 0) return null;
         const counted = rows.filter((r) => r.counted);
         const cost = counted.reduce((n, r) => n + (r.resident ?? 0), 0);
@@ -370,19 +480,25 @@ function EffectiveList({
             </h2>
             {rows.map((raw) => {
               const pending = stagedOp(staged, raw);
-              // 暂存了停用的项：照原型写「已停用（待同步）」，划线，常驻写「—」。
+              const upgrade = staged.some((e) => e.op === "upgrade" && e.asset === raw.name);
+              // 排进计划还没同步的：写「停用（待同步）」「待同步 ↑ 新版本」，常驻不提前扣（6.3）。
               const item: EffectiveItem =
                 pending === "disable"
-                  ? { ...raw, label: "已停用（待同步）", state: null, resident: null }
+                  ? { ...raw, label: "停用（待同步）" }
                   : pending === "enable"
                     ? { ...raw, label: "恢复（待同步）" }
-                    : raw;
+                    : upgrade && raw.update
+                      ? { ...raw, label: `待同步 ↑ ${raw.update.to}` }
+                      : raw;
               return (
                 <button
                   key={item.id}
                   type="button"
                   className={page.row}
                   aria-pressed={item.id === selectedId}
+                  data-hl={hoverId === item.id}
+                  onMouseEnter={() => onHover(item.id)}
+                  onMouseLeave={() => onHover(null)}
                   onClick={() => onPick(item.id)}
                 >
                   <span className={styles.colName}>
@@ -401,6 +517,7 @@ function EffectiveList({
                     <StatusDot
                       tone={item.state ? toneOfState(item.state) : "neutral"}
                       label={item.label}
+                      strong={item.state !== null && STRONG[item.state] === true}
                     />
                   </span>
                   <span className={`${styles.colCost} ${page.cost}`}>
@@ -414,12 +531,13 @@ function EffectiveList({
       })}
       <div>
         <h2 className={page.groupHead} style={{ justifyContent: "flex-start" }}>
-          其他加载项<span className={styles.tag}>只看不管</span>
+          其他加载项<span className={c.tag}>只看不管</span>
+          <span className={c.tag}>不计入预算</span>
+          <InfoTip label="其他加载项说明">
+            插件、Hook、斜杠命令、子代理也会被 Agent
+            加载。列在这里是为了看清全貌；当前版本方寸不修改它们，也不计入预算。
+          </InfoTip>
         </h2>
-        <p className={styles.othersIntro}>
-          插件、Hook、斜杠命令、子代理也会被 Agent
-          加载。列在这里是为了看清全貌；当前版本方寸不修改它们，也不计入上方预算。
-        </p>
         {context.observed.map((o) => (
           <div key={`${o.kind}:${o.scope}:${o.name}`} className={page.row}>
             <span className={styles.colName}>
@@ -460,6 +578,7 @@ function ItemInspector({
 }) {
   const tools = useTools();
   const toolName = tools.data?.find((t) => t.id === context.tool)?.name ?? context.tool;
+  const [driftDone, setDriftDone] = useState<DriftDone | null>(null);
   const total = context.budget.instructions + context.budget.skills + context.budget.mcp;
   const share =
     item.counted && item.resident !== null && total > 0
@@ -518,35 +637,57 @@ function ItemInspector({
   ];
   return (
     <Inspector
-      kind={
-        item.members.length > 1
-          ? `${KIND_LABEL[item.kind]} · ${item.members.length} 项`
-          : KIND_LABEL[item.kind]
-      }
+      kind={`${KIND_LABEL[item.kind]}${item.members.length > 1 ? ` · ${item.members.length} 项` : ""} · ${SCOPE_NAMES[item.scope]}${item.bundle ? ` · ${item.bundle}` : ""}`}
       name={item.name}
       status={{ tone: item.state ? toneOfState(item.state) : "neutral", label: item.label }}
+      intro={
+        <>
+          {item.reason}
+          <br />
+          <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
+        </>
+      }
+      decision={
+        <>
+          {driftDone ? (
+            <Done
+              title={DRIFT_DONE[driftDone.choice].title}
+              desc={DRIFT_DONE[driftDone.choice].desc}
+              extra={
+                driftDone.others.length > 0 && (
+                  <span className={styles.cardText}>
+                    同样用它的项目：{driftDone.others.join("、")}，已进「可更新」。
+                  </span>
+                )
+              }
+              onUndo={() => undoRecord(driftDone.record)}
+            />
+          ) : (
+            root &&
+            item.drift && (
+              <DriftBox item={item} drift={item.drift} root={root} onDone={setDriftDone} />
+            )
+          )}
+          {root && item.update && (
+            <UpdateBox item={item} update={item.update} root={root} staged={staged} />
+          )}
+          {root && item.disable && (
+            <DisableBox item={item} root={root} staged={staged} toolName={toolName} />
+          )}
+          {item.overriddenBy && (
+            <OverriddenBox
+              item={item}
+              winner={context.items.find((i) => i.id === item.overriddenBy)}
+              toolName={toolName}
+              onPick={onPick}
+            />
+          )}
+          {item.state === "unknown-source" && <UnknownBox item={item} />}
+        </>
+      }
       fields={fields}
       onClose={onClose}
     >
-      <Section title="为什么是这个状态">
-        <p className={page.why}>{item.reason}</p>
-        <CommandHint command={`fangcun why ${item.members[0] ?? item.name}`} />
-      </Section>
-      {root && item.drift && <DriftBox item={item} drift={item.drift} root={root} />}
-      {root && item.update && (
-        <UpdateBox item={item} update={item.update} root={root} staged={staged} />
-      )}
-      {root && item.disable && (
-        <DisableBox item={item} root={root} staged={staged} toolName={toolName} />
-      )}
-      {item.overriddenBy && (
-        <OverriddenBox
-          item={item}
-          winner={context.items.find((i) => i.id === item.overriddenBy)}
-          toolName={toolName}
-          onPick={onPick}
-        />
-      )}
       <Section title="在哪一层声明 · 谁覆盖谁">
         <ol className={styles.stack}>
           {item.declared.map((d) => (
@@ -642,25 +783,77 @@ function DiffLines({ file }: { file: FileDiff }) {
   );
 }
 
+type DriftDone = { choice: DriftChoice; record: string; others: string[] };
+
+const DRIFT_DONE: Record<DriftChoice, { title: string; desc: string }> = {
+  promote: { title: "已回流到来源", desc: "来源生成了新版本，本项目改用它。" },
+  discard: {
+    title: "已丢弃修改",
+    desc: "副本已恢复为锁定的版本。被丢弃的修改在快照里，回滚能找回。",
+  },
+  fork: {
+    title: "已分叉为项目专属",
+    desc: "改成本项目自己的文件，提交进仓库。清单和锁里去掉了这一项，方寸不再管它。",
+  },
+};
+
+function diffCount(files: FileDiff[]): string {
+  let add = 0;
+  let del = 0;
+  for (const f of files)
+    for (const l of f.lines) {
+      if (l.kind === "add") add++;
+      if (l.kind === "remove") del++;
+    }
+  return `+${add} −${del}`;
+}
+
+function undoRecord(record: string) {
+  void usePlan.getState().preview({
+    load: () => kernel.planRollbackRecord(record),
+    done: (_, plan) => `已撤销：${plan.title}`,
+    undoable: false,
+  });
+}
+
 /**
- * 漂移块（6.3 检查器「漂移」、F4、9.3）：差异片段，回流、丢弃、分叉三选一，预览后应用。
- * 回流只对本地来源，GitHub 来源置灰并说明。
+ * 漂移的决定卡片（6.3、F4、9.3）：差异片段，回流、丢弃、分叉三选一，「会写入 · N 处」随选项变，
+ * 点按钮就写。回流只对本地来源，GitHub 来源置灰并说明。
  */
-function DriftBox({ item, drift, root }: { item: EffectiveItem; drift: DriftInfo; root: string }) {
-  const preview = usePlan((s) => s.preview);
+function DriftBox({
+  item,
+  drift,
+  root,
+  onDone,
+}: {
+  item: EffectiveItem;
+  drift: DriftInfo;
+  root: string;
+  onDone: (done: DriftDone) => void;
+}) {
+  const client = useQueryClient();
   const [pick, setPick] = useState<DriftChoice>(drift.promoteBlocked ? "discard" : "promote");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const others = drift.others.length;
-  const options: { id: DriftChoice; title: string; desc: string; off: string | null }[] = [
+  const options: {
+    id: DriftChoice;
+    title: string;
+    desc: string;
+    off: string | null;
+    recommended?: boolean;
+  }[] = [
     {
       id: "promote",
       title: "回流到来源",
-      desc: `写回 ${item.source ?? "来源"} 生成新版本${others > 0 ? `，再决定其他 ${others} 个项目是否跟进` : ""}。`,
+      desc: `写回 ${item.source ?? "来源"} 生成新版本${others > 0 ? `，其他 ${others} 个项目进「可更新」` : ""}。`,
       off: drift.promoteBlocked,
+      recommended: true,
     },
     {
       id: "discard",
       title: "丢弃修改",
-      desc: `恢复为锁定的 ${drift.locked}，修改进快照，回滚能找回。`,
+      desc: "被丢弃的修改另存一份，可找回。",
       off: drift.original ? null : "原版取不回（本地来源没有提交）",
     },
     {
@@ -671,62 +864,85 @@ function DriftBox({ item, drift, root }: { item: EffectiveItem; drift: DriftInfo
     },
   ];
   const chosen = options.find((o) => o.id === pick && !o.off) ?? options.find((o) => !o.off);
-  const done: Record<DriftChoice, string> = {
-    promote: "已回流到来源",
-    discard: "已丢弃修改",
-    fork: "已分叉为项目专属",
+  const plan = useQuery({
+    queryKey: ["drift-plan", root, item.name, chosen?.id],
+    queryFn: () => kernel.planDrift(root, item.name, chosen?.id ?? "discard"),
+    enabled: chosen !== undefined,
+  });
+  const button: Record<DriftChoice, string> = {
+    promote: "回流到来源",
+    discard: "丢弃修改",
+    fork: "分叉到项目",
+  };
+  const apply = async () => {
+    if (!chosen || !plan.data || plan.data.blocked) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const applied = await applyInline(
+        plan.data,
+        (a) =>
+          `${DRIFT_DONE[chosen.id].title} · 快照 ${a.snapshots.map((x) => `#${x}`).join("、")}`,
+        () => client.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "tools" }),
+      );
+      onDone({
+        choice: chosen.id,
+        record: applied.record,
+        others: chosen.id === "promote" ? drift.others.map(projectName) : [],
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
   };
   return (
-    <div className={styles.stateBox}>
-      <h3 className={styles.stateTitle}>副本已被修改</h3>
-      <p className={styles.stateText}>{drift.summary}</p>
-      {drift.files.slice(0, 3).map((f) => (
-        <DiffLines key={f.path} file={f} />
+    <DecisionCard
+      title="副本被改过"
+      metric={diffCount(drift.files)}
+      tone="warn"
+      foot={
+        <>
+          <span className={styles.footNote}>写前留快照 · 可撤销</span>
+          <button
+            type="button"
+            className={`${c.b} ${c.primary}`}
+            disabled={!chosen || !plan.data || plan.data.blocked || busy}
+            onClick={() => void apply()}
+          >
+            {busy ? "正在写入…" : chosen ? button[chosen.id] : "处理"}
+          </button>
+        </>
+      }
+    >
+      <p className={styles.cardText}>{drift.summary}</p>
+      {drift.files.slice(0, 2).map((f) => (
+        <div key={f.path}>
+          <span className={styles.diffPath}>{f.path}</span>
+          <DiffLines file={f} />
+        </div>
       ))}
-      {drift.files.length > 3 && (
-        <span className={styles.sectionNote}>另有 {drift.files.length - 3} 个文件有变化。</span>
+      {drift.files.length > 2 && (
+        <span className={styles.sectionNote}>另有 {drift.files.length - 2} 个文件有变化。</span>
       )}
-      <fieldset className={styles.choices}>
-        <legend>怎么处理这份修改？</legend>
-        {options.map((o) => (
-          <label key={o.id} data-on={chosen?.id === o.id} data-off={o.off !== null}>
-            <input
-              type="radio"
-              name={`drift-${item.id}`}
-              checked={chosen?.id === o.id}
-              disabled={o.off !== null}
-              onChange={() => setPick(o.id)}
-            />
-            <span>
-              <span className={styles.choiceTitle}>{o.title}</span>
-              <span className={styles.choiceDesc}>{o.off ?? o.desc}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
-      <div className={styles.stateActionsEnd}>
-        <button
-          type="button"
-          className={page.buttonPrimary}
-          disabled={!chosen}
-          onClick={() =>
-            chosen &&
-            preview({
-              load: () => kernel.planDrift(root, item.name, chosen.id),
-              done: (applied) =>
-                `${done[chosen.id]} · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}，可撤销`,
-            })
-          }
-        >
-          预览并应用
-        </button>
-      </div>
-    </div>
+      <Options
+        name={`drift-${item.id}`}
+        legend="处理方式"
+        options={options}
+        value={chosen?.id}
+        onChange={setPick}
+      />
+      <WriteList
+        changes={plan.data?.changes}
+        loading={plan.isLoading}
+        error={error ?? (plan.isError ? plan.error.message : null)}
+        blockedNote={plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null}
+      />
+    </DecisionCard>
   );
 }
 
 /**
- * 可更新块（6.3 检查器「可更新」、F6）：版本差异，脚本变更标红；同一版本的其他项目可勾选，
+ * 可更新的决定卡片（6.3、F6）：版本差异，脚本变更标红；同一版本的其他项目可勾选，
  * 一起加入同步计划，每个项目各留一个快照。
  */
 function UpdateBox({
@@ -752,11 +968,41 @@ function UpdateBox({
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const edit: ManifestEdit = { op: "upgrade", asset: item.name, projects: chosen };
   const total = chosen.length + 1;
+  const add = update.files.reduce((n, f) => n + f.added, 0);
+  const del = update.files.reduce((n, f) => n + f.removed, 0);
   return (
-    <div className={styles.stateBox}>
-      <h3 className={styles.stateTitle}>
-        {update.from} → {update.to}
-      </h3>
+    <DecisionCard
+      title={`有新版本 ${update.from} → ${update.to}`}
+      metric={`+${add} −${del}`}
+      tone="info"
+      foot={
+        queued ? (
+          <>
+            <span className={styles.footNote}>
+              已加入计划 · {total > 1 ? `共 ${total} 个项目` : "仅本项目"}
+            </span>
+            <button
+              type="button"
+              className={`${c.b} ${c.small}`}
+              onClick={() => unstage(root, queued)}
+            >
+              撤回
+            </button>
+          </>
+        ) : (
+          <>
+            <span className={styles.footNote}>各留快照</span>
+            <button
+              type="button"
+              className={`${c.b} ${c.primary}`}
+              onClick={() => stage(root, edit)}
+            >
+              {total > 1 ? `加入计划 · ${total} 个项目` : "加入计划"}
+            </button>
+          </>
+        )
+      }
+    >
       <ul className={styles.updateFiles}>
         {update.files.map((f) => (
           <li key={f.path} className={styles.updateFile} data-script={f.script}>
@@ -784,44 +1030,30 @@ function UpdateBox({
           </li>
         ))}
       </ul>
-      <fieldset className={styles.affected}>
-        <legend>受影响的项目 · 同一版本 {update.from}</legend>
-        <label>
-          <input type="checkbox" checked disabled />
-          <span className={styles.affectedName}>{projectName(root)}</span>
-          <span>本项目</span>
-        </label>
-        {update.others.map((p) => (
-          <label key={p.project}>
-            <input
-              type="checkbox"
-              checked={chosen.includes(p.project)}
-              disabled={queued !== undefined}
-              onChange={() => toggle(p.project)}
-            />
-            <span className={styles.affectedName}>{p.name}</span>
-            <span>{p.note}</span>
+      <span className={styles.cliHint}>完整差异：fangcun update {item.name} --dry-run</span>
+      {update.others.length > 0 && (
+        <fieldset className={styles.affected}>
+          <legend>同版本项目一起升级</legend>
+          <label>
+            <input type="checkbox" checked disabled />
+            <span className={styles.affectedName}>{projectName(root)}</span>
+            <span>本项目</span>
           </label>
-        ))}
-        <span>勾选的项目一起加入同步计划，每个项目各留一个快照。</span>
-      </fieldset>
-      {queued ? (
-        <div className={styles.queued}>
-          已加入同步计划 · {total > 1 ? `共 ${total} 个项目` : "仅本项目"}
-          <button type="button" className={styles.linkButton} onClick={() => unstage(root, queued)}>
-            撤回
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className={`${page.buttonPrimary} ${styles.startAligned}`}
-          onClick={() => stage(root, edit)}
-        >
-          {total > 1 ? `审阅后加入同步计划 · ${total} 个项目` : "审阅后加入同步计划"}
-        </button>
+          {update.others.map((p) => (
+            <label key={p.project}>
+              <input
+                type="checkbox"
+                checked={chosen.includes(p.project)}
+                disabled={queued !== undefined}
+                onChange={() => toggle(p.project)}
+              />
+              <span className={styles.affectedName}>{p.name}</span>
+              <span>{p.note}</span>
+            </label>
+          ))}
+        </fieldset>
       )}
-    </div>
+    </DecisionCard>
   );
 }
 
@@ -853,74 +1085,88 @@ function DisableBox({
   if (item.kind === "instruction") return null;
   const kind = item.kind;
   const edit = (op: SwitchOp): ManifestEdit => ({ op, kind, names: option.names });
+  const count = item.members.length || option.names.length;
   const what =
     item.kind === "mcp"
       ? "这个 MCP 服务每次会话都会启动，本项目从未调用。"
-      : option.names.length > 1 || item.members.length > 1
-        ? `${item.members.length || option.names.length} 个 skill 的名称与描述常驻上下文，本项目从未触发。`
+      : count > 1
+        ? `${count} 个 skill 常驻上下文，本项目从未触发。`
         : "它的名称与描述常驻上下文，本项目从未触发。";
-  const saving =
-    item.resident && item.resident > 0 ? ` · 预计常驻减少 ${formatK(item.resident)}` : "";
+  const saving = item.resident && item.resident > 0 ? `−${formatK(item.resident)}` : null;
 
   if (pending) {
     return (
-      <div className={styles.stateBox}>
-        <div className={styles.staged}>
-          {pending === "disable" ? `已加入同步计划${saving}` : "已加入同步计划 · 恢复后重新加载"}
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => unstage(root, edit(pending))}
-          >
-            撤回
-          </button>
-        </div>
-      </div>
+      <DecisionCard
+        title={pending === "disable" ? "已加入计划" : "已加入计划 · 恢复加载"}
+        metric={pending === "disable" ? saving : null}
+        foot={
+          <>
+            <span className={styles.footNote}>点「同步」时一起预览和应用</span>
+            <button
+              type="button"
+              className={`${c.b} ${c.small}`}
+              onClick={() => unstage(root, edit(pending))}
+            >
+              撤回
+            </button>
+          </>
+        }
+      />
     );
   }
   if (option.active) {
     return (
-      <div className={styles.stateBox}>
-        <h3 className={styles.stateTitle}>已在本项目停用</h3>
-        <p className={styles.stateText}>
-          清单的 [disable] 写了它，同步时写进 {toolName} 自己的开关，其他项目照常加载。
+      <DecisionCard
+        title="已在本项目停用"
+        foot={
+          <>
+            <span className={styles.footNote}>其他项目照常加载</span>
+            <button type="button" className={c.b} onClick={() => stage(root, edit("enable"))}>
+              在本项目恢复
+            </button>
+          </>
+        }
+      >
+        <p className={styles.cardText}>
+          写在清单 [disable]，同步时写进 {toolName} 自己的开关。
+          {option.note && ` ${option.note}`}
         </p>
-        {option.note && <span className={styles.sectionNote}>{option.note}</span>}
-        <div className={styles.stateActions}>
-          <button type="button" className={page.button} onClick={() => stage(root, edit("enable"))}>
-            在本项目恢复
-          </button>
-        </div>
-      </div>
+      </DecisionCard>
     );
   }
   return (
-    <div className={styles.stateBox}>
-      <h3 className={styles.stateTitle}>全局税：每个项目都在缴</h3>
-      <p className={styles.stateText}>{what}停用只写入本项目的 fangcun.toml，不影响其他项目。</p>
+    <DecisionCard
+      title="全局税：每个项目都在缴"
+      metric={saving && `${saving} 停用后`}
+      tone="warn"
+      foot={
+        <>
+          <span className={styles.footNote}>只写本项目的清单</span>
+          <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
+            改为套装…
+          </button>
+          <button
+            type="button"
+            className={`${c.b} ${c.primary}`}
+            disabled={option.unsupported !== null}
+            title={option.unsupported ?? "加入同步计划，点「同步」时一起预览和应用"}
+            onClick={() => stage(root, edit("disable"))}
+          >
+            在本项目停用
+          </button>
+        </>
+      }
+    >
+      <p className={styles.cardText}>{what}</p>
       {option.unsupported && <span className={styles.sectionNote}>{option.unsupported}</span>}
       {option.note && <span className={styles.sectionNote}>{option.note}</span>}
-      <div className={styles.stateActions}>
-        <button
-          type="button"
-          className={page.buttonPrimary}
-          disabled={option.unsupported !== null}
-          title={option.unsupported ?? "加入同步计划，点「同步」时一起预览和应用"}
-          onClick={() => stage(root, edit("disable"))}
-        >
-          在本项目停用
-        </button>
-        <button type="button" className={page.button} disabled title="还没开放，见 M1-19">
-          改为套装…
-        </button>
-      </div>
-    </div>
+    </DecisionCard>
   );
 }
 
 /**
- * 被覆盖的项的处理块（6.3 检查器「被覆盖」）。一律能跳到覆盖它的项；
- * 全局层那一份赢、被挡住的是下层这一份时（Claude Code 的 skill），另给两个处理全局那一份的动作，M1 开放。
+ * 被覆盖的决定卡片（6.3）。一律能跳到覆盖它的项；
+ * 全局层那一份赢、被挡住的是下层这一份时（Claude Code 的 skill），另给两个处理全局那一份的动作。
  */
 function OverriddenBox({
   item,
@@ -934,40 +1180,69 @@ function OverriddenBox({
   onPick: (id: string) => void;
 }) {
   const winLayer = winner ? SCOPE_NAMES[winner.scope] : "其他";
-  const thisOne = `${SCOPE_NAMES[item.scope]}里这份${item.version ? ` ${item.version} ` : ""}`;
   const globalWins = winner?.scope === "global" && item.scope !== "global";
-  const kind = item.kind === "skill" ? "skill" : KIND_LABEL[item.kind];
-  const text = globalWins
-    ? `全局层有同名 ${kind}。${toolName} 同名时全局优先，${thisOne}不加载，常驻成本为 0。同步不会自动移走全局那一份：其他项目也在读它。`
-    : `${winLayer}层有同名 ${kind}。${toolName} 同名时以${winLayer}层的为准，${thisOne}不加载，常驻成本为 0。`;
+  const version = item.version ? `${item.version} ` : "";
   return (
-    <div className={styles.stateBox}>
-      <p className={styles.stateText}>{text}</p>
-      <div className={styles.stateActions}>
-        {winner && (
-          <button type="button" className={page.button} onClick={() => onPick(winner.id)}>
-            查看覆盖它的项
-          </button>
-        )}
-        {globalWins &&
-          ["转成套装…", "从全局移除…"].map((a) => (
-            <button
-              key={a}
-              type="button"
-              className={page.button}
-              disabled
-              title="还没开放，见 M1-19、M1-20"
-            >
-              {a}
+    <DecisionCard
+      title={globalWins ? "被全局同名项挡住" : `被${winLayer}层同名项覆盖`}
+      metric={`${version}不加载`}
+      foot={
+        <>
+          <span className={styles.footNote}>
+            {toolName} 同名时{globalWins ? "全局" : `${winLayer}层`}优先
+            <InfoTip label="被覆盖说明" align="right">
+              {globalWins
+                ? "同步不会自动移走全局那一份：其他项目也在读它。两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。"
+                : `${winLayer}层的那一份生效，这一份常驻成本为 0。`}
+            </InfoTip>
+          </span>
+          {winner && (
+            <button type="button" className={c.b} onClick={() => onPick(winner.id)}>
+              查看覆盖项
             </button>
-          ))}
-      </div>
+          )}
+        </>
+      }
+    >
       {globalWins && (
-        <span className={styles.sectionNote}>
-          两个动作处理的是全局那一份，都先出变更计划，列出受影响的项目。还没开放。
-        </span>
+        <div className={styles.cardActions}>
+          <button type="button" className={c.b} disabled title="还没开放，见 M1-19">
+            转成套装…
+          </button>
+          <button
+            type="button"
+            className={`${c.b} ${c.danger}`}
+            disabled
+            title="界面在批 11（M1-42），命令行可用 fangcun remove --global"
+          >
+            从全局移除…
+          </button>
+        </div>
       )}
-    </div>
+    </DecisionCard>
+  );
+}
+
+/** 来源未知的决定卡片（6.3）：收编后才能追踪版本与更新，去资产库收编。 */
+function UnknownBox({ item }: { item: EffectiveItem }) {
+  return (
+    <DecisionCard
+      title="查不到来源"
+      metric="哈希不匹配任何来源"
+      foot={
+        <>
+          <span className={styles.footNote}>
+            收编后才能追踪版本与更新
+            <InfoTip label="来源未知说明" align="right">
+              在 {item.location} 发现，内容哈希与资产库里任何来源都不匹配。
+            </InfoTip>
+          </span>
+          <Link to={`/library?asset=${encodeURIComponent(item.name)}`} className={c.b}>
+            去收编
+          </Link>
+        </>
+      }
+    />
   );
 }
 
@@ -1149,29 +1424,42 @@ function UnregisteredInspector({
           v: `${formatK(total)} tokens（估算）${onlyGlobal ? "· 全部来自全局层" : ""}`,
         },
       ]}
+      intro="近 30 天的会话记录里出现过这个目录，但它还没登记。方寸只读显示它实际加载了什么，不写入。"
+      decision={
+        <DecisionCard
+          title="登记后才能管理"
+          foot={
+            <>
+              <span className={styles.footNote}>
+                从现状生成 fangcun.toml 与 .lock
+                <InfoTip label="登记说明" align="right">
+                  从目录现状反推清单。查不出来源的项不进清单，留在原处照常生效。先问一次物化方式，再出变更计划。命令行：fangcun
+                  init --from-existing
+                </InfoTip>
+              </span>
+              <button
+                type="button"
+                className={`${c.b} ${c.primary}`}
+                onClick={() => openRegister(root)}
+              >
+                登记…
+              </button>
+            </>
+          }
+        />
+      }
       onClose={onClose}
-    >
-      <Section title="为什么是这个状态">
-        <p className={page.why}>
-          近 30 天的会话记录里出现过这个目录，但它还没登记。{"\n"}
-          方寸只读显示它实际加载了什么，不写入。登记后才能同步、停用、升级。
-        </p>
-      </Section>
-      <Section title="登记">
-        <p className={styles.sectionNote}>
-          从目录现状反推清单，生成 fangcun.toml 与
-          fangcun.lock。查不出来源的项不进清单，留在原处照常生效。先问一次物化方式，再出变更计划。
-        </p>
-        <div>
-          <button type="button" className={page.buttonPrimary} onClick={() => openRegister(root)}>
-            登记…
-          </button>
-        </div>
-        <CommandHint command="fangcun init --from-existing" />
-      </Section>
-    </Inspector>
+    ></Inspector>
   );
 }
+
+/** 要处理的状态文字加粗（6.3、6.10）。 */
+const STRONG: Partial<Record<NonNullable<EffectiveItem["state"]>, true>> = {
+  drifted: true,
+  updatable: true,
+  "script-changed": true,
+  "unknown-source": true,
+};
 
 const PENDING: Partial<Record<NonNullable<EffectiveItem["state"]>, true>> = {
   drifted: true,
@@ -1190,12 +1478,16 @@ function RegisteredInspector({
   root,
   context,
   summary,
+  staged,
+  onSync,
   onPick,
   onClose,
 }: {
   root: string;
   context: EffectiveContext;
   summary: ProjectSummary | undefined;
+  staged: ManifestEdit[];
+  onSync: () => void;
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
@@ -1219,6 +1511,27 @@ function RegisteredInspector({
       kind="项目"
       name={context.projectName}
       status={status}
+      decision={
+        staged.length > 0 && (
+          <DecisionCard
+            title={`待同步 ${staged.length} 处改动`}
+            foot={
+              <>
+                <span className={styles.footNote}>未写入磁盘</span>
+                <button type="button" className={`${c.b} ${c.primary}`} onClick={onSync}>
+                  预览
+                </button>
+              </>
+            }
+          >
+            <ul className={styles.causes}>
+              {staged.map((e) => (
+                <li key={causeOf(e, context.items)}>{causeOf(e, context.items)}</li>
+              ))}
+            </ul>
+          </DecisionCard>
+        )
+      }
       fields={[
         { k: "路径", v: context.projectPath, mono: true },
         {
@@ -1242,7 +1555,7 @@ function RegisteredInspector({
       ]}
       onClose={onClose}
     >
-      <Section title="待处理">
+      <Section title={`待处理 ${pending.length}`}>
         {pending.length === 0 ? (
           <p className={styles.pendingNone}>没有待处理的项</p>
         ) : (
@@ -1281,10 +1594,21 @@ function when(iso: string): string {
   return `${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
 
-/** 历史页签：这个项目的快照，最新的是当前磁盘状态，别的能「回滚到此」（6.3、M1-14）。 */
+/**
+ * 历史页签：这个项目的快照，最新的是当前磁盘状态（6.3、M1-14）。
+ * 「回滚到此…」在这一条下面展开「回滚到 #N：会写入 N 处」，确认后才写。
+ */
 function HistoryTab({ root }: { root: string }) {
   const history = useHistory(root, true);
-  const preview = usePlan((s) => s.preview);
+  const client = useQueryClient();
+  const [open, setOpen] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const plan = useQuery({
+    queryKey: ["rollback-plan", root, open],
+    queryFn: () => kernel.planRollback(root, open ?? 0),
+    enabled: open !== null,
+  });
   if (history.isError) return <p className={page.error}>{history.error.message}</p>;
   if (!history.data) return <p className={page.empty}>正在读取历史…</p>;
   if (history.data.length === 0)
@@ -1293,30 +1617,78 @@ function HistoryTab({ root }: { root: string }) {
         <p>还没有快照。同步、收编、升级都会留快照，之后在这里一键回滚。</p>
       </div>
     );
+  const rollback = async (snapshot: number) => {
+    if (!plan.data || plan.data.blocked) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await applyInline(
+        plan.data,
+        () => `已回滚到 #${snapshot} · 磁盘状态逐字节一致`,
+        () => client.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "tools" }),
+      );
+      setOpen(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <ol className={styles.history}>
       {history.data.map((h) => (
-        <li key={h.record} className={styles.historyRow}>
-          <span className={styles.historyId}>#{h.snapshot}</span>
-          <span className={styles.historyTitle}>
-            <span className={styles.historyName}>{h.title}</span>
-            <span className={styles.historyWhen}> · {when(h.at)}</span>
-          </span>
-          {h.current ? (
-            <span className={styles.historyCurrent}>当前磁盘状态</span>
-          ) : (
-            <button
-              type="button"
-              className={styles.historyButton}
-              onClick={() =>
-                preview({
-                  load: () => kernel.planRollback(root, h.snapshot),
-                  done: () => `已回滚到快照 #${h.snapshot}，磁盘状态逐字节一致`,
-                })
+        <li key={h.record} className={styles.historyItem}>
+          <div className={styles.historyRow}>
+            <span className={styles.historyId}>#{h.snapshot}</span>
+            <span className={styles.historyTitle}>
+              <span className={styles.historyName}>{h.title}</span>
+              <span className={styles.historyWhen}> · {when(h.at)}</span>
+            </span>
+            {h.current ? (
+              <span className={styles.historyCurrent}>当前磁盘状态</span>
+            ) : (
+              <button
+                type="button"
+                className={`${c.b} ${c.small}`}
+                aria-expanded={open === h.snapshot}
+                onClick={() => {
+                  setError(null);
+                  setOpen(open === h.snapshot ? null : h.snapshot);
+                }}
+              >
+                回滚到此…
+              </button>
+            )}
+          </div>
+          {open === h.snapshot && (
+            <DecisionCard
+              title={`回滚到 #${h.snapshot}：会写入 ${plan.data?.changes.length ?? "…"} 处`}
+              foot={
+                <>
+                  <span className={styles.footNote}>回滚本身也留快照，可以再撤销</span>
+                  <button type="button" className={c.b} onClick={() => setOpen(null)}>
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className={`${c.b} ${c.primary}`}
+                    disabled={!plan.data || plan.data.blocked || busy}
+                    onClick={() => void rollback(h.snapshot)}
+                  >
+                    {busy ? "正在回滚…" : "回滚"}
+                  </button>
+                </>
               }
             >
-              回滚到此
-            </button>
+              <WriteList
+                changes={plan.data?.changes}
+                loading={plan.isLoading}
+                error={error ?? (plan.isError ? plan.error.message : null)}
+                blockedNote={
+                  plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null
+                }
+              />
+            </DecisionCard>
           )}
         </li>
       ))}

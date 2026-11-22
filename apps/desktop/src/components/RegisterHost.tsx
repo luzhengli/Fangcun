@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import type { SyncMode } from "@/ipc/bindings/SyncMode";
 import { kernel } from "@/ipc/commands";
 import { projectPath } from "@/shell/nav";
-import { usePlan } from "@/state/plan";
+import { applyInline } from "@/state/plan";
 import { useRegister } from "@/state/register";
+import c from "./controls.module.css";
+import { WriteList } from "./DecisionCard";
 import styles from "./PlanHost.module.css";
 
 const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
@@ -22,8 +24,8 @@ const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
 ];
 
 /**
- * 登记弹窗（Main.dc.html「登记：先问物化方式」）：按提交者人数标「建议」，
- * 选完出登记的变更计划；计划里「上一步」回到这里。
+ * 登记面板（6.3「登记」，方寸 2）：先选物化方式，按提交者人数标「推荐」；
+ * 下面「会写入」逐条列文件，随所选方式变；点「登记」就写，提示条给撤销。
  */
 export function RegisterHost() {
   const root = useRegister((s) => s.root);
@@ -33,34 +35,51 @@ export function RegisterHost() {
 
 function RegisterDialog({ root }: { root: string }) {
   const close = useRegister((s) => s.close);
-  const reopen = useRegister((s) => s.open);
-  const preview = usePlan((s) => s.preview);
   const navigate = useNavigate();
+  const client = useQueryClient();
   const suggestion = useQuery({
     queryKey: ["suggest-mode", root],
     queryFn: () => kernel.suggestMode(root),
   });
   const [mode, setMode] = useState<SyncMode | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const picked = mode ?? suggestion.data?.mode ?? "link";
+  const plan = useQuery({
+    queryKey: ["init-plan", root, picked],
+    queryFn: () => kernel.planInit(root, picked),
+    enabled: suggestion.isSuccess || mode !== null,
+  });
   const name = root.split("/").filter(Boolean).pop() ?? root;
   const committers = suggestion.data?.committers ?? 0;
-
+  const recommended = suggestion.data?.mode;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [close]);
-
-  const next = () => {
-    close();
-    void preview({
-      load: () => kernel.planInit(root, picked),
-      done: (applied) =>
-        `已登记 ${name}，生成清单与锁 · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
-      back: () => reopen(root),
-      after: () => navigate(projectPath(root)),
-    });
+  const register = async () => {
+    if (!plan.data || plan.data.blocked) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await applyInline(
+        plan.data,
+        (applied) => `已登记 ${name} · 快照 ${applied.snapshots.map((s) => `#${s}`).join("、")}`,
+        () => client.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "tools" }),
+      );
+      close();
+      navigate(projectPath(root));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
   };
+  const basis = suggestion.isPending
+    ? "正在看 git 历史…"
+    : committers === 0
+      ? "不是 git 仓库，建议「链接」。"
+      : `提交者 ${committers} 位，建议「${committers >= 2 ? "入库" : "链接"}」。`;
 
   return (
     <div className={styles.veil}>
@@ -74,9 +93,7 @@ function RegisterDialog({ root }: { root: string }) {
           <h2 id="reg-title" className={styles.title}>
             登记 {name}
           </h2>
-          <p className={styles.sub}>
-            选一种物化方式，写进清单的 mode。只问这一次，以后在清单里改。
-          </p>
+          <p className={styles.sub}>先选物化方式。{basis}</p>
         </div>
         <fieldset className={styles.options}>
           <legend className={styles.srOnly}>物化方式</legend>
@@ -91,30 +108,32 @@ function RegisterDialog({ root }: { root: string }) {
               <span className={styles.optionText}>
                 <span className={styles.optionTitle}>
                   {o.title}
-                  {suggestion.data?.mode === o.mode && <span className={styles.badge}>建议</span>}
+                  {recommended === o.mode && <span className={c.tag}>推荐</span>}
                 </span>
                 <span className={styles.optionDesc}>{o.desc}</span>
               </span>
             </label>
           ))}
-          <span className={styles.basis}>
-            {suggestion.isPending
-              ? "正在看 git 历史…"
-              : committers === 0
-                ? "不是 git 仓库，按个人项目建议链接。两位及以上提交者时建议入库。"
-                : `建议的依据：git 历史里有 ${committers} 位提交者（不算 [bot]），${
-                    committers >= 2
-                      ? "按多人协作建议入库"
-                      : "按个人项目建议链接。两位及以上时建议入库"
-                  }。`}
-          </span>
         </fieldset>
-        <div className={`${styles.foot} ${styles.footEnd}`}>
-          <button type="button" className={styles.cancel} onClick={close}>
+        <div className={styles.regWrites}>
+          <WriteList
+            changes={plan.data?.changes}
+            loading={plan.isLoading}
+            error={error ?? (plan.isError ? plan.error.message : null)}
+          />
+        </div>
+        <div className={styles.foot}>
+          <span className={styles.footNote}>不会触碰其他任何文件。</span>
+          <button type="button" className={c.b} onClick={close}>
             取消
           </button>
-          <button type="button" className={styles.apply} onClick={next}>
-            预览变更
+          <button
+            type="button"
+            className={`${c.b} ${c.primary}`}
+            disabled={!plan.data || plan.data.blocked || busy}
+            onClick={() => void register()}
+          >
+            {busy ? "正在登记…" : "登记"}
           </button>
         </div>
       </div>

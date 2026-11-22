@@ -6,7 +6,9 @@
  */
 import { create } from "zustand";
 import type { Applied } from "@/ipc/bindings/Applied";
+import type { Change } from "@/ipc/bindings/Change";
 import type { ChangePlan } from "@/ipc/bindings/ChangePlan";
+import { kernel } from "@/ipc/commands";
 
 export interface PlanRequest {
   /** 向内核要计划。 */
@@ -19,6 +21,14 @@ export interface PlanRequest {
   after?: (applied: Applied) => void;
   /** 有上一步时（登记先选物化方式），弹窗里的「取消」换成「上一步」。 */
   back?: () => void;
+  /** 标题与副标题，不给就用内核的标题和通用副标题。 */
+  title?: (plan: ChangePlan) => string;
+  sub?: (plan: ChangePlan) => string;
+  /**
+   * 同步计划按原因分组（6.8）：给每一行一个原因。`load` 跑完后才能算，所以是在 `load` 里填好的函数。
+   * 每组可「移出计划」，`removeGroup` 把这个原因对应的暂存撤掉，再重新出计划。
+   */
+  group?: { of: (change: Change) => string; remove?: (cause: string) => void };
 }
 
 interface PlanState {
@@ -57,3 +67,18 @@ export const usePlan = create<PlanState>((set, get) => ({
   setError: (error) => set({ error, applying: false }),
   showToast: (toast) => set({ toast }),
 }));
+
+/**
+ * 决定卡片里直接应用计划（6.1「决定卡片」）：计划已经在卡片里列出「会写入 · N 处」，点按钮就写，
+ * 不再弹面板。应用后让查询重取，出带「撤销」的提示条。返回应用结果，卡片原地显示完成状态。
+ */
+export async function applyInline(
+  plan: ChangePlan,
+  done: (applied: Applied) => string,
+  refresh: () => Promise<unknown>,
+): Promise<Applied> {
+  const applied = await kernel.applyPlan(plan);
+  await refresh();
+  usePlan.getState().showToast({ text: done(applied), record: applied.record });
+  return applied;
+}

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import styles from "./components.module.css";
 import { StatusBadge } from "./StatusDot";
 import { TONE_COLORS, type Tone } from "./tone";
@@ -17,16 +17,27 @@ interface Props {
   name: string;
   status?: { tone: Tone; label: string };
   intro?: ReactNode;
+  /** 决定卡片（6.1）：排在「为什么」之后、字段表之前，只在要人决定时给。 */
+  decision?: ReactNode;
   fields?: Field[];
   onClose: () => void;
   children?: ReactNode;
 }
 
 /**
- * 检查器统一结构（6.1）：类型小标签、名称、状态徽标、一句说明、字段表、若干分区、操作。
- * 右上角 × 关闭。项目页、体检报告、全局、活动共用。
+ * 检查器统一结构（6.1）：类型小标签、名称、状态徽标、一句「为什么」、决定卡片、字段表、若干分区。
+ * 右上角 × 只关面板。项目页、体检报告、全局、活动共用。
  */
-export function Inspector({ kind, name, status, intro, fields, onClose, children }: Props) {
+export function Inspector({
+  kind,
+  name,
+  status,
+  intro,
+  decision,
+  fields,
+  onClose,
+  children,
+}: Props) {
   return (
     <aside aria-label="检查器" className={styles.inspector}>
       <div className={styles.inspectorHead}>
@@ -53,8 +64,9 @@ export function Inspector({ kind, name, status, intro, fields, onClose, children
         <span className={styles.kind}>{kind}</span>
         <h2 className={styles.inspectorName}>{name}</h2>
         {status && <StatusBadge tone={status.tone} label={status.label} />}
-        {intro && <p className={styles.intro}>{intro}</p>}
+        {intro && <div className={styles.intro}>{intro}</div>}
       </div>
+      {decision}
       {fields && fields.length > 0 && (
         <dl className={styles.fields}>
           {fields.map((f) => (
@@ -79,34 +91,58 @@ function FieldRow({ field }: { field: Field }) {
   );
 }
 
-/** 检查器里的一个分区。标题统一 11px 灰色小字。 */
+/** 检查器里的一个分区。标题统一 11px 灰色小字，点标题折叠（6.1）。 */
 export function Section({
   title,
   aside,
+  collapsible = true,
   children,
 }: {
   title: string;
   aside?: ReactNode;
+  collapsible?: boolean;
   children: ReactNode;
 }) {
+  const [open, setOpen] = useState(true);
   return (
     <section aria-label={title} className={styles.section}>
       <div className={styles.sectionHead}>
-        <h3>{title}</h3>
+        {collapsible ? (
+          <button
+            type="button"
+            className={styles.sectionToggle}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            <svg
+              width="9"
+              height="9"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className={styles.chev}
+            >
+              <path d="M6 3.5 10.5 8 6 12.5" />
+            </svg>
+            <h3>{title}</h3>
+          </button>
+        ) : (
+          <h3>{title}</h3>
+        )}
         {aside}
       </div>
-      {children}
+      {open && children}
     </section>
   );
 }
 
-/** 「命令行同款」那一行。 */
+/** 命令行的对应写法，例如「$ fangcun why tdd」（6.1 检查器第 2 条）。 */
 export function CommandHint({ command }: { command: string }) {
-  return (
-    <span className={styles.hint}>
-      命令行同款：<span className={styles.mono}>{command}</span>
-    </span>
-  );
+  return <span className={styles.command}>$ {command}</span>;
 }
 
 /** 还没接上内核用例的写入动作：按钮置灰，旁边说明。 */

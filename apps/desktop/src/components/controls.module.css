@@ -156,7 +156,8 @@
   background: var(--fill-1);
 }
 
-.seg > button[aria-pressed="true"] {
+.seg > button[aria-pressed="true"],
+.seg > button[aria-selected="true"] {
   background: var(--raised);
   color: var(--tx-1);
   box-shadow: var(--shadow-1);

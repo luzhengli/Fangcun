@@ -124,6 +124,8 @@ src/
 - **两种状态分开放。** 内核的数据走 TanStack Query，键集中在 `ipc/queries.ts`。只属于窗口的状态（侧栏折叠、待应用的同步计划）放 `state/`。
 - **样式用 CSS Modules 加 token。** 不引入第二套设计系统。原型是行内样式，实现时改写成模块样式，尺寸照抄。
 - **工具栏与页面标题**（方寸 2，批 8）：工具栏由外壳画（`shell/Toolbar.tsx`），页面不要自己画页头，用 `<PageToolbar title subtitle mono tag crumb>` 放标题，子元素放进右侧控件区。项目页选中一项时传 `crumb`，标题变面包屑。控件样式从 `components/controls.module.css` 取（`c.b`、`c.primary`、`c.quiet`、`c.danger`、`c.small`、`c.icon`、`c.seg`、`c.kbd`、`c.tag`），说明文字用 `InfoTip`，目标工具用 `ToolPicker`。
+- **决定卡片**（批 9）：`components/DecisionCard.tsx` 的 `DecisionCard`（标题、量化、正文、底部一行）、`Options`（单选，推荐项排第一）、`WriteList`（「会写入 · N 处」）、`Done`（完成和撤销）。卡片要用的计划用 `useQuery` 向内核要，点按钮用 `state/plan.ts` 的 `applyInline` 写，它会重取查询、出带撤销的提示条。放进 `Inspector` 的 `decision`，排在「为什么」之后、字段表之前。检查器是纵向 flex 容器，卡片和其他带 `overflow: hidden` 的块要 `flex: none`，否则会被压到 0 高（截图看不见、`innerText` 却有字）。
+- **同步计划分组**：`PlanRequest.group` 给每一行一个原因，可「移出计划」；`title`、`sub` 覆盖面板标题。项目页的分法见 `ProjectView.openSync`。
 - **侧栏**：`useSidebar()` 返回 `shown`、`peek`、`toggle`、`close`。宽窗口里开关把侧栏整个藏起（`ui.sidebarCollapsed`）；窄于 960px 时侧栏默认收起，开关让它浮出（`ui.sidebarPeek`），点外面、Esc、点导航项都收起。
 - **token 的旧名字**：2026-11-22 原型换成方寸 2 的 token（`--win`、`--side`、`--insp`、`--raised`、`--fill-1…3`、`--k1…3` 等）。`tokens.css` 末尾有一段旧名字别名（`--bg`、`--bg-sidebar`、`--line-strong` 等指到新 token），只给还没重做的界面用。新代码只用新名字；某个页面按方寸 2 重做完，就把它用到的旧名字换掉，全部换完删掉别名段。
 - **页面自己摆「列表 + 检查器」。** 骨架只管工具栏和侧栏，因为套装页的左栏和别的页不一样。
