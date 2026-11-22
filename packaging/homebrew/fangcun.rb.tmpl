@@ -1,0 +1,20 @@
+# 由 Fangcun 仓库的 .github/workflows/tap.yml 按模板 packaging/homebrew/fangcun.rb.tmpl 生成，不要手改。
+class Fangcun < Formula
+  desc "Agent 上下文的包管理器与环境管理器（命令行）"
+  homepage "https://github.com/luzhengli/Fangcun"
+  url "https://github.com/luzhengli/Fangcun/archive/refs/tags/v{{VERSION}}.tar.gz"
+  sha256 "{{SOURCE_SHA256}}"
+  license any_of: ["MIT", "Apache-2.0"]
+  head "https://github.com/luzhengli/Fangcun.git", branch: "main"
+
+  depends_on "rust" => :build
+  depends_on :macos
+
+  def install
+    system "cargo", "install", *std_cargo_args(path: "crates/fangcun-cli")
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/fangcun --version")
+  end
+end
