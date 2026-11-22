@@ -281,3 +281,50 @@ fieldset.segmented {
   border: 0;
   min-width: 0;
 }
+
+/* 分区标题可点，折叠或展开（6.1）。 */
+.sectionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 0 -2px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tx-3);
+  cursor: default;
+}
+
+.sectionToggle:hover {
+  color: var(--tx-1);
+}
+
+.chev {
+  transition: transform 150ms var(--ease);
+}
+
+.sectionToggle[aria-expanded="true"] .chev {
+  transform: rotate(90deg);
+}
+
+.command {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-top: 4px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--fill-1);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-2);
+  user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chev {
+    transition: none;
+  }
+}

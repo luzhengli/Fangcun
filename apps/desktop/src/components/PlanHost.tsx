@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import type { Change } from "@/ipc/bindings/Change";
 import type { ChangeOp } from "@/ipc/bindings/ChangeOp";
 import type { NoteTone } from "@/ipc/bindings/NoteTone";
 import { kernel } from "@/ipc/commands";
 import { usePlan } from "@/state/plan";
+import c from "./controls.module.css";
 import styles from "./PlanHost.module.css";
 
 const OP: Record<ChangeOp, string> = { add: "+", modify: "~", remove: "−" };
@@ -71,9 +73,17 @@ export function PlanHost() {
           >
             <div className={styles.head}>
               <h2 id="plan-title" className={styles.title}>
-                {plan?.title ?? (loading ? "正在生成变更计划…" : "变更计划")}
+                {plan
+                  ? (request.title?.(plan) ?? plan.title)
+                  : loading
+                    ? "正在生成变更计划…"
+                    : "变更计划"}
               </h2>
-              <p className={styles.sub}>预览先于写入。应用前自动快照，可在「历史」一键回滚。</p>
+              <p className={styles.sub}>
+                {plan && request.sub
+                  ? request.sub(plan)
+                  : "预览先于写入。应用前自动快照，可在「历史」一键回滚。"}
+              </p>
             </div>
             {plan && plan.notes.length > 0 && (
               <ul className={styles.notes}>
@@ -85,29 +95,50 @@ export function PlanHost() {
               </ul>
             )}
             {plan && plan.changes.length > 0 && (
-              <ul className={styles.changes}>
-                {plan.changes.map((c) => (
-                  <li key={`${c.op}:${c.path}`}>
-                    <span className={styles.op} data-op={c.op}>
-                      {OP[c.op]}
-                    </span>
-                    <span className={styles.path}>{c.path}</span>
-                    <span className={styles.detail}>{c.detail}</span>
-                  </li>
+              <div className={styles.groups}>
+                {groupChanges(plan.changes, request.group?.of).map((g) => (
+                  <section key={g.cause ?? ""} aria-label={g.cause ?? "变更"}>
+                    {g.cause && (
+                      <div className={styles.groupHead}>
+                        <span className={styles.groupCause}>{g.cause}</span>
+                        <span className={styles.groupCount}>{g.changes.length} 处</span>
+                        {request.group?.remove && (
+                          <button
+                            type="button"
+                            className={`${c.b} ${c.quiet} ${c.small}`}
+                            onClick={() => request.group?.remove?.(g.cause ?? "")}
+                          >
+                            移出计划
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <ul className={styles.changes}>
+                      {g.changes.map((ch) => (
+                        <li key={`${ch.op}:${ch.path}`}>
+                          <span className={styles.op} data-op={ch.op}>
+                            {OP[ch.op]}
+                          </span>
+                          <span className={styles.path}>{ch.path}</span>
+                          <span className={styles.detail}>{ch.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ))}
-              </ul>
+              </div>
             )}
             {plan && plan.changes.length === 0 && (
-              <p className={styles.empty}>没有要写的文件，磁盘已和清单与锁一致。</p>
+              <p className={styles.empty}>磁盘已经和清单一致，没有要写的。</p>
             )}
             {error && <p className={styles.error}>{error}</p>}
             <div className={styles.foot}>
               <span className={styles.footNote}>
-                {plan?.blocked ? "有冲突，不能应用。原因见上方提示。" : "不会触碰其他任何文件。"}
+                {plan?.blocked ? "有冲突，不能应用。原因见上方提示。" : "不碰其他文件"}
               </span>
               <button
                 type="button"
-                className={styles.cancel}
+                className={c.b}
                 onClick={() => {
                   close();
                   request.back?.();
@@ -117,12 +148,12 @@ export function PlanHost() {
               </button>
               <button
                 type="button"
-                className={styles.apply}
+                className={`${c.b} ${c.primary}`}
                 disabled={!plan || plan.blocked || plan.changes.length === 0 || applying}
                 onClick={() => void apply()}
               >
                 {applying ? "正在应用…" : "应用"}
-                <span className={styles.kbd}>⌘↩</span>
+                <span className={c.kbd}>⌘↩</span>
               </button>
             </div>
           </div>
@@ -157,4 +188,18 @@ export function PlanHost() {
       )}
     </>
   );
+}
+
+/** 按原因分组，保持原因第一次出现的顺序。没给分组函数时整份一组、不写标题。 */
+function groupChanges(
+  changes: Change[],
+  of: ((change: Change) => string) | undefined,
+): { cause: string | null; changes: Change[] }[] {
+  if (!of) return [{ cause: null, changes }];
+  const groups = new Map<string, Change[]>();
+  for (const ch of changes) {
+    const cause = of(ch);
+    groups.set(cause, [...(groups.get(cause) ?? []), ch]);
+  }
+  return [...groups].map(([cause, list]) => ({ cause, changes: list }));
 }

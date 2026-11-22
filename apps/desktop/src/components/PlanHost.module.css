@@ -325,3 +325,33 @@
 .narrow {
   max-width: 520px;
 }
+
+/* 同步计划按原因分组（6.8）。 */
+.groups {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px 2px;
+}
+
+.groupCause {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.groupCount {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--tx-3);
+}
+
+.regWrites {
+  padding: 4px 20px 14px;
+}

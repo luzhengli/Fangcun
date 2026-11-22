@@ -12,7 +12,7 @@
 export const SCENES = {
   "Main@codex": {
     board: "Main",
-    steps: [{ click: "Codex" }],
+    steps: [{ click: "目标工具 · Claude Code" }, { click: "Codex" }],
   },
   "Main@frontend-design": {
     board: "Main",
@@ -27,23 +27,14 @@ export const SCENES = {
     steps: [{ click: "luyao-skills" }, { click: "登记…" }],
     focus: '[role="dialog"]',
   },
-  "Main@register-plan": {
-    board: "Main",
-    steps: [{ click: "luyao-skills" }, { click: "登记…" }, { click: "预览变更" }],
-    focus: '[role="dialog"]',
-  },
   "Main@registered": {
     board: "Main",
-    steps: [
-      { click: "luyao-skills" },
-      { click: "登记…" },
-      { click: "预览变更" },
-      { click: "应用" },
-    ],
+    steps: [{ click: "luyao-skills" }, { click: "登记…" }, { click: "登记" }],
   },
+  // 方寸 2：同步计划只装排进来的改动，按原因分组（6.8）。先停用全局税，再点同步。
   "Main@sync-plan": {
     board: "Main",
-    steps: [{ click: "同步" }],
+    steps: [{ click: "lark-doc" }, { click: "在本项目停用" }, { click: "同步" }],
     focus: '[role="dialog"]',
   },
   "Main@history": {
@@ -89,7 +80,8 @@ export async function runStep(page, step) {
   if (step.click === undefined) return `不认识的步骤：${JSON.stringify(step)}`;
   const ok = await page.evaluate(
     ({ text, nth }) => {
-      const pick = 'button, a, [role="tab"], [role="switch"], [role="menuitem"], label';
+      const pick =
+        'button, a, [role="tab"], [role="switch"], [role="menuitem"], [role="menuitemradio"], label';
       const visible = (el) => {
         const r = el.getBoundingClientRect();
         return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden";
