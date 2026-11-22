@@ -271,6 +271,7 @@ MVP 的范围是六项能力。每项都直接对应第 2 节的痛点。
 fangcun doctor                # 只读体检
 fangcun init --from-existing  # 登记项目，从目录现状反推清单与锁
 fangcun status                # 当前项目的同步状态与漂移
+fangcun drift [资产] [promote|discard|fork]  # 漂移：不写资产列出全部，只写资产看差异，写动作出计划（回流 / 丢弃 / 分叉）
 fangcun add <资产>             # 加入清单，同一份计划里更新锁并同步。<资产> 写 <来源>@<名字> 或资产库里的名字，都不是时搜 skills.sh
 fangcun remove <资产>… --global  # 从全局层移除，只对已收编的。--tool 指定工具，名字可带 *
 fangcun adopt <资产>           # 收编进资产库
@@ -1185,6 +1186,7 @@ git-commit = { source = "local:luyao-skills", pin = "0d81aa3" }
 | 包标识与显示名（2026-11-22，D-16） | 包标识 `io.github.luzhengli.fangcun`（GitHub 账号倒写，不需要域名）。Dock、菜单栏、访达里显示「方寸」，`.app` 文件名 `Fangcun.app`，命令行 `fangcun`。包标识只管系统权限记录、界面缓存与卸载清理的目录；`~/.fangcun` 与钥匙串服务名 `fangcun` 不随它变 |
 | Homebrew tap 放哪（2026-11-22，R-03） | 单独的公开仓库 `luzhengli/homebrew-fangcun`，用户 `brew install luzhengli/fangcun/fangcun`（命令行）、`brew install --cask luzhengli/fangcun/fangcun`（桌面应用）。发版流水线用只对 tap 仓库有写权限的 token 推更新 |
 | v0.1 全局页里「只有一两个项目用到」的项（2026-11-22，M1-35） | 套装在 v0.1 隐藏，这类项的标签改为「少数在用」（蓝），决定卡片只写事实：「只有 client-acme 用到，其余 5 个项目每个多付 6.4k 常驻（估算）」，不给按钮、不提以后的版本。v0.2 放出套装时改回「建议转套装」和「转成套装…」（6.6） |
+| 命令行怎么处理漂移（2026-11-22，M1-23） | `fangcun drift [资产] [promote\|discard\|fork]`：不写资产时列出当前项目的全部漂移，只写资产时看这一项的差异和三个动作的命令，写了动作时出计划。活动页里漂移的记录附这条命令（6.7） |
 
 **M1 开工前的四件（M1-pre-05 至 08）**，2026-11-19 人都选了推荐项。
 

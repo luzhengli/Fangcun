@@ -36,6 +36,14 @@ pub enum Command {
 
     /// 当前项目的同步状态与漂移
     Status,
+    /// 当前项目的漂移：不写资产时列出全部；写了资产、不写动作时看差异；写了动作时出计划（F4、6.9）
+    Drift {
+        /// 资产
+        asset: Option<String>,
+        /// 回流 / 丢弃 / 分叉
+        #[arg(value_enum, requires = "asset")]
+        action: Option<DriftAction>,
+    },
 
     /// 加入清单
     Add {
@@ -120,6 +128,17 @@ pub enum Command {
     },
 }
 
+/// `fangcun drift` 的三个动作，顺序固定：回流、丢弃、分叉。
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum DriftAction {
+    /// 回流到来源（只对本地来源，9.3）
+    Promote,
+    /// 丢弃修改，恢复锁里的版本
+    Discard,
+    /// 分叉为项目专属，清单和锁里去掉这一项
+    Fork,
+}
+
 /// `fangcun secret` 的三个动作。
 #[derive(Debug, Subcommand)]
 pub enum SecretAction {
@@ -154,7 +173,7 @@ mod tests {
         Cli::command().debug_assert();
     }
 
-    /// 设计文档第 5 节列出的十三个命令，顺序一致；另加 `remove`（批 6，Agent 定，待写进第 5 节）。
+    /// 设计文档第 5 节「配套：命令行」列出的命令，顺序一致。
     #[test]
     fn subcommands_match_the_design_doc() {
         let names: Vec<String> = Cli::command()
@@ -164,8 +183,8 @@ mod tests {
         assert_eq!(
             names,
             [
-                "doctor", "init", "status", "add", "adopt", "remove", "lock", "export", "sync",
-                "update", "rollback", "log", "why", "secret"
+                "doctor", "init", "status", "drift", "add", "adopt", "remove", "lock", "export",
+                "sync", "update", "rollback", "log", "why", "secret"
             ]
         );
     }
@@ -176,6 +195,11 @@ mod tests {
             "fangcun doctor",
             "fangcun init --from-existing",
             "fangcun status",
+            "fangcun drift",
+            "fangcun drift project-harness",
+            "fangcun drift project-harness promote",
+            "fangcun drift project-harness discard",
+            "fangcun drift project-harness fork",
             "fangcun add tdd",
             "fangcun adopt project-harness",
             "fangcun remove lark-* --global",
