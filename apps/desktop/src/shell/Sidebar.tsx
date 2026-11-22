@@ -33,6 +33,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const openRegister = useRegister((s) => s.open);
   const onProject = useMatch("/projects/:projectId") !== null;
+  const onCheckup = useMatch("/checkup") !== null;
   const registered = projects.data?.filter((p) => p.registered) ?? [];
   const recent = projects.data?.filter((p) => !p.registered) ?? [];
   const addProject = async () => {
@@ -140,6 +141,7 @@ export function Sidebar() {
           <button
             type="button"
             className={styles.nav}
+            aria-current={onCheckup ? "page" : undefined}
             disabled={rescan.isPending}
             onClick={() => {
               sidebar.close();

@@ -24,6 +24,8 @@ function E(
     summary: string;
     changes: [string, string, string][];
     cli: string;
+    /** 待处理记录指向的资产（6.7「去处理」「查看差异」的深链）。 */
+    subject?: { asset: string; version: string | null };
   },
 ): ActivityRecord {
   const [command, ...output] = x.cli.replace(/^\$ /, "").split("\n");
@@ -52,6 +54,7 @@ function E(
             },
           ],
     reverts: null,
+    subject: x.subject ?? null,
     status: x.status,
     summary: x.summary,
     files: x.changes.map(([op, path, note]) => ({ op: OP[op] ?? "read", path, note })),
@@ -64,6 +67,7 @@ export const activity: ActivityRecord[] = [
   E("drift1", "11-13", "11:37", "drift", ["evals_studio"], "project-harness 的副本被修改", {
     status: "pending",
     trigger: "watcher",
+    subject: { asset: "project-harness", version: null },
     summary:
       "Agent 在工作时改进了项目里的 skill 副本。改动还留在副本里，等你决定回流、丢弃或分叉。",
     changes: [
@@ -81,6 +85,7 @@ export const activity: ActivityRecord[] = [
     {
       status: "pending",
       trigger: "upstream-check",
+      subject: { asset: "tdd", version: "b7e9f0" },
       summary: "跟随 main 的 tdd 有新版本。差异里新增了一个脚本，需要你确认后才会更新。",
       changes: [
         ["~", "SKILL.md", "+8 −2 行"],

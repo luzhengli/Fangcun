@@ -86,6 +86,10 @@ pub struct Finding {
     /// 已处理时，处理它的那条活动记录（M1-28）。界面的「撤销」凭它出回滚计划
     /// （`Kernel::plan_rollback_record`）；回滚之后这一条回到待处理。
     pub record: Option<String>,
+    /// 量化卡片上的大数字（6.2），例如「5 份 → 1 份」「每个项目 −6.4k」。
+    pub metric: Option<String>,
+    /// 量化卡片上大数字下面的短说明，例如「重复副本」「每个项目都在缴」。
+    pub metric_note: Option<String>,
 }
 
 /// 页头的「处理进度 N / 总数」（6.2、M1-28）。「尚未扫描」的不算在总数里。
@@ -315,6 +319,8 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
         findings.push(Finding {
             ready: false,
             record: None,
+            metric: Some(copies.len().to_string()),
+            metric_note: Some("份可以归并成 1 份".to_owned()),
             id: format!("duplicate:{name}"),
             category: FindingCategory::Duplicate,
             title,
@@ -366,6 +372,8 @@ fn repos(scan: &Scan, findings: &mut Vec<Finding>) {
     findings.push(Finding {
         ready: false,
         record: None,
+        metric: Some(shared.len().to_string()),
+        metric_note: Some("个仓库存着相同的 skill".to_owned()),
         id: "duplicate:repos".to_owned(),
         category: FindingCategory::Duplicate,
         title: format!("{} 个仓库存放着相同的 skill", shared.len()),
@@ -491,6 +499,8 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         findings.push(Finding {
             ready: false,
         record: None,
+        metric: Some(format_k(TokenEstimate(resident))),
+        metric_note: Some("每个项目都在缴".to_owned()),
             id: format!("global-tax:{}", group.label),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个 {} skill 加载进了每一个项目", group.members.len(), group.label),
@@ -541,6 +551,8 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
         findings.push(Finding {
             ready: false,
         record: None,
+        metric: Some(format_k(TokenEstimate(resident))),
+        metric_note: Some("近 30 天没人用".to_owned()),
             id: "global-tax:never-used".to_owned(),
             category: FindingCategory::GlobalTax,
             title: format!("{} 个全局 skill 近 30 天没有项目用到", never_used.len()),
@@ -597,6 +609,8 @@ fn inconsistent(scan: &Scan, findings: &mut Vec<Finding>) {
     findings.push(Finding {
         ready: false,
         record: None,
+        metric: Some(all.len().to_string()),
+        metric_note: Some("个全局 skill 分发不齐".to_owned()),
         id: "inconsistent:global-skills".to_owned(),
         category: FindingCategory::Inconsistent,
         title: format!("{} 个全局 skill 在各工具间分发不齐", all.len()),
@@ -692,6 +706,8 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
         findings.push(Finding {
             ready: false,
             record: None,
+            metric: Some((only_lock.len() + only_disk.len()).to_string()),
+            metric_note: Some("项锁和目录对不上".to_owned()),
             id: format!("detached:{}", lock.path.display()),
             category: FindingCategory::Detached,
             title: "全局锁文件与实际目录不一致".to_owned(),
@@ -748,6 +764,8 @@ fn secrets(scan: &Scan, findings: &mut Vec<Finding>) {
     findings.push(Finding {
         ready: false,
         record: None,
+        metric: Some(hits.len().to_string()),
+        metric_note: Some("处已提交的明文".to_owned()),
         id: "secret:mcp".to_owned(),
         category: FindingCategory::Secret,
         title: format!("{} 处已提交的 MCP 配置里有明文密钥", hits.len()),
