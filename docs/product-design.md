@@ -1182,6 +1182,9 @@ git-commit = { source = "local:luyao-skills", pin = "0d81aa3" }
 | 漂移做多少 | 文件监听、五秒提示、回流 / 丢弃 / 分叉都做；回流只对 `local:` 来源，GitHub 来源的回流置灰并说明（F4、6.9） |
 | 怎么分发 | 起初定签名公证 + Homebrew；同日人说没有 Apple Developer 账号、暂时不办，改成下一行 |
 | 没有开发者账号时怎么分发（2026-11-21） | GitHub Releases 放 ad-hoc 签名的 dmg 和命令行；自建 Homebrew tap，formula 从源码编译装命令行，cask 装桌面应用。安装说明写清第一次打开在「系统设置 → 隐私与安全性 → 仍要打开」放行，不在安装脚本里清隔离属性。发布流水线留好签名公证的位置，有账号再接（7.5） |
+| 包标识与显示名（2026-11-22，D-16） | 包标识 `io.github.luzhengli.fangcun`（GitHub 账号倒写，不需要域名）。Dock、菜单栏、访达里显示「方寸」，`.app` 文件名 `Fangcun.app`，命令行 `fangcun`。包标识只管系统权限记录、界面缓存与卸载清理的目录；`~/.fangcun` 与钥匙串服务名 `fangcun` 不随它变 |
+| Homebrew tap 放哪（2026-11-22，R-03） | 单独的公开仓库 `luzhengli/homebrew-fangcun`，用户 `brew install luzhengli/fangcun/fangcun`（命令行）、`brew install --cask luzhengli/fangcun/fangcun`（桌面应用）。发版流水线用只对 tap 仓库有写权限的 token 推更新 |
+| v0.1 全局页里「只有一两个项目用到」的项（2026-11-22，M1-35） | 套装在 v0.1 隐藏，这类项的标签改为「少数在用」（蓝），决定卡片只写事实：「只有 client-acme 用到，其余 5 个项目每个多付 6.4k 常驻（估算）」，不给按钮、不提以后的版本。v0.2 放出套装时改回「建议转套装」和「转成套装…」（6.6） |
 
 **M1 开工前的四件（M1-pre-05 至 08）**，2026-11-19 人都选了推荐项。
 
