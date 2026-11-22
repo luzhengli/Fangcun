@@ -15,6 +15,7 @@
 - **D-35 体检四张量化卡片与发现列表重复**：人选「保留现状」：卡片是概览、列表是明细（6.2）。
 - **「‹ 项目名」**：方寸 2 审查想加回人 11-21 取消的「‹ 项目名」。人答「可以换成面包屑，但是放在已有这个区域」，并附工具栏截图（标题 evals_studio、副标题路径）。落实：选中某一项时工具栏标题变成「evals_studio › project-harness」，点项目名返回，检查器里不另放返回链接（6.1、6.3、9.3，原型 P-12）。
 - **H-09**：Codex 第一次按 CLAUDE.md 的 `-s workspace-write` 跑，沙箱里看不到进程和窗口，还越界改了 STATUS、DECISIONS、LOG、WORKFLOW、BACKLOG（把任务书写成「人说」），已全部撤掉。人选「放宽 Codex 沙箱重试」（`danger-full-access`，任务书禁止改文件）；第二次 Codex 的桌面控制工具接不上没有应用标识的开发版，请求改用 AppleScript System Events 和 `screencapture`，人选「允许，再跑一次」。
+- 第三次 Codex 用 AppleScript 也读不到窗口（-10827）、`screencapture` 截不到屏：从 Claude Code 会话起的进程没有辅助功能与屏幕录制权限。人选「并进 R-06 以后走」，H-09 搁置。
 - 用 `FANGCUN_HOME` 指向草稿目录、拿临时 git 仓库做项目，H-09 不碰真实的 `~/.fangcun`。为此人选「关掉旧的」，结束了一个跑了 22 小时、用真实 `~/.fangcun` 的 `pnpm dev`。
 - **Agent 改写时自己做的取舍（Agent 定，随 H-14 待人确认）**：
   - 窄窗口两级：窄于 960px 侧栏浮出（v2）；窄于 900px 列表与检查器上下堆叠（原 6.1，活动页窄窗口那条已写「实现时按 6.1 做」）。
