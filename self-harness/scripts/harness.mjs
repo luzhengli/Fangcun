@@ -277,10 +277,20 @@ function boundaryViolations() {
 }
 
 // ── check ───────────────────────────────────────────────────────────────
+// skill 自己的版本：SKILL.md description 里的「版本 x.y.z」要和 CHANGELOG 最新一节一致。
+function versionProblems() {
+  const desc = /版本 (\d+\.\d+\.\d+)/.exec(readText(SKILL, "SKILL.md"))?.[1];
+  const log = /^## (\d+\.\d+\.\d+)/m.exec(readText(SKILL, "CHANGELOG.md"))?.[1];
+  if (!desc) return ["SKILL.md 的 description 里没写「版本 x.y.z」"];
+  if (desc !== log) return [`SKILL.md 写的是版本 ${desc}，CHANGELOG 最新是 ${log}`];
+  return [];
+}
+
 function check() {
   const problems = [
     ...validate(loadRules(root), loadOracles(root)),
     ...boundaryViolations().map((v) => `越界 ${v}`),
+    ...versionProblems(),
   ];
   if (problems.length) {
     console.error(`self-harness check：${problems.length} 处问题`);
