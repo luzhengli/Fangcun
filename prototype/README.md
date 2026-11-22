@@ -25,8 +25,9 @@ python3 -m http.server 8000
 | 项 | 值 |
 | --- | --- |
 | 画布 | https://claude.ai/artifact/WAK5PGWGuUmNNAYS8hFcXq |
-| 版本 | 1795196431-b5e5 |
-| 同步于 | 2026-11-21 |
+| 版本 | 1795316474-22ff |
+| 同步于 | 2026-11-22 |
+| 说明 | 方寸 2（H-13）合回：八张 v2 画板替换了同名的现行画板，「方寸 2 提案」分页已删 |
 
 ## 画板
 
@@ -34,11 +35,11 @@ python3 -m http.server 8000
 | --- | --- | --- |
 | `project/canvas.json` | 画板索引：位置、尺寸、标题、便签 | — |
 | `screens/<名称>.png` | 各画板默认状态的截图，同步时生成 | — |
-| `project/DesignSystem.dc.html` | 方寸设计系统 · 墨格 | 6.10 |
-| `project/Main.dc.html` | 项目 · 生效上下文 | 6.3、6.1 侧栏与登记 |
+| `project/DesignSystem.dc.html` | 方寸设计系统（方寸 2，在「墨格」上改出来） | 6.10、6.1 |
+| `project/Main.dc.html` | 项目 · 生效上下文 | 6.3、6.1 骨架、6.8 同步计划 |
 | `project/Checkup.dc.html` | 首次启动 · 体检报告 | 6.2 |
 | `project/Library.dc.html` | 资产库 · 资产详情 | 6.4 |
 | `project/Bundles.dc.html` | 套装 · 资产组合 | 6.5 |
 | `project/Global.dc.html` | 全局 · 瘦身 | 6.6 |
 | `project/Activity.dc.html` | 活动 · 时间线与回滚 | 6.7 |
-| `project/Settings.dc.html` | 设置 · 通用 | 6.1「设置窗口」 |
+| `project/Settings.dc.html` | 设置 · 通用 | 6.1「设置」 |
