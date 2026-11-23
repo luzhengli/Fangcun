@@ -25,6 +25,7 @@ export function OnboardingStrip() {
     <div
       className={styles.wrap}
       data-open={!presence.exiting}
+      data-no-card="true"
       aria-hidden={presence.exiting || undefined}
     >
       <div className={styles.inner}>
