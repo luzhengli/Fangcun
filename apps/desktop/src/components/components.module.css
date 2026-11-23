@@ -112,6 +112,7 @@
 .bar > span {
   display: block;
   height: 100%;
+  transition: width 160ms var(--ease);
 }
 
 /* ── 检查器 ── */
@@ -153,10 +154,20 @@
   border-radius: 6px;
   background: transparent;
   color: var(--tx-2);
+  transition:
+    transform 120ms var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .close:hover {
-  box-shadow: inset 0 0 0 999px var(--fill-1);
+  background: var(--fill-1);
+  color: var(--tx-1);
+}
+
+.close:active {
+  transform: scale(0.95);
+  transition-duration: var(--dur-press);
 }
 
 .badgeRow {
@@ -216,6 +227,7 @@
 }
 
 .section {
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -264,14 +276,18 @@
   background: transparent;
   color: var(--tx-3);
   cursor: default;
+  transition:
+    color var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease);
 }
 
 .sectionToggle:hover {
   color: var(--tx-1);
+  background: var(--fill-1);
 }
 
 .chev {
-  transition: transform 160ms var(--ease);
+  transition: transform var(--dur-ui) var(--ease);
 }
 
 .sectionToggle[aria-expanded="true"] .chev {
@@ -282,8 +298,8 @@
   display: grid;
   grid-template-rows: 1fr;
   transition:
-    grid-template-rows 180ms var(--ease),
-    opacity 150ms var(--ease);
+    grid-template-rows var(--dur-ui) var(--ease),
+    opacity var(--dur-ui) var(--ease);
 }
 
 .sectionBody[data-open="false"] {
@@ -297,10 +313,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  visibility: visible;
+  transition: visibility 0s linear 0s;
 }
 
 .sectionBody[data-open="false"] .sectionInner {
   visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear var(--dur-ui);
 }
 
 .command {
@@ -320,15 +340,21 @@
   user-select: text;
   cursor: pointer;
   transition:
-    background-color 120ms,
-    border-color 120ms,
-    color 120ms;
+    transform 120ms var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    border-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .command:hover {
   background: var(--fill-2);
   border-color: var(--line);
   color: var(--tx-1);
+}
+
+.command:active {
+  transform: scale(0.98);
+  transition-duration: var(--dur-press);
 }
 
 .command[data-copied="true"] {
@@ -343,9 +369,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .bar > span,
+  .close,
+  .sectionToggle,
   .chev,
   .sectionBody,
+  .sectionInner,
+  .command,
   .tick {
     transition: none;
+  }
+
+  .close:active,
+  .command:active {
+    transform: none;
   }
 }

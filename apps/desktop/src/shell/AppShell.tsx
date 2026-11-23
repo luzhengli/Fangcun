@@ -9,6 +9,7 @@ import styles from "./AppShell.module.css";
 import { SETTINGS_PATH } from "./nav";
 import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
+import { useSidebar } from "./useSidebar";
 
 /**
  * 窗口骨架（6.1，方寸 2），所有页面共用：左边是贯通到顶的侧栏，右边是统一工具栏和主区。
@@ -19,6 +20,7 @@ import { Toolbar } from "./Toolbar";
  */
 export function AppShell() {
   useOpenSettings();
+  useSidebarShortcut();
   useKernelEvents();
   return (
     <div className={styles.shell}>
@@ -93,4 +95,20 @@ function useOpenSettings() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
+}
+
+/** ⌃⌘S：收起或展开侧栏（与按钮 title 声明对齐），弹窗开着时不抢按键。 */
+function useSidebarShortcut() {
+  const { toggle } = useSidebar();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey && e.ctrlKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "s") {
+        if (document.querySelector('[role="dialog"]')) return;
+        e.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
 }

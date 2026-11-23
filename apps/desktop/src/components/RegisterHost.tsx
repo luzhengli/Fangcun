@@ -10,6 +10,7 @@ import c from "./controls.module.css";
 import { WriteList } from "./DecisionCard";
 import styles from "./PlanHost.module.css";
 import { useDialogFocus } from "./useDialogFocus";
+import { usePresence, useRetainedValue } from "./usePresence";
 
 const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
   {
@@ -30,14 +31,27 @@ const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
  */
 export function RegisterHost() {
   const root = useRegister((s) => s.root);
-  if (!root) return null;
-  return <RegisterDialog key={root} root={root} />;
+  const open = root !== null;
+  const presence = usePresence(open, 100);
+  const activeRoot = useRetainedValue(root);
+  if (!presence.mounted || !activeRoot) return null;
+  return (
+    <RegisterDialog key={activeRoot} root={activeRoot} open={open} exiting={presence.exiting} />
+  );
 }
 
-function RegisterDialog({ root }: { root: string }) {
+function RegisterDialog({
+  root,
+  open,
+  exiting,
+}: {
+  root: string;
+  open: boolean;
+  exiting: boolean;
+}) {
   const close = useRegister((s) => s.close);
   const dialog = useRef<HTMLDivElement>(null);
-  useDialogFocus(dialog, true);
+  useDialogFocus(dialog, open);
   const navigate = useNavigate();
   const client = useQueryClient();
   const suggestion = useQuery({
@@ -52,15 +66,17 @@ function RegisterDialog({ root }: { root: string }) {
     queryKey: ["init-plan", root, picked],
     queryFn: () => kernel.planInit(root, picked),
     enabled: suggestion.isSuccess || mode !== null,
+    placeholderData: (prev) => prev,
   });
   const name = root.split("/").filter(Boolean).pop() ?? root;
   const committers = suggestion.data?.committers ?? 0;
   const recommended = suggestion.data?.mode;
   useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
+  }, [open, close]);
   const register = async () => {
     if (!plan.data || plan.data.blocked) return;
     setBusy(true);
@@ -85,13 +101,18 @@ function RegisterDialog({ root }: { root: string }) {
       : `提交者 ${committers} 位，建议「${committers >= 2 ? "拷入仓库" : "本机软链"}」。`;
 
   return (
-    <div className={styles.veil}>
+    <div
+      className={styles.veil}
+      data-exiting={exiting || undefined}
+      aria-hidden={exiting || undefined}
+    >
       <div
         ref={dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="reg-title"
         className={`${styles.dialog} ${styles.narrow}`}
+        data-exiting={exiting || undefined}
       >
         <div className={styles.head}>
           <h2 id="reg-title" className={styles.title}>
@@ -123,6 +144,7 @@ function RegisterDialog({ root }: { root: string }) {
           <WriteList
             changes={plan.data?.changes}
             loading={plan.isLoading}
+            updating={plan.isFetching && plan.isPlaceholderData}
             error={error ?? (plan.isError ? plan.error.message : null)}
           />
         </div>

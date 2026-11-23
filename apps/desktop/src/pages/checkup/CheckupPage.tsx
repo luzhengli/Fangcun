@@ -318,6 +318,7 @@ export function CheckupPage() {
               decision={
                 current.status === "resolved" ? (
                   <Done
+                    animate={justDone === current.id}
                     title="已处理 · 已留快照"
                     desc={current.foot}
                     onUndo={

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Change } from "@/ipc/bindings/Change";
 import type { ChangeOp } from "@/ipc/bindings/ChangeOp";
 import type { NoteTone } from "@/ipc/bindings/NoteTone";
@@ -9,6 +9,7 @@ import { usePlan } from "@/state/plan";
 import c from "./controls.module.css";
 import styles from "./PlanHost.module.css";
 import { useDialogFocus } from "./useDialogFocus";
+import { usePresence, useRetainedValue } from "./usePresence";
 
 const OP: Record<ChangeOp, string> = { add: "新增", modify: "修改", remove: "移除" };
 const NOTE: Record<NoteTone, string> = {
@@ -29,7 +30,17 @@ export function PlanHost() {
   const client = useQueryClient();
   const readOnly = useReadOnly();
   const dialog = useRef<HTMLDivElement>(null);
-  useDialogFocus(dialog, request !== null);
+  const dialogOpen = request !== null;
+  const dialogPresence = usePresence(dialogOpen, 100);
+  const snap = useMemo(
+    () => (request ? { request, plan, loading, error } : null),
+    [request, plan, loading, error],
+  );
+  const activeSnap = useRetainedValue(snap);
+  const toastOpen = toast !== null;
+  const toastPresence = usePresence(toastOpen, 100);
+  const activeToast = useRetainedValue(toast);
+  useDialogFocus(dialog, dialogOpen);
 
   const apply = async () => {
     if (!plan || !request || plan.blocked || applying || readOnly) return;
@@ -66,53 +77,63 @@ export function PlanHost() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const activeReq = activeSnap?.request;
+  const activePlan = activeSnap?.plan ?? null;
+  const activeLoading = activeSnap?.loading ?? false;
+  const activeError = activeSnap?.error ?? null;
+
   return (
     <>
-      {request && (
-        <div className={styles.veil}>
+      {dialogPresence.mounted && activeReq && (
+        <div
+          className={styles.veil}
+          data-exiting={dialogPresence.exiting || undefined}
+          aria-hidden={dialogPresence.exiting || undefined}
+        >
           <div
             ref={dialog}
             role="dialog"
             aria-modal="true"
             aria-labelledby="plan-title"
             className={styles.dialog}
+            data-exiting={dialogPresence.exiting || undefined}
           >
             <div className={styles.head}>
               <h2 id="plan-title" className={styles.title}>
-                {plan
-                  ? (request.title?.(plan) ?? plan.title)
-                  : loading
+                {activePlan
+                  ? (activeReq.title?.(activePlan) ?? activePlan.title)
+                  : activeLoading
                     ? "正在生成变更计划…"
                     : "变更计划"}
               </h2>
               <p className={styles.sub}>
-                {plan && request.sub
-                  ? request.sub(plan)
+                {activePlan && activeReq.sub
+                  ? activeReq.sub(activePlan)
                   : "预览先于写入。应用前自动快照，可在「历史」一键回滚。"}
               </p>
             </div>
-            {plan && plan.notes.length > 0 && (
+            {activePlan && activePlan.notes.length > 0 && (
               <ul className={styles.notes}>
-                {plan.notes.map((n) => (
+                {activePlan.notes.map((n) => (
                   <li key={n.text} className={NOTE[n.tone]}>
                     {n.text}
                   </li>
                 ))}
               </ul>
             )}
-            {plan && plan.changes.length > 0 && (
+            {activePlan && activePlan.changes.length > 0 && (
               <div className={styles.groups}>
-                {groupChanges(plan.changes, request.group?.of).map((g) => (
+                {groupChanges(activePlan.changes, activeReq.group?.of).map((g) => (
                   <section key={g.cause ?? ""} aria-label={g.cause ?? "变更"}>
                     {g.cause && (
                       <div className={styles.groupHead}>
                         <span className={styles.groupCause}>{g.cause}</span>
                         <span className={styles.groupCount}>{g.changes.length} 处</span>
-                        {request.group?.remove && (
+                        {activeReq.group?.remove && (
                           <button
                             type="button"
                             className={`${c.b} ${c.quiet} ${c.small}`}
-                            onClick={() => request.group?.remove?.(g.cause ?? "")}
+                            onClick={() => activeReq.group?.remove?.(g.cause ?? "")}
                           >
                             移出计划
                           </button>
@@ -134,30 +155,34 @@ export function PlanHost() {
                 ))}
               </div>
             )}
-            {plan && plan.changes.length === 0 && (
+            {activePlan && activePlan.changes.length === 0 && (
               <p className={styles.empty}>磁盘已经和清单一致，没有要写的。</p>
             )}
-            {error && <p className={styles.error}>{error}</p>}
+            {activeError && <p className={styles.error}>{activeError}</p>}
             <div className={styles.foot}>
               <span className={styles.footNote}>
-                {plan?.blocked ? "有冲突，不能应用。原因见上方提示。" : "不碰其他文件"}
+                {activePlan?.blocked ? "有冲突，不能应用。原因见上方提示。" : "不碰其他文件"}
               </span>
               <button
                 type="button"
                 className={c.b}
                 onClick={() => {
                   close();
-                  request.back?.();
+                  activeReq.back?.();
                 }}
               >
-                {request.back ? "上一步" : "取消"}
+                {activeReq.back ? "上一步" : "取消"}
               </button>
               <button
                 type="button"
                 className={`${c.b} ${c.primary}`}
                 data-autofocus="true"
                 disabled={
-                  readOnly || !plan || plan.blocked || plan.changes.length === 0 || applying
+                  readOnly ||
+                  !activePlan ||
+                  activePlan.blocked ||
+                  activePlan.changes.length === 0 ||
+                  applying
                 }
                 title={readOnly ? "只读模式：在设置里关掉后才能应用" : undefined}
                 onClick={() => void apply()}
@@ -169,8 +194,13 @@ export function PlanHost() {
           </div>
         </div>
       )}
-      {toast && (
-        <div role="status" className={styles.toast}>
+      {toastPresence.mounted && activeToast && (
+        <div
+          role="status"
+          className={styles.toast}
+          data-exiting={toastPresence.exiting || undefined}
+          aria-hidden={toastPresence.exiting || undefined}
+        >
           <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
             <path
               d="m3.5 8.5 3 3 6-7"
@@ -181,12 +211,12 @@ export function PlanHost() {
               strokeLinejoin="round"
             />
           </svg>
-          <span>{toast.text}</span>
-          {toast.record && (
+          <span>{activeToast.text}</span>
+          {activeToast.record && (
             <button
               type="button"
               className={styles.toastButton}
-              onClick={() => toast.record && void undo(toast.record)}
+              onClick={() => activeToast.record && void undo(activeToast.record)}
             >
               撤销
             </button>

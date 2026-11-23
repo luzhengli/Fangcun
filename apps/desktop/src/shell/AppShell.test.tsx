@@ -59,6 +59,21 @@ describe("窗口骨架（6.1）", () => {
     expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
   });
 
+  it("⌃⌘S 可收起并重新显示侧栏，弹窗开启时不抢按键", () => {
+    renderApp("/global");
+    expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "s", metaKey: true, ctrlKey: true });
+    expect(screen.queryByRole("navigation", { name: "主导航" })).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "s", metaKey: true, ctrlKey: true });
+    expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
+
+    // 打开命令面板弹窗后，⌃⌘S 不应切换侧栏
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    expect(screen.getByRole("dialog", { name: "命令面板" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "s", metaKey: true, ctrlKey: true });
+    expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
+  });
+
   it("页面标题在统一工具栏里", () => {
     renderApp("/activity");
     const toolbar = screen.getByRole("toolbar", { name: "窗口工具栏" });

@@ -219,7 +219,20 @@ function ProjectView({ root }: { root: string | undefined }) {
   const current = items.find((i) => i.id === selected);
   const tools = useTools();
   const toolName = tools.data?.find((t) => t.id === tool)?.name ?? tool;
+  const syncLoaded = syncPlan.data !== undefined;
   const pending = syncPlan.data?.changes.length ?? 0;
+  const [syncState, setSyncState] = useState<{ prev: number | null; pulse: number }>({
+    prev: null,
+    pulse: 0,
+  });
+  useEffect(() => {
+    if (!syncLoaded) return;
+    setSyncState((cur) => {
+      if (cur.prev === null) return { prev: pending, pulse: 0 };
+      if (cur.prev === pending) return cur;
+      return { prev: pending, pulse: pending > 0 ? cur.pulse + 1 : cur.pulse };
+    });
+  }, [syncLoaded, pending]);
   const pendingItems = items.filter((i) => i.state && PENDING[i.state]);
   // 排进计划还没同步的停用、恢复：常驻不提前扣，只算「同步后约 N」（6.3）。
   const residentOf = (e: ManifestEdit) =>
@@ -267,9 +280,11 @@ function ProjectView({ root }: { root: string | undefined }) {
         </button>
         {registered && (
           <button
-            key={pending}
+            key={syncState.pulse}
             type="button"
-            className={`${pending > 0 ? `${c.b} ${c.primary}` : c.b}${pending > 0 ? ` ${styles.syncPop}` : ""}`}
+            className={`${pending > 0 ? `${c.b} ${c.primary}` : c.b}${
+              pending > 0 && syncState.pulse > 0 ? ` ${styles.syncPop}` : ""
+            }`}
             onClick={() => openSync()}
             disabled={readOnly}
             title={
@@ -720,6 +735,7 @@ function ItemInspector({
         <>
           {driftDone ? (
             <Done
+              animate
               title={DRIFT_DONE[driftDone.choice].title}
               desc={DRIFT_DONE[driftDone.choice].desc}
               extra={
@@ -938,6 +954,7 @@ function DriftBox({
     queryKey: ["drift-plan", root, item.name, chosen?.id],
     queryFn: () => kernel.planDrift(root, item.name, chosen?.id ?? "discard"),
     enabled: chosen !== undefined,
+    placeholderData: (prev) => prev,
   });
   const button: Record<DriftChoice, string> = {
     promote: "写回源仓库",
@@ -1004,6 +1021,7 @@ function DriftBox({
       <WriteList
         changes={plan.data?.changes}
         loading={plan.isLoading}
+        updating={plan.isFetching && plan.isPlaceholderData}
         error={error ?? (plan.isError ? plan.error.message : null)}
         blockedNote={plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null}
       />

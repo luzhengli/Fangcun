@@ -1,6 +1,7 @@
 import { useUi } from "@/state/ui";
 import { Icon } from "./Icon";
 import styles from "./OnboardingStrip.module.css";
+import { usePresence } from "./usePresence";
 
 const STEPS = [
   { n: "1", title: "体检看现状", desc: "找出重复、冲突与未收录文件" },
@@ -15,31 +16,41 @@ const STEPS = [
 export function OnboardingStrip() {
   const hidden = useUi((s) => s.guideHidden);
   const hide = useUi((s) => s.hideGuide);
+  const open = !hidden;
+  const presence = usePresence(open, 150);
 
-  if (hidden) return null;
+  if (!presence.mounted) return null;
 
   return (
-    <aside aria-label="新手四步速览" className={styles.strip}>
-      <div className={styles.steps}>
-        {STEPS.map((s) => (
-          <div key={s.n} className={styles.step}>
-            <span className={styles.num}>{s.n}</span>
-            <span className={styles.text}>
-              <strong>{s.title}</strong>
-              <span>{s.desc}</span>
-            </span>
+    <div
+      className={styles.wrap}
+      data-open={!presence.exiting}
+      aria-hidden={presence.exiting || undefined}
+    >
+      <div className={styles.inner}>
+        <aside aria-label="新手四步速览" className={styles.strip}>
+          <div className={styles.steps}>
+            {STEPS.map((s) => (
+              <div key={s.n} className={styles.step}>
+                <span className={styles.num}>{s.n}</span>
+                <span className={styles.text}>
+                  <strong>{s.title}</strong>
+                  <span>{s.desc}</span>
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+          <button
+            type="button"
+            className={styles.close}
+            onClick={hide}
+            title="不再提示四步速览（可在命令面板恢复）"
+          >
+            <span>不再提示</span>
+            <Icon name="close" size={11} />
+          </button>
+        </aside>
       </div>
-      <button
-        type="button"
-        className={styles.close}
-        onClick={hide}
-        title="不再提示四步速览（可在命令面板恢复）"
-      >
-        <span>不再提示</span>
-        <Icon name="close" size={11} />
-      </button>
-    </aside>
+    </div>
   );
 }

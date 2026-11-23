@@ -11,7 +11,12 @@
   padding: 64px 16px 24px;
   box-sizing: border-box;
   background: var(--veil-bg);
-  animation: fc-fade 160ms ease-out;
+  animation: fc-fade 120ms var(--ease);
+}
+
+.veil[data-exiting="true"] {
+  pointer-events: none;
+  animation: fc-fade-out var(--dur-micro) var(--ease-exit) forwards;
 }
 
 .dialog {
@@ -25,7 +30,12 @@
   box-shadow: var(--shadow-pop);
   overflow: hidden;
   transform-origin: 50% 0;
-  animation: fc-drop 220ms var(--ease);
+  animation: fc-drop var(--dur-ui) var(--ease);
+}
+
+.dialog[data-exiting="true"] {
+  pointer-events: none;
+  animation: fc-drop-out var(--dur-micro) var(--ease-exit) forwards;
 }
 
 .head {
@@ -185,7 +195,12 @@
   box-shadow: var(--shadow-pop);
   font-size: 13px;
   white-space: nowrap;
-  animation: fc-rise 220ms var(--ease);
+  animation: fc-rise var(--dur-ui) var(--ease);
+}
+
+.toast[data-exiting="true"] {
+  pointer-events: none;
+  animation: fc-rise-out var(--dur-micro) var(--ease-exit) forwards;
 }
 
 .toast svg {
@@ -201,10 +216,28 @@
   color: var(--win);
   font: inherit;
   font-weight: 500;
+  transition:
+    transform 120ms var(--ease),
+    background-color var(--dur-micro) var(--ease);
+}
+
+.toastButton:hover {
+  background: color-mix(in srgb, var(--win) 22%, transparent);
+}
+
+.toastButton:active {
+  transform: scale(0.96);
+  transition-duration: var(--dur-press);
 }
 
 @keyframes fc-fade {
   from {
+    opacity: 0;
+  }
+}
+
+@keyframes fc-fade-out {
+  to {
     opacity: 0;
   }
 }
@@ -216,18 +249,53 @@
   }
 }
 
+@keyframes fc-drop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+}
+
 @keyframes fc-rise {
   from {
     opacity: 0;
-    transform: translate(-50%, 10px);
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes fc-rise-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 8px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .veil,
+  .veil[data-exiting="true"],
   .dialog,
-  .toast {
+  .dialog[data-exiting="true"],
+  .toast,
+  .toast[data-exiting="true"] {
     animation: none;
+  }
+
+  .toastButton,
+  .option {
+    transition: none;
+  }
+
+  .toastButton:active,
+  .option:active {
+    transform: none;
   }
 }
 
@@ -258,6 +326,20 @@
   cursor: pointer;
   background: var(--win);
   border: 1px solid var(--line);
+  transition:
+    border-color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
+}
+
+.option:hover {
+  border-color: var(--accent-line);
+}
+
+.option:active {
+  transform: scale(0.99);
+  transition-duration: var(--dur-press);
 }
 
 .option[data-on="true"] {

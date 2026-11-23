@@ -43,23 +43,25 @@ export function DecisionCard({
 export function WriteList({
   changes,
   loading,
+  updating,
   error,
   blockedNote,
 }: {
   changes: Change[] | undefined;
   loading?: boolean;
+  updating?: boolean;
   error?: string | null;
   blockedNote?: string | null;
 }) {
   return (
     <div className={styles.writes}>
       <span className={styles.writesHead}>
-        {loading ? "正在算会写入哪些文件…" : `会写入 · ${changes?.length ?? 0} 处`}
+        {loading && !changes ? "正在算会写入哪些文件…" : `会写入 · ${changes?.length ?? 0} 处`}
       </span>
       {error && <span className={styles.error}>{error}</span>}
       {blockedNote && <span className={styles.blocked}>{blockedNote}</span>}
       {changes && changes.length > 0 && (
-        <ul className={styles.writeList}>
+        <ul className={styles.writeList} data-updating={updating || undefined}>
           {changes.map((ch) => (
             <li key={`${ch.op}:${ch.path}`}>
               <span className={styles.op} data-op={ch.op} title={OP[ch.op][1]}>
@@ -122,14 +124,21 @@ export function Done({
   desc,
   extra,
   onUndo,
+  animate,
 }: {
   title: string;
   desc?: string;
   extra?: ReactNode;
   onUndo?: () => void;
+  animate?: boolean;
 }) {
   return (
-    <section aria-label={title} className={styles.card} data-tone="ok">
+    <section
+      aria-label={title}
+      className={styles.card}
+      data-tone="ok"
+      data-animate={animate || undefined}
+    >
       <div className={styles.head}>
         <span className={styles.doneDot} aria-hidden="true" />
         <span className={styles.title}>{title}</span>

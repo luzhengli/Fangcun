@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { FEATURES } from "@/app/features";
 import c from "@/components/controls.module.css";
@@ -10,6 +10,7 @@ import { Segmented } from "@/components/Segmented";
 import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, TONE_COLORS, type Tone } from "@/components/tone";
 import { useListNav } from "@/components/useListNav";
+import { usePresence, useRetainedValue } from "@/components/usePresence";
 import { RecentList, WhoButton, WhoList, type WhoTag } from "@/components/WhoBar";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { Change } from "@/ipc/bindings/Change";
@@ -130,6 +131,18 @@ export function GlobalPage() {
     ? pickedRows.filter((r) => actOf(r) === "bundle" && usersOf(r).length > 0).length
     : 0;
   const traySave = Math.max(0, ...projectNames.map((p) => savingFor(pickedRows, p)));
+  const trayCount = pickedRows.length;
+  const trayNames = pickedRows.map((r) => r.name).join("、");
+  const trayCanOpen = pickedRows.some((r) => r.inLibrary);
+  const traySnap = useMemo(
+    () =>
+      trayCount > 0
+        ? { count: trayCount, bundleCount, traySave, names: trayNames, canOpen: trayCanOpen }
+        : null,
+    [trayCount, bundleCount, traySave, trayNames, trayCanOpen],
+  );
+  const trayPresence = usePresence(trayCount > 0, 100);
+  const activeTray = useRetainedValue(traySnap);
   const allOn = rows.length > 0 && rows.every((r) => picked.has(r.id));
 
   const toggle = (id: string) =>
@@ -452,17 +465,21 @@ export function GlobalPage() {
               )}
             </div>
 
-            {pickedRows.length > 0 && (
-              <section className={styles.tray} aria-label="待清理项目">
+            {trayPresence.mounted && activeTray && (
+              <section
+                className={styles.tray}
+                aria-label="待清理项目"
+                data-exiting={trayPresence.exiting || undefined}
+                aria-hidden={trayPresence.exiting || undefined}
+              >
                 <span className={styles.trayText}>
                   <span className={styles.trayTitle}>
-                    待清理 {pickedRows.length} 项 ·{" "}
-                    {bundleCount > 0 ? `转套装 ${bundleCount} · ` : ""}移除{" "}
-                    {pickedRows.length - bundleCount} · 每个项目最多 −{formatK(traySave)}
+                    待清理 {activeTray.count} 项 ·{" "}
+                    {activeTray.bundleCount > 0 ? `转套装 ${activeTray.bundleCount} · ` : ""}移除{" "}
+                    {activeTray.count - activeTray.bundleCount} · 每个项目最多 −
+                    {formatK(activeTray.traySave)}
                   </span>
-                  <span className={styles.trayNames}>
-                    {pickedRows.map((r) => r.name).join("、")}
-                  </span>
+                  <span className={styles.trayNames}>{activeTray.names}</span>
                 </span>
                 <button
                   type="button"
@@ -474,9 +491,9 @@ export function GlobalPage() {
                 <button
                   type="button"
                   className={`${c.b} ${c.primary}`}
-                  disabled={!pickedRows.some((r) => r.inLibrary)}
+                  disabled={!activeTray.canOpen}
                   title={
-                    pickedRows.some((r) => r.inLibrary)
+                    activeTray.canOpen
                       ? "逐条预览会写入的变更"
                       : "选中的都未收录：从全局移除只对已收录进资产库的项开放，请先去资产库收录"
                   }
@@ -705,12 +722,19 @@ function GlobalInspector({
                     ? `${total} 个项目都没用到`
                     : `其余 ${idle.length} 个没用到`}
                 </button>
-                {idleOpen &&
-                  idle.map((p) => (
-                    <div key={p} className={styles.idleRow}>
-                      {p}
-                    </div>
-                  ))}
+                <div
+                  className={styles.idleBody}
+                  data-open={idleOpen}
+                  aria-hidden={!idleOpen || undefined}
+                >
+                  <div className={styles.idleInner}>
+                    {idle.map((p) => (
+                      <div key={p} className={styles.idleRow}>
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
           </>
