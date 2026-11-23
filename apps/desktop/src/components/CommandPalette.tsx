@@ -133,6 +133,8 @@ function Panel({ onClose }: { onClose: () => void }) {
   const needle = query.trim().toLowerCase();
   const matches = (e: Entry) => !needle || `${e.name} ${e.hint}`.toLowerCase().includes(needle);
 
+  const guideHidden = useUi((s) => s.guideHidden);
+  const showGuide = useUi((s) => s.showGuide);
   const actions: Entry[] = [];
   if (root && project) {
     if (registered) {
@@ -140,7 +142,7 @@ function Panel({ onClose }: { onClose: () => void }) {
         key: "sync",
         kind: "动作",
         name: `同步 ${project.name}`,
-        hint: "按清单与锁物化，先出变更计划",
+        hint: "按清单与锁同步到项目目录，先出变更计划",
         go: () => go(`${projectPath(root)}?do=sync`),
       });
       actions.push({
@@ -178,7 +180,13 @@ function Panel({ onClose }: { onClose: () => void }) {
       go: () => go("/activity?check=1"),
     },
     { key: "library", kind: "动作", name: "打开资产库", hint: "", go: () => go("/library") },
-    { key: "global", kind: "动作", name: "打开全局", hint: "瘦身", go: () => go("/global") },
+    {
+      key: "global",
+      kind: "动作",
+      name: "打开全局",
+      hint: "清理全局常驻项",
+      go: () => go("/global"),
+    },
     {
       key: "activity",
       kind: "动作",
@@ -186,6 +194,20 @@ function Panel({ onClose }: { onClose: () => void }) {
       hint: "时间线与回滚",
       go: () => go("/activity"),
     },
+    ...(guideHidden
+      ? [
+          {
+            key: "guide",
+            kind: "动作" as const,
+            name: "显示新手四步速览",
+            hint: "恢复项目页顶部引导条",
+            go: () => {
+              showGuide();
+              go("/");
+            },
+          },
+        ]
+      : []),
   );
   const projectEntries: Entry[] = (projects.data ?? [])
     .filter((p) => p.id !== root)
@@ -287,6 +309,7 @@ function Panel({ onClose }: { onClose: () => void }) {
           <input
             id="palette-q"
             ref={input}
+            data-autofocus="true"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);

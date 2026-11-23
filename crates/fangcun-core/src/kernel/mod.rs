@@ -1355,7 +1355,7 @@ impl Kernel {
             .ok_or_else(|| Error::NotFound(format!("记录 {record_id}")))?;
         let snapshots = rollback::check(&self.home, &record)?;
         let before = |id: u32| match (id.saturating_sub(1), record.kind) {
-            (0, RecordKind::Adopt) => "收编前".to_owned(),
+            (0, RecordKind::Adopt) => "收录前".to_owned(),
             (0, _) => "登记前".to_owned(),
             (n, _) => format!("快照 #{n}"),
         };

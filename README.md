@@ -23,30 +23,30 @@ brew install luzhengli/fangcun/fangcun          # 命令行 fangcun（从源码�
 
 ## 两分钟上手
 
-1. **体检。** 打开方寸，先看到体检报告：重复的副本、来源未知的资产、每个项目都在缴的「全局税」。命令行是 `fangcun doctor`，只读，不改任何文件。
-2. **登记项目。** 在侧栏「近 30 天 · 未登记」里点一个项目，再点「登记…」，选物化方式：
-   - **链接**：项目里是指向资产库的软链，零重复，适合个人项目。
-   - **入库**：实体文件提交进仓库，同事与云端 Agent 不装方寸也能用，适合团队项目。
+1. **体检。** 打开方寸，先看到体检报告：重复的副本、未收录的资产、每个项目都在缴的「全局税」。命令行是 `fangcun doctor`，只读，不改任何文件。
+2. **登记项目。** 在侧栏「近 30 天 · 未登记」里点一个项目，再点「登记…」，选择同步方式：
+   - **本机软链**：项目内放软链指向本机资产库，不进 Git，零重复。适合个人项目。
+   - **拷入仓库**：实体文件拷入项目目录随 Git 提交，同事与云端 Agent 不装方寸也能用。适合团队项目。
 
    命令行是在项目目录里运行 `fangcun init --from-existing`。
 3. **同步。** 在清单里加资产（⌘K 搜索，或 `fangcun add <资产>`），点「同步」。写入前先给出变更计划，逐行列出 `+` `~` `−`，确认后才落盘。
 4. **回滚。** 每次写入前都留快照。在「活动」页对任何一条记录点「回滚」，或 `fangcun rollback <快照>`。
 
-Agent 改了受管的 skill，五秒内出现漂移提示，可以回流、丢弃或分叉（`fangcun drift`）。
+Agent 改了受管的 skill，五秒内出现本地已改提示，可以写回源仓库、还原锁定版或转为项目独立文件（`fangcun drift`）。
 
 ## 命令行速查
 
 ```bash
 fangcun doctor                    # 只读体检
 fangcun init --from-existing      # 登记项目，从目录现状反推清单与锁
-fangcun status                    # 当前项目的同步状态与漂移
-fangcun drift [资产] [promote|discard|fork]  # 看漂移和差异；回流 / 丢弃 / 分叉
+fangcun status                    # 当前项目的同步状态与本地改动
+fangcun drift [资产] [promote|discard|fork]  # 看本地改动与差异；写回源仓库 / 还原锁定版 / 转为独立文件
 fangcun add <资产>                 # 加入清单并同步
-fangcun remove <资产>… --global    # 从全局层移除（只对已收编的）
-fangcun adopt <资产>               # 收编进资产库
+fangcun remove <资产>… --global    # 从全局层移除（只对已收录的）
+fangcun adopt <资产>               # 收录进本机资产库
 fangcun lock                      # 重新解析清单，更新锁
 fangcun export skills-lock        # 导出 skills-lock.json，与 skills 命令行互通
-fangcun sync                      # 按清单与锁物化
+fangcun sync                      # 按清单与锁同步
 fangcun sync --frozen             # CI 用：锁与清单不一致就失败
 fangcun update [资产] --dry-run    # 检查可升级的项，只看差异
 fangcun rollback <快照>            # 回滚到某个快照
@@ -61,7 +61,7 @@ fangcun secret set|rm|ls          # 钥匙串里的密钥，值不回显、不�
 
 方寸只写各工具自己的原生位置，不发明运行时。卸载应用和命令行后，Agent 照常读到那些文件。
 
-`~/.fangcun` 里是资产库正本、快照和活动记录。用「链接」方式的项目指向那里的正本，所以卸载（包括 `brew uninstall --zap`）不删这个目录。要连它一起删，先把项目的物化方式改成「入库」并同步。
+`~/.fangcun` 里是资产库正本、快照和活动记录。用「本机软链」方式的项目指向那里的正本，所以卸载（包括 `brew uninstall --zap`）不删这个目录。要连它一起删，先把项目的同步方式改成「拷入仓库」并同步。
 
 ## 隐私
 

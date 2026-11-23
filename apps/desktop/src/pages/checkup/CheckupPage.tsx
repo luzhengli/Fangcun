@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { FEATURES } from "@/app/features";
 import c from "@/components/controls.module.css";
 import { DecisionCard, Done, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
 import { InfoTip } from "@/components/InfoTip";
-import { Inspector } from "@/components/Inspector";
+import { CommandHint, Inspector } from "@/components/Inspector";
 import { TONE_COLORS, type Tone } from "@/components/tone";
+import { useListNav } from "@/components/useListNav";
 import type { Finding } from "@/ipc/bindings/Finding";
 import type { FindingCategory } from "@/ipc/bindings/FindingCategory";
 import type { LocationTone } from "@/ipc/bindings/LocationTone";
@@ -94,6 +94,7 @@ export function CheckupPage() {
   const handled = data?.progress.handled ?? 0;
   const total = data?.progress.total ?? 0;
   const left = total - handled;
+  const readyLeft = findings.filter((f) => f.status === "pending" && f.ready).length;
   const cards = CARD_ORDER.map((cat) => findings.find((f) => f.category === cat)).filter(
     (f): f is Finding => f !== undefined && f.metric !== null,
   );
@@ -113,6 +114,11 @@ export function CheckupPage() {
     setJustDone(null);
     setInspectorOpen(true);
   };
+  useListNav(
+    findings.map((f) => f.id),
+    current?.id,
+    pick,
+  );
 
   return (
     <div className={page.page}>
@@ -160,7 +166,9 @@ export function CheckupPage() {
                     ? "没有发现。"
                     : left === 0 && total > 0
                       ? `${total} 件都处理完了。下一步：进入项目看看生效上下文。`
-                      : `发现 ${findings.length} 件事，${left} 件可以一键处理。`}
+                      : readyLeft > 0
+                        ? `发现 ${findings.length} 件事：${readyLeft} 件可直接收录，其余可直达处理。`
+                        : `发现 ${findings.length} 件事，可直达对应页面处理。`}
                 </h2>
                 <p className={styles.numbers}>
                   <span>
@@ -250,6 +258,7 @@ export function CheckupPage() {
                   <button
                     key={f.id}
                     type="button"
+                    data-nav-id={f.id}
                     className={styles.finding}
                     aria-pressed={f.id === current?.id}
                     onClick={() => pick(f.id)}
@@ -333,12 +342,45 @@ export function CheckupPage() {
   );
 }
 
-/** 一条发现的决定卡片：涉及的位置、会写入哪些文件、写动作的按钮。 */
+function routeForFinding(f: Finding): { to: string; label: string } | null {
+  switch (f.category) {
+    case "global-tax":
+      return { to: "/global", label: "去全局页清理" };
+    case "inconsistent":
+      return { to: "/global", label: "去全局页查看" };
+    case "duplicate":
+      return { to: "/library", label: "去资产库查看" };
+    case "detached":
+      return { to: "/", label: "去项目查看" };
+    case "secret":
+      return null;
+  }
+}
+
+function cliForFinding(f: Finding): string {
+  switch (f.category) {
+    case "global-tax":
+    case "inconsistent":
+      return "fangcun status --global";
+    case "duplicate":
+      return f.id === "repos"
+        ? "fangcun library sources"
+        : `fangcun adopt ${f.id.replace(/^dup:/, "")}`;
+    case "detached":
+      return "fangcun lock --refresh";
+    case "secret":
+      return "fangcun secret scan";
+  }
+}
+
+/** 一条发现的决定卡片：涉及的位置、会写入哪些文件、一键动作或直达导航。 */
 function FindingCard({ finding: f, onDone }: { finding: Finding; onDone: () => void }) {
   const client = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const writes = f.status === "pending" && f.ready;
+  const route = routeForFinding(f);
+  const cli = cliForFinding(f);
   const plan = useQuery({
     queryKey: ["finding-plan", f.id],
     queryFn: () => kernel.planFinding(f.id),
@@ -367,17 +409,23 @@ function FindingCard({ finding: f, onDone }: { finding: Finding; onDone: () => v
       foot={
         <>
           <span className={styles.footNote}>{writes ? "写前留快照 · 可撤销" : f.foot}</span>
-          {/* v0.1 套装隐藏：全局税的「创建套装」不显示（9.3、M1-35）。 */}
-          {(FEATURES.bundles || f.category !== "global-tax") && (
+          {writes ? (
             <button
               type="button"
               className={`${c.b} ${c.primary}`}
-              disabled={!writes || !plan.data || plan.data.blocked || busy}
-              title={writes ? f.foot : "这一类的一键处理还没接上，先在命令行或对应页面处理"}
+              disabled={!plan.data || plan.data.blocked || busy}
+              title={f.foot}
               onClick={() => void apply()}
             >
               {busy ? "正在写入…" : f.action}
             </button>
+          ) : (
+            route && (
+              <Link to={route.to} className={`${c.b} ${c.primary} ${styles.routeLink}`}>
+                <span>{route.label}</span>
+                <Icon name="arrowRight" size={12} />
+              </Link>
+            )
           )}
         </>
       }
@@ -403,11 +451,16 @@ function FindingCard({ finding: f, onDone }: { finding: Finding; onDone: () => v
           blockedNote={plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null}
         />
       ) : (
-        <p className={styles.noWrites}>
-          {f.status === "not-scanned"
-            ? "只读扫描，不写任何文件。还没开放。"
-            : "这一类的一键处理还没接上，先在命令行或对应页面处理。"}
-        </p>
+        <div className={styles.noWritesBox}>
+          <p className={styles.noWrites}>
+            {f.status === "not-scanned"
+              ? "只读扫描，不写任何文件。点击下方可复制命令在终端运行："
+              : route
+                ? "前往对应页面直接处理，或点击复制终端命令："
+                : "可点击复制下方终端命令查看详情："}
+          </p>
+          <CommandHint command={cli} />
+        </div>
       )}
     </DecisionCard>
   );

@@ -64,14 +64,14 @@ function E(
 }
 
 export const activity: ActivityRecord[] = [
-  E("drift1", "11-13", "11:37", "drift", ["evals_studio"], "project-harness 的副本被修改", {
+  E("drift1", "11-13", "11:37", "drift", ["evals_studio"], "project-harness 在本地被修改", {
     status: "pending",
     trigger: "watcher",
     subject: { asset: "project-harness", version: null },
     summary:
-      "Agent 在工作时改进了项目里的 skill 副本。改动还留在副本里，等你决定回流、丢弃或分叉。",
+      "Agent 在工作时改进了项目里的 skill 副本。改动还留在本地，等你决定写回源仓库、还原锁定版或转为项目独立文件。",
     changes: [["~", ".agents/skills/project-harness/SKILL.md", "+3 −1 行 · 与正本 4d9b1eb 不一致"]],
-    cli: "$ fangcun status\nevals_studio  1 处漂移  project-harness",
+    cli: "$ fangcun status\nevals_studio  1 处本地已改  project-harness",
   }),
   E(
     "tdd1",
@@ -97,8 +97,8 @@ export const activity: ActivityRecord[] = [
     snap: 127,
     summary: "加入工程基线套装里的 tdd，并为 Claude Code 写入 github MCP 配置。",
     changes: [
-      ["+", ".agents/skills/tdd", "链接到 tdd@a1b2c3"],
-      ["+", ".claude/skills/tdd", "相对链接到 .agents/skills/tdd"],
+      ["+", ".agents/skills/tdd", "本机软链到 tdd@a1b2c3"],
+      ["+", ".claude/skills/tdd", "本机相对软链到 .agents/skills/tdd"],
       ["~", ".mcp.json", "新增键 mcpServers.github"],
     ],
     cli: "$ fangcun sync\n3 处变更 · 快照 #127",
@@ -117,7 +117,7 @@ export const activity: ActivityRecord[] = [
     status: "applied",
     snap: 41,
     trigger: "cli",
-    summary: "重新解析清单，把新增的 playwright 写进锁，再物化到项目目录。下一次校验应能通过。",
+    summary: "重新解析清单，把新增的 playwright 写进锁，再同步到项目目录。下一次校验应能通过。",
     changes: [
       ["~", "fangcun.lock", "新增 playwright 条目"],
       ["~", ".mcp.json", "新增键 mcpServers.playwright"],
@@ -128,7 +128,7 @@ export const activity: ActivityRecord[] = [
     status: "failed",
     trigger: "cli",
     summary:
-      "提交前钩子在本机运行校验。fangcun.toml 新增了 playwright，但 fangcun.lock 没有更新，--frozen 模式下拒绝物化。",
+      "提交前钩子在本机运行校验。fangcun.toml 新增了 playwright，但 fangcun.lock 没有更新，--frozen 模式下拒绝写入。",
     changes: [
       ["~", "fangcun.toml", "[mcp.playwright] 已声明"],
       ["=", "fangcun.lock", "缺少 playwright 条目"],
@@ -149,8 +149,8 @@ export const activity: ActivityRecord[] = [
         "从活动的待处理项进入，在项目页检查器里勾选两个项目一起升级。差异里没有脚本或命令变更。",
       changes: [
         ["~", "evals_studio/fangcun.lock", "frontend-design → v1.3.0"],
-        ["~", "evals_studio/.agents/skills/frontend-design", "改链到 v1.3.0"],
-        ["~", "blog-site/.agents/skills/frontend-design", "入库文件更新为 v1.3.0"],
+        ["~", "evals_studio/.agents/skills/frontend-design", "软链改到 v1.3.0"],
+        ["~", "blog-site/.agents/skills/frontend-design", "拷入文件更新为 v1.3.0"],
       ],
       cli: "$ fangcun update frontend-design --projects evals_studio,blog-site",
     },
@@ -189,15 +189,15 @@ export const activity: ActivityRecord[] = [
     "09:30",
     "adopt",
     ["evals_studio", "agent-lab", "fangcun", "blog-site", "notes-kit"],
-    "收编 project-harness：5 份副本归并为 1 份正本",
+    "收录 project-harness：5 份副本归并为 1 份正本",
     {
       status: "applied",
       snap: 125,
       summary:
-        "4 份相同副本替换为受管链接；evals_studio/.trae 里已分叉的那份另存为分叉版本 e81c55a，事前全部备份。",
+        "4 份相同副本换为受管软链；evals_studio/.trae 里内容已分化的那份另存为独立版本 e81c55a，事前全部备份。",
       changes: [
-        ["+", "~/.fangcun/lib/project-harness@4d9b1eb", "正本入库"],
-        ["~", "4 个项目的 .agents/skills/project-harness", "替换为受管链接"],
+        ["+", "~/.fangcun/lib/project-harness@4d9b1eb", "正本存入资产库"],
+        ["~", "4 个项目的 .agents/skills/project-harness", "替换为受管软链"],
         ["−", "evals_studio/.trae/project-harness", "改由资产库管理，已备份"],
       ],
       cli: "$ fangcun adopt project-harness",

@@ -130,7 +130,7 @@ impl Ledger {
 
     pub fn to_toml(&self) -> Result<String> {
         toml::to_string(self).map_err(|e| Error::Parse {
-            origin: "物化台账".to_owned(),
+            origin: "同步台账".to_owned(),
             message: e.to_string(),
         })
     }
@@ -244,7 +244,7 @@ impl Adopted {
 
     pub fn to_toml(&self) -> Result<String> {
         toml::to_string(self).map_err(|e| Error::Parse {
-            origin: "收编台账".to_owned(),
+            origin: "收录台账".to_owned(),
             message: e.to_string(),
         })
     }

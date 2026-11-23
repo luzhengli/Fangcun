@@ -16,7 +16,7 @@ export const TONE_COLORS: Record<Tone, [text: string, dot: string]> = {
   danger: ["var(--danger)", "var(--danger-dot)"],
 };
 
-/** 六种资产状态的语气（6.10）：漂移橙、可更新蓝，避开红绿对立。 */
+/** 六种资产状态的语气（6.10）：本地已改用橙、可更新用蓝，避开红绿对立。 */
 export function toneOfState(state: AssetState | null): Tone {
   switch (state) {
     case "synced":

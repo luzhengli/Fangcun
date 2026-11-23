@@ -162,7 +162,7 @@ pub fn plan(input: &RemoveInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
                     _ => {
                         builder.remove(
                             &copy.dir,
-                            format!("移出全局层（链接到 {name}@{short}），资产库保留正本"),
+                            format!("移出全局层（软链指向 {name}@{short}），资产库保留正本"),
                         )?;
                         continue;
                     }
@@ -261,7 +261,7 @@ pub fn plan(input: &RemoveInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         builder.write_file(
             &Adopted::file(input.home),
             ledger.to_toml()?.into_bytes(),
-            format!("收编台账：去掉 {} 个全局位置", before - ledger.links.len()),
+            format!("收录台账：去掉 {} 个全局位置", before - ledger.links.len()),
         )?;
     }
 

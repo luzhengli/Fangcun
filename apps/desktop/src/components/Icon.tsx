@@ -105,6 +105,41 @@ const paths = {
       <path d="M8 1.5v1.75M8 12.75v1.75M1.5 8h1.75M12.75 8h1.75" />
     </>
   ),
+  instruction: (
+    <>
+      <path d="M3.5 2.25h6.25l3 3V13a.75.75 0 0 1-.75.75h-8.5A.75.75 0 0 1 2.75 13V3a.75.75 0 0 1 .75-.75Z" />
+      <path d="M9.75 2.25v3h3M5.25 8h5.5M5.25 10.5h3.75" />
+    </>
+  ),
+  skill: (
+    <>
+      <path d="m8.75 1.75-5 7h4.25l-.75 5.5 5-7H8l.75-5.5Z" />
+    </>
+  ),
+  mcp: (
+    <>
+      <circle cx="4.5" cy="4.5" r="1.75" />
+      <circle cx="11.5" cy="4.5" r="1.75" />
+      <circle cx="8" cy="11.75" r="1.75" />
+      <path d="M6 5.5l1.5 4.5M10 5.5l-1.5 4.5M6.25 4.5h3.5" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="5.5" y="5.5" width="7.75" height="7.75" rx="1.5" />
+      <path d="M10.5 5.5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+    </>
+  ),
+  close: (
+    <>
+      <path d="M4 4l8 8M12 4l-8 8" />
+    </>
+  ),
+  arrowRight: (
+    <>
+      <path d="M3 8h9.5M8.75 4.25 12.5 8l-3.75 3.75" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof paths;

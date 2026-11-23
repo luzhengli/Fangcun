@@ -112,7 +112,7 @@ const handlers: Partial<Commands> = {
   plan_init: ({ projectRoot, mode }) => initPlan(projectRoot, mode),
   /** Main.dc.html 的 REG_OPTS 依据：git 历史里有 1 位提交者，建议链接。 */
   suggest_mode: () => ({ mode: "link", committers: 1 }),
-  plan_rollback_record: () => rollbackPlan(),
+  plan_rollback_record: ({ recordId }) => rollbackPlan(recordId),
   plan_rollback: ({ snapshot }) => rollbackToPlan(snapshot),
   /** Checkup.dc.html 的 dup。 */
   plan_finding: () => findingPlan(),

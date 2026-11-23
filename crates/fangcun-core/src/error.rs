@@ -22,7 +22,7 @@ pub enum Error {
     OutOfScope(PathBuf),
 
     /// 出计划之后磁盘上的文件变了。重新出计划再应用。
-    #[error("出计划之后 {} 变了，请重新预览", .0.display())]
+    #[error("预览期间文件已变动（{}），未执行任何写入，请重新生成预览", .0.display())]
     StalePlan(PathBuf),
 
     /// 计划不能应用，例如回滚时有文件被后来的变更改过（6.7 回滚规则第 6 条）。
@@ -34,7 +34,7 @@ pub enum Error {
     Frozen(String),
 
     /// 要应用的计划不是这个内核出的，或者已经应用过。
-    #[error("找不到计划 #{0}，请重新预览")]
+    #[error("预览计划 #{0} 已过期，未执行任何写入，请重新预览")]
     PlanNotFound(u32),
 
     /// 资产库索引（SQLite）读写出错。
@@ -54,7 +54,7 @@ pub enum Error {
     #[error("找不到用户主目录")]
     NoHomeDir,
 
-    #[error("读写 {path} 失败")]
+    #[error("读写 {path} 失败：{source}")]
     Io {
         path: PathBuf,
         #[source]
@@ -64,8 +64,8 @@ pub enum Error {
     #[error("解析 {origin} 失败：{message}")]
     Parse { origin: String, message: String },
 
-    /// 全局层的移除、降级只对已收编进资产库的项开放（7.5）。参数是没收编的项。
-    #[error("{0} 还没收编进资产库。先收编（fangcun adopt），再从全局移除")]
+    /// 全局层的移除、降级只对已收录进资产库的项开放（7.5）。参数是未收录的项。
+    #[error("{0} 尚未收录进资产库。请先收录（fangcun adopt {0}），再从全局层移除")]
     NotAdopted(String),
 
     /// 钥匙串出错（F6、M1-17）。信息里只有名称，从不带值。

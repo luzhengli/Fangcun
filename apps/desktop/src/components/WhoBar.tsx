@@ -60,9 +60,9 @@ export function WhoButton({
 
 export interface WhoTag {
   name: string;
-  /** warn：漂移、同名冲突，标橙；all：全部项目。 */
+  /** warn：本地已改、同名冲突，标橙；all：全部项目。 */
   tone?: "warn" | "all";
-  /** 多版本并存时的版本号，或「同名冲突」「漂移」。 */
+  /** 多版本并存时的版本号，或「同名冲突」「本地已改」。 */
   ver?: string;
 }
 
@@ -74,6 +74,7 @@ export function WhoList({
   tags,
   idle,
   indent,
+  open = true,
 }: {
   id: string;
   label: string;
@@ -82,23 +83,29 @@ export function WhoList({
   idle?: string;
   /** 左边距，和名称对齐。 */
   indent: number;
+  /** 控制展开折叠，支持 CSS Grid 过渡动画。 */
+  open?: boolean;
 }) {
   return (
-    <fieldset
-      id={`who-${id}`}
-      aria-label={label}
-      className={styles.list}
-      style={{ "--who-x": `${indent}px` } as React.CSSProperties}
-    >
-      {lead && <span className={styles.lead}>{lead}</span>}
-      {tags.map((t) => (
-        <span key={`${t.name}:${t.ver ?? ""}`} className={styles.tag} data-t={t.tone ?? "n"}>
-          {t.name}
-          {t.ver && <span className={styles.ver}>{t.ver}</span>}
-        </span>
-      ))}
-      {idle && <span className={styles.idle}>{idle}</span>}
-    </fieldset>
+    <div className={styles.listWrap} data-open={open} aria-hidden={!open || undefined}>
+      <div className={styles.listInner}>
+        <fieldset
+          id={`who-${id}`}
+          aria-label={label}
+          className={styles.list}
+          style={{ "--who-x": `${indent}px` } as React.CSSProperties}
+        >
+          {lead && <span className={styles.lead}>{lead}</span>}
+          {tags.map((t) => (
+            <span key={`${t.name}:${t.ver ?? ""}`} className={styles.tag} data-t={t.tone ?? "n"}>
+              {t.name}
+              {t.ver && <span className={styles.ver}>{t.ver}</span>}
+            </span>
+          ))}
+          {idle && <span className={styles.idle}>{idle}</span>}
+        </fieldset>
+      </div>
+    </div>
   );
 }
 

@@ -301,12 +301,14 @@ fn ask_mode(kernel: &Kernel, root: &Path, yes: bool) -> Option<SyncMode> {
     let suggestion = kernel.suggest_mode(root);
     let (hint, default) = match suggestion.mode {
         SyncMode::Vendor => (
-            format!("{} 位提交者，多人协作建议入库", suggestion.committers),
+            format!("{} 位提交者，多人协作建议拷入仓库", suggestion.committers),
             "v",
         ),
-        SyncMode::Link => ("个人项目建议链接".to_owned(), "l"),
+        SyncMode::Link => ("个人项目建议本机软链".to_owned(), "l"),
     };
-    print!("物化方式：链接（l，软链到资产库）或入库（v，实体文件提交进仓库）。{hint} [{default}] ");
+    print!(
+        "同步方式：本机软链（l，软链到资产库）或拷入仓库（v，实体文件随 Git 提交）。{hint} [{default}] "
+    );
     let _ = std::io::stdout().flush();
     let mut answer = String::new();
     let _ = std::io::stdin().lock().read_line(&mut answer);
@@ -442,7 +444,21 @@ fn print_doctor(report: &CheckupReport) {
         match (finding.status, finding.ready) {
             (FindingStatus::Resolved, _) => println!("  已处理 · 已留快照"),
             (_, true) => println!("  → {}", finding.action),
-            (_, false) => println!("  → {}（还没接上）", finding.action),
+            (_, false) => match finding.category {
+                FindingCategory::GlobalTax => {
+                    println!(
+                        "  → {}（可用 fangcun remove <资产> --global 或在桌面端「全局」页清理）",
+                        finding.action
+                    )
+                }
+                FindingCategory::Secret => {
+                    println!(
+                        "  → {}（请运行 fangcun secret set <名称> 存入钥匙串）",
+                        finding.action
+                    )
+                }
+                _ => println!("  → {}（请在桌面端对应页面查看或处理）", finding.action),
+            },
         }
         println!();
     }
@@ -458,10 +474,10 @@ fn print_status(kernel: &Kernel, cwd: &Path) -> Result<()> {
     );
     if status.has_manifest {
         if status.drifted.is_empty() && status.updatable.is_empty() {
-            println!("没有漂移，也没有可更新的项（上次上游检查的结果）。");
+            println!("没有本地改动，也没有可更新的项（上次上游检查的结果）。");
         }
         for asset in &status.drifted {
-            println!("● 已漂移  {asset}：副本被改过。看差异：fangcun drift {asset}");
+            println!("● 本地已改  {asset}：项目内文件已被本地修改。看差异：fangcun drift {asset}");
         }
         for line in &status.updatable {
             println!("● 可更新  {line}。看差异：fangcun update --dry-run");
@@ -479,15 +495,15 @@ fn print_status(kernel: &Kernel, cwd: &Path) -> Result<()> {
     Ok(())
 }
 
-/// `fangcun drift`：每项漂移一段，差异照活动页的样子，加号减号打头（第 5 节、6.9）。
+/// `fangcun drift`：每项本地改动一段，差异照活动页的样子，加号减号打头（第 5 节、6.9）。
 fn print_drift(report: &[(String, DriftInfo)]) {
     if report.is_empty() {
-        println!("没有漂移：受管的副本和锁里的一样。");
+        println!("没有本地改动：受管文件与锁定的版本一致。");
         return;
     }
     let single = report.len() == 1;
     for (asset, info) in report {
-        println!("● 已漂移  {asset}（锁定 {}）", info.locked);
+        println!("● 本地已改  {asset}（锁定 {}）", info.locked);
         println!("  {}", info.summary);
         if !info.others.is_empty() {
             println!("  同样用它的项目：{}", info.others.join("、"));
@@ -512,15 +528,15 @@ fn print_drift(report: &[(String, DriftInfo)]) {
         }
         println!();
         match &info.promote_blocked {
-            Some(why) => println!("  回流用不了：{why}"),
-            None => println!("  回流：fangcun drift {asset} promote"),
+            Some(why) => println!("  写回源仓库用不了：{why}"),
+            None => println!("  写回源仓库：fangcun drift {asset} promote"),
         }
         if info.original {
-            println!("  丢弃：fangcun drift {asset} discard");
+            println!("  还原锁定版：fangcun drift {asset} discard");
         } else {
-            println!("  丢弃用不了：原版取不回");
+            println!("  还原锁定版用不了：原版无法取回");
         }
-        println!("  分叉：fangcun drift {asset} fork");
+        println!("  转为项目独立文件：fangcun drift {asset} fork");
         if !single {
             println!("  看差异：fangcun drift {asset}");
         }

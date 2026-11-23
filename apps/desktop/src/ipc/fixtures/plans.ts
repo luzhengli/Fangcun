@@ -12,6 +12,7 @@ import type { HistoryEntry } from "../bindings/HistoryEntry";
 import type { ManifestEdit } from "../bindings/ManifestEdit";
 import type { SyncMode } from "../bindings/SyncMode";
 import type { ToolId } from "../bindings/ToolId";
+import { activity } from "./activity";
 import { globalRowsNamed, removedGlobal } from "./global";
 import { libraryState } from "./library";
 
@@ -24,6 +25,8 @@ const state = {
   /** 正在预览的「从全局移除」涉及的全局行，应用后从列表里拿掉。 */
   removing: [] as string[],
   lastRemoved: [] as string[],
+  /** 最近一次应用的变更列表，用于撤回计划展示真实文件路径。 */
+  lastAppliedChanges: [] as ChangePlan["changes"],
 };
 
 /** Main.dc.html 的 plan：同步计划，只装排进来的改动（6.8）。 */
@@ -33,13 +36,13 @@ export function syncPlan(projectRoot: string, edits: ManifestEdit[] = []): Chang
   const changes: ChangePlan["changes"] = [];
   // 暂存的「在本项目停用」：清单加一节，Claude Code 的开关加 16 个键（原型 larkOff）。
   for (const edit of edits) {
-    // 升级 tdd（Main.dc.html 的 tddQueued）：本项目改链接，勾选的项目各一行。
+    // 升级 tdd（Main.dc.html 的 tddQueued）：本项目改软链，勾选的项目各一行。
     if (edit.op === "upgrade") {
       changes.push(
         {
           op: "modify",
           path: ".agents/skills/tdd",
-          detail: "链接改指 tdd@b7e9f0，含新脚本 run-tests.sh",
+          detail: "本机软链改指 tdd@b7e9f0，含新脚本 run-tests.sh",
         },
         { op: "modify", path: "fangcun.lock", detail: "tdd 记下 b7e9f0 的内容哈希" },
       );
@@ -81,7 +84,11 @@ export function initPlan(projectRoot: string, mode: SyncMode): ChangePlan {
     id: state.next++,
     title: `即将登记 ${name}，写 3 个文件`,
     changes: [
-      { op: "add", path: "fangcun.toml", detail: `清单 · mode = "${mode}"，从目录现状反推` },
+      {
+        op: "add",
+        path: "fangcun.toml",
+        detail: `清单 · mode = "${mode}"（${mode === "link" ? "本机软链" : "拷入仓库"}），从目录现状反推`,
+      },
       { op: "add", path: "fangcun.lock", detail: "锁 · 记下每一项的版本与哈希" },
       { op: "modify", path: "~/.fangcun/projects.toml", detail: "登记表新增一节 · 本机，不提交" },
     ],
@@ -90,12 +97,38 @@ export function initPlan(projectRoot: string, mode: SyncMode): ChangePlan {
   };
 }
 
-/** 撤销：把上一次写入回滚。原型里撤销直接生效，这里照内核的做法先出计划。 */
-export function rollbackPlan(): ChangePlan {
+/** 撤销或从活动详情发起回滚：按目标记录或上一次应用的文件列表还原快照状态。 */
+export function rollbackPlan(recordId?: string): ChangePlan {
+  const matched = recordId ? activity.find((r) => r.id === recordId) : undefined;
+  const reverse =
+    matched && matched.files.length > 0
+      ? matched.files
+          .filter((f) => f.op !== "read")
+          .map((f) => ({
+            op: (f.op === "add" ? "remove" : f.op === "remove" ? "add" : "modify") as
+              | "add"
+              | "modify"
+              | "remove",
+            path: f.path,
+            detail: "按快照逐字节恢复写入前状态",
+          }))
+      : state.lastAppliedChanges.length > 0
+        ? state.lastAppliedChanges.map((ch) => ({
+            op: (ch.op === "add" ? "remove" : ch.op === "remove" ? "add" : "modify") as
+              | "add"
+              | "modify"
+              | "remove",
+            path: ch.path,
+            detail: "还原成写入前快照状态",
+          }))
+        : [
+            { op: "modify" as const, path: ".agents/skills/tdd", detail: "还原成写入前版本" },
+            { op: "modify" as const, path: "fangcun.lock", detail: "恢复锁定哈希" },
+          ];
   return {
     id: state.next++,
     title: "回滚到写入前",
-    changes: [{ op: "modify", path: "（上一次写入的文件）", detail: "还原成写入前的样子" }],
+    changes: reverse,
     notes: [],
     blocked: false,
   };
@@ -106,7 +139,7 @@ export function history(): HistoryEntry[] {
   const rows: [number, string, string][] = [
     [127, "同步 3 处变更", "2026-11-13T10:42:00"],
     [126, "升级 frontend-design → v1.3.0", "2026-11-12T18:05:00"],
-    [125, "收编 project-harness", "2026-11-11T09:30:00"],
+    [125, "收录 project-harness", "2026-11-11T09:30:00"],
     [124, "登记项目，生成清单与锁", "2026-11-10T16:12:00"],
   ];
   if (state.synced) rows.unshift([128, "同步 4 处变更", new Date().toISOString()]);
@@ -149,10 +182,13 @@ export function applyPlan(plan: ChangePlan): Applied {
     state.current = Number(rollingTo[1]);
     return { snapshots: [129], record: `fixture-${plan.id}` };
   }
+  if (plan.title !== "回滚到写入前") {
+    state.lastAppliedChanges = plan.changes;
+  }
   if (plan.title.startsWith("即将对")) state.synced = true;
   const registering = /^即将登记 (\S+)，/.exec(plan.title);
   if (registering?.[1]) state.registered.add(registering[1]);
-  if (plan.title.startsWith("收编 pr-review")) libraryState.adopted = true;
+  if (plan.title.startsWith("收录 pr-review")) libraryState.adopted = true;
   if (plan.title.startsWith("从全局层移除")) {
     for (const id of state.removing) removedGlobal.add(id);
     state.lastRemoved = [...state.removing];
@@ -163,6 +199,7 @@ export function applyPlan(plan: ChangePlan): Applied {
     libraryState.adopted = false;
     for (const id of state.lastRemoved) removedGlobal.delete(id);
     state.lastRemoved = [];
+    state.lastAppliedChanges = [];
   }
   return { snapshots: [128], record: `fixture-${plan.id}` };
 }
@@ -171,22 +208,22 @@ export function isRegistered(name: string): boolean {
   return state.registered.has(name);
 }
 
-/** Checkup.dc.html 的 dup：project-harness 的 5 份副本收编进资产库，分叉的另存一版。 */
+/** Checkup.dc.html 的 dup：project-harness 的 5 份副本收录进资产库，已分化的另存一版。 */
 export function findingPlan(): ChangePlan {
   const same = ["agent-lab/.claude", "fangcun/.claude", "blog-site/.agents", "notes-kit/.claude"];
   return {
     id: state.next++,
-    title: "收编 project-harness：5 份副本，4 份相同、1 份已分叉",
+    title: "收录 project-harness：5 份副本，4 份相同、1 份内容已分化",
     changes: [
       ...same.map((dir) => ({
         op: "modify" as const,
         path: `${dir}/skills/project-harness`,
-        detail: "换成受管链接 → 资产库 4d9b1eb，事前备份",
+        detail: "换为受管软链 → 资产库 4d9b1eb，事前备份",
       })),
       {
         op: "modify" as const,
         path: "evals_studio/.trae/project-harness",
-        detail: "已分叉，另存为独立版本，换成受管链接",
+        detail: "内容已分化，另存为独立版本，换为受管软链",
       },
     ],
     notes: [],
@@ -194,16 +231,16 @@ export function findingPlan(): ChangePlan {
   };
 }
 
-/** 漂移的三种处理（Main.dc.html 的 driftDoneMap）。原型点了直接生效，这里照内核的做法先出计划。 */
+/** 本地已改的三种处理：写回源仓库 / 还原锁定版 / 转为项目独立文件。 */
 export function driftPlan(choice: "promote" | "discard" | "fork"): ChangePlan {
   const plans = {
     promote: {
-      title: "回流 project-harness 到 local:luyao-skills",
+      title: "将 project-harness 的本地修改写回源仓库",
       changes: [
         {
           op: "modify" as const,
           path: "~/code/luyao-skills/project-harness",
-          detail: "回流 project-harness 的修改，生成新版本 9c1f2a",
+          detail: "写入本地修改到 local:luyao-skills，生成新版本 9c1f2a",
         },
         { op: "modify" as const, path: "fangcun.toml", detail: "project-harness 改为固定 9c1f2a" },
         { op: "modify" as const, path: "fangcun.lock", detail: "project-harness 锁到 9c1f2a" },
@@ -211,39 +248,39 @@ export function driftPlan(choice: "promote" | "discard" | "fork"): ChangePlan {
       notes: [
         {
           tone: "info" as const,
-          text: "另有 4 个项目也用 project-harness：agent-lab、fangcun、blog-site、notes-kit。回流后上游检查会把它们列进「可更新」，逐个决定是否跟进",
+          text: "另有 4 个项目也用 project-harness：agent-lab、fangcun、blog-site、notes-kit。写回后上游检查会把它们列进「可更新」，逐个决定是否跟进",
         },
       ],
     },
     discard: {
-      title: "丢弃 project-harness 的修改",
+      title: "还原 project-harness 到锁定版",
       changes: [
         {
           op: "modify" as const,
           path: "~/.fangcun/library/objects/4d9b1eb…",
-          detail: "恢复资产库里的正本 4d9b1eb，链到它的项目一起恢复；改过的内容进快照",
+          detail: "还原资产库里的锁定版 4d9b1eb，链到它的项目一起恢复；本地改过的内容留进快照",
         },
       ],
       notes: [
         {
           tone: "info" as const,
-          text: "想找回被丢弃的修改，对这条记录回滚即可（6.7 回滚规则第 4 条）",
+          text: "想找回刚才改过的内容，对这条记录回滚即可（6.7 回滚规则第 4 条）",
         },
       ],
     },
     fork: {
-      title: "分叉 project-harness 为本项目专属",
+      title: "将 project-harness 转为项目独立文件",
       changes: [
         {
           op: "modify" as const,
           path: "fangcun.toml",
-          detail: "[skills] 去掉 project-harness，不再跟随来源",
+          detail: "[skills] 去掉 project-harness，不再跟随原来源",
         },
         { op: "modify" as const, path: "fangcun.lock", detail: "去掉 project-harness" },
         {
           op: "modify" as const,
           path: ".agents/skills/project-harness",
-          detail: "改成本项目自己的实体目录，提交进仓库",
+          detail: "转为本项目自己的独立实体文件，随项目仓库提交",
         },
       ],
       notes: [],
@@ -252,25 +289,25 @@ export function driftPlan(choice: "promote" | "discard" | "fork"): ChangePlan {
   return { id: state.next++, blocked: false, ...plans[choice] };
 }
 
-/** Library.dc.html 的 adopt：pr-review 收编为本地来源，原位换成受管链接。 */
+/** Library.dc.html 的 adopt：pr-review 收录到资产库，原位换为受管软链。 */
 export function adoptPlan(asset: string): ChangePlan {
   const dirs = ["~/.claude/skills", "~/.agents/skills", "~/.codeium/windsurf/skills"];
   return {
     id: state.next++,
-    title: `收编 ${asset}：记为本地来源，原位换成链接`,
+    title: `收录 ${asset}：存入本机资产库，原位换为软链`,
     changes: [
       {
         op: "add",
         path: "~/.fangcun/lib/sha256-d441…",
-        detail: `${asset} 存进资产库 · 记为本地来源`,
+        detail: `${asset} 存入资产库 · 记为本地来源`,
       },
       ...dirs.map((dir) => ({
         op: "modify" as const,
         path: `${dir}/${asset}`,
-        detail: "换成受管链接 → 资产库 d4410e2，事前备份",
+        detail: "换为受管软链 → 资产库 d4410e2，事前备份",
       })),
     ],
-    notes: [{ tone: "info", text: "6 个项目照常加载。只换链接、不改清单" }],
+    notes: [{ tone: "info", text: "6 个项目照常加载。只换软链、不改清单" }],
     blocked: false,
   };
 }
@@ -280,7 +317,7 @@ const SKDIR: Record<string, string> = {
   codex: "~/.codex/skills/",
 };
 
-/** Global.dc.html 的瘦身计划：当前工具全局目录里的链接或配置项，逐个移出。 */
+/** Global.dc.html 的待清理计划：当前工具全局目录里的软链或配置项，逐个移出。 */
 export function removeGlobalPlan(tool: ToolId, items: GlobalItemRef[]): ChangePlan {
   const rows = globalRowsNamed(items.map((i) => i.name));
   state.removing = rows.map((r) => r.id);
@@ -290,7 +327,7 @@ export function removeGlobalPlan(tool: ToolId, items: GlobalItemRef[]): ChangePl
       r.kind === "skill" ? `${SKDIR[tool] ?? ""}${r.count > 1 ? "lark-*" : r.name}` : r.location,
     detail:
       r.kind === "skill"
-        ? `移出全局层（${r.members[0]}@${r.count > 1 ? `3f20c9a，${r.count} 个链接` : "0d81aa3"}），资产库保留正本`
+        ? `移出全局层（${r.members[0]}@${r.count > 1 ? `3f20c9a，${r.count} 个软链` : "0d81aa3"}），资产库保留正本`
         : `移出全局层（${r.name}），资产库保留正本`,
   }));
   return {
@@ -302,7 +339,7 @@ export function removeGlobalPlan(tool: ToolId, items: GlobalItemRef[]): ChangePl
   };
 }
 
-/** 命令面板回车加入（6.9）：原型没画这一步的计划，按 `fangcun add` 的三处写入照写。 */
+/** 命令面板回车加入（6.9）：按 `fangcun add` 的三处写入照写。 */
 export function addPlan(projectRoot: string, asset: string): ChangePlan {
   const name = asset.split("@").pop() ?? asset;
   return {
@@ -311,7 +348,7 @@ export function addPlan(projectRoot: string, asset: string): ChangePlan {
     changes: [
       { op: "modify", path: "fangcun.toml", detail: `[skills] 加入 ${name}` },
       { op: "modify", path: "fangcun.lock", detail: `记下 ${name} 的版本与哈希` },
-      { op: "add", path: `.claude/skills/${name}`, detail: "链接到资产库正本" },
+      { op: "add", path: `.claude/skills/${name}`, detail: "本机软链到资产库正本" },
     ],
     notes: [],
     blocked: false,

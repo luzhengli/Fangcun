@@ -6,7 +6,9 @@ import { DecisionCard, Done, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
 import { InfoTip } from "@/components/InfoTip";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
+import { Segmented } from "@/components/Segmented";
 import { formatK, TONE_COLORS, type Tone } from "@/components/tone";
+import { useListNav } from "@/components/useListNav";
 import { RecentList, WhoButton, WhoList, type WhoTag } from "@/components/WhoBar";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { LibraryRow } from "@/ipc/bindings/LibraryRow";
@@ -27,18 +29,18 @@ const KIND_LONG: Record<AssetKind, string> = {
 };
 /** 行首方块：字、底色、字色。照抄原型的 KB。 */
 const BADGE: Record<AssetKind, [string, string, string]> = {
-  skill: ["S", "var(--k2)", "#fff"],
+  skill: ["S", "var(--k2)", "var(--on-k)"],
   mcp: ["M", "var(--k3)", "var(--accent)"],
-  instruction: ["指", "var(--k1)", "#fff"],
+  instruction: ["指", "var(--k1)", "var(--on-k)"],
 };
 
 function statusOf(row: LibraryRow): { tone: Tone; label: string } {
   const map: Record<LibraryStatus, { tone: Tone; label: string }> = {
-    drift: { tone: "warn", label: `${row.drift} 处漂移` },
+    drift: { tone: "warn", label: `${row.drift} 处本地已改` },
     updatable: { tone: "info", label: "可更新" },
-    "unknown-source": { tone: "unknown", label: "来源未知" },
+    "unknown-source": { tone: "unknown", label: "未收录" },
     synced: { tone: "ok", label: "已同步" },
-    adopted: { tone: "ok", label: "已收编" },
+    adopted: { tone: "ok", label: "已收录" },
     unused: { tone: "muted", label: "没有项目在用" },
   };
   return map[row.status];
@@ -47,9 +49,9 @@ function statusOf(row: LibraryRow): { tone: Tone; label: string } {
 const TAG: Record<VersionTag, { tone: Tone; label: string }> = {
   locked: { tone: "ok", label: "锁定中" },
   latest: { tone: "info", label: "最新" },
-  fork: { tone: "warn", label: "分叉" },
+  fork: { tone: "warn", label: "已分化" },
   old: { tone: "neutral", label: "旧版" },
-  unadopted: { tone: "unknown", label: "未收编" },
+  unadopted: { tone: "unknown", label: "未收录" },
 };
 
 /** 语义浅底，只用「墨格」的几种。 */
@@ -67,7 +69,7 @@ const GROUP_NAME: Record<SourceGroup, string> = {
   local: "本地开发",
   github: "GitHub",
   npm: "npm",
-  unknown: "待收编",
+  unknown: "未收录",
   other: "其他",
 };
 
@@ -87,21 +89,21 @@ function Badge({ kind, big }: { kind: AssetKind; big?: boolean }) {
   );
 }
 
-/** 「谁在用」展开后的项目名：多版本并存时带版本号，漂移的标橙。 */
+/** 「谁在用」展开后的项目名：多版本并存时带版本号，本地已改标橙。 */
 function whoTags(row: LibraryRow): WhoTag[] {
   const multi = row.versions.filter((v) => v.users.length > 0).length > 1;
   return row.versions.flatMap((v) =>
     v.users.map((u) => ({
       name: u.name,
       tone: u.name.startsWith("全部") ? ("all" as const) : u.drift ? ("warn" as const) : undefined,
-      ver: u.drift ? "漂移" : multi ? v.label : undefined,
+      ver: u.drift ? "本地已改" : multi ? v.label : undefined,
     })),
   );
 }
 
 /**
  * 资产库（6.4，方寸 2）：四个数字、类型与来源筛选、「谁在用」比例条、版本轨道。
- * 来源未知的资产在检查器里给「收编」，点了就写，原地显示结果和撤销。
+ * 未收录资产在检查器里提供「收录到资产库」，点了就写，原地显示结果和撤销。
  */
 export function LibraryPage() {
   const overview = useLibraryOverview();
@@ -114,10 +116,11 @@ export function LibraryPage() {
   const [adopted, setAdopted] = useState<{ name: string; record: string | null } | null>(null);
   const search = useRef<HTMLInputElement>(null);
 
-  // 从项目页、全局页的「去收编」过来时带着 ?asset=，选中那一项。
+  // 从项目页、全局页的「去资产库收录」过来时带着 ?asset=，选中那一项。
   const navKey = useLocation().key;
   const [params] = useSearchParams();
   const [seenNavKey, setSeenNavKey] = useState<string | null>(null);
+  const [stuck, setStuck] = useState(false);
   if (navKey !== seenNavKey) {
     setSeenNavKey(navKey);
     const wanted = params.get("asset");
@@ -159,9 +162,20 @@ export function LibraryPage() {
       (source === "all" || sourceKey(r) === source) &&
       (!q || `${r.name} ${r.source}`.toLowerCase().includes(q)),
   );
-  // 按名字选中：收编后这一行的编号会变，名字不变。
+  // 按名字选中：收录后这一行的编号会变，名字不变。
   const current = shown.find((r) => r.name === selected) ?? shown[0];
   const total = data?.projectTotal ?? 0;
+  useListNav(
+    shown.map((r) => r.id),
+    current?.id,
+    (id) => {
+      const hit = shown.find((x) => x.id === id);
+      if (hit) {
+        setSelected(hit.name);
+        setInspectorOpen(true);
+      }
+    },
+  );
 
   const toggleWho = (id: string) =>
     setWhoOpen((prev) => {
@@ -192,9 +206,9 @@ export function LibraryPage() {
     .join("、");
   const todo = (data?.drift ?? 0) + (data?.updatable ?? 0) + (data?.unknown ?? 0);
   const todoNote = [
-    data?.drift ? `漂移 ${data.drift}` : null,
+    data?.drift ? `本地已改 ${data.drift}` : null,
     data?.updatable ? `可更新 ${data.updatable}` : null,
-    data?.unknown ? `来源未知 ${data.unknown}` : null,
+    data?.unknown ? `未收录 ${data.unknown}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -246,10 +260,15 @@ export function LibraryPage() {
 
       {data && (
         <div className={page.split}>
-          <main className={`${page.list} ${styles.main}`}>
+          <main
+            className={`${page.list} ${styles.main}`}
+            onScroll={(e) => setStuck(e.currentTarget.scrollTop > 4)}
+          >
             <section aria-label="概要" className={styles.tiles}>
-              <Tile label="资产" value={kindTotal}>
-                Skill {kinds.skill} · MCP {kinds.mcp} · 指令 {kinds.instruction}
+              <Tile label="已收录资产" value={Math.max(0, kindTotal - data.unknown)}>
+                {data.unknown > 0
+                  ? `另有 ${data.unknown} 项未收录 · 共发现 ${kindTotal} 项`
+                  : `Skill ${kinds.skill} · MCP ${kinds.mcp} · 指令 ${kinds.instruction}`}
               </Tile>
               <Tile label="来源" value={sources.length}>
                 {sourceNote || "还没有来源"}
@@ -262,20 +281,13 @@ export function LibraryPage() {
               </Tile>
             </section>
 
-            <div className={styles.sticky}>
-              <fieldset className={c.seg} aria-label="类型">
-                {filters.map(([k, label, n]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    aria-pressed={filter === k}
-                    onClick={() => setFilter(k)}
-                  >
-                    {label}
-                    <span className={c.count}>{n}</span>
-                  </button>
-                ))}
-              </fieldset>
+            <div className={styles.sticky} data-stuck={stuck}>
+              <Segmented
+                label="类型"
+                value={filter}
+                onChange={setFilter}
+                options={filters.map(([k, label, n]) => ({ value: k, label, count: n }))}
+              />
               <span className={styles.flex} />
               <label className={styles.srcLabel}>
                 来源
@@ -341,7 +353,7 @@ export function LibraryPage() {
                 const everyone = [...names].some((n) => n.startsWith("全部") || n === "全局层");
                 const idle = everyone ? [] : data.projects.filter((p) => !names.has(p));
                 return (
-                  <div key={r.id}>
+                  <div key={r.id} data-nav-id={r.id}>
                     <div className={styles.row} data-on={r.id === current?.id}>
                       <button
                         type="button"
@@ -380,15 +392,14 @@ export function LibraryPage() {
                         {status.label}
                       </span>
                     </div>
-                    {open && (
-                      <WhoList
-                        id={r.id}
-                        label={`${r.name} 用在哪些项目`}
-                        indent={48}
-                        tags={whoTags(r)}
-                        idle={idle.length > 0 ? `没用到：${idle.join("、")}` : undefined}
-                      />
-                    )}
+                    <WhoList
+                      id={r.id}
+                      label={`${r.name} 用在哪些项目`}
+                      indent={48}
+                      open={open}
+                      tags={whoTags(r)}
+                      idle={idle.length > 0 ? `没用到：${idle.join("、")}` : undefined}
+                    />
                   </div>
                 );
               })}
@@ -470,8 +481,8 @@ function LibraryInspector({
       decision={
         adopted ? (
           <Done
-            title="已收编"
-            desc="已收编为本地来源，原位置替换为受管链接，事前已备份。"
+            title="已收录"
+            desc="已存入本机资产库统一管理，原位置换为受管软链，Agent 读取不受影响，事前已备份。"
             onUndo={
               adopted.record
                 ? () =>
@@ -549,7 +560,7 @@ function LibraryInspector({
                           {u.name}
                           <span className={styles.mode}>
                             {u.mode}
-                            {u.drift ? " · 漂移" : ""}
+                            {u.drift ? " · 本地已改" : ""}
                           </span>
                         </span>
                       ))
@@ -594,7 +605,7 @@ function LibraryInspector({
   );
 }
 
-/** 来源未知的决定卡片（6.4）：收编进资产库，点了就写。 */
+/** 未收录资产的决定卡片（6.4）：收录到资产库，点了就写。 */
 function AdoptCard({
   row,
   total,
@@ -620,7 +631,7 @@ function AdoptCard({
     try {
       const applied = await applyInline(
         plan.data,
-        () => `已收编 ${row.name} · 原位置换成受管链接 · 已留快照`,
+        () => `已收录 ${row.name} · 原位置换为受管软链 · 已留快照`,
         () => client.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "tools" }),
       );
       onDone(applied.record);
@@ -631,13 +642,14 @@ function AdoptCard({
   };
   return (
     <DecisionCard
-      title="收编进资产库"
+      title="收录到资产库"
       foot={
         <>
           <span className={styles.lg}>
             事前备份 · 可撤销
-            <InfoTip label="收编说明" align="right">
-              把 {row.source} 记为本地来源，存一份正本，原位置换成受管链接。只换链接、不改清单。
+            <InfoTip label="收录说明" align="right">
+              把 {row.source} 存入本机资产库统一管理，原位置换为受管软链。Agent
+              读取不受影响，只换软链、不改清单。
             </InfoTip>
           </span>
           <button
@@ -646,18 +658,26 @@ function AdoptCard({
             disabled={!plan.data || plan.data.blocked || busy}
             onClick={() => void apply()}
           >
-            {busy ? "正在收编…" : "收编"}
+            {busy ? "正在收录…" : "收录到资产库"}
           </button>
         </>
       }
     >
-      <p className={styles.advice}>记为本地来源，原位换成链接 · {keeps}</p>
-      <WriteList
-        changes={plan.data?.changes}
-        loading={plan.isLoading}
-        error={error ?? (plan.isError ? plan.error.message : null)}
-        blockedNote={plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null}
-      />
+      <p className={styles.advice}>
+        存入本机资产库，原位置自动换为软链（Agent 读取不受影响）· {keeps}
+      </p>
+      {plan.data && plan.data.changes.length === 0 ? (
+        <p className={styles.advice}>
+          该资产已在资产库中，点击上方「收录到资产库」即可完成收录登记。
+        </p>
+      ) : (
+        <WriteList
+          changes={plan.data?.changes}
+          loading={plan.isLoading}
+          error={error ?? (plan.isError ? plan.error.message : null)}
+          blockedNote={plan.data?.blocked ? plan.data.notes.map((n) => n.text).join(" ") : null}
+        />
+      )}
     </DecisionCard>
   );
 }

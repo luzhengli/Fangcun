@@ -107,7 +107,7 @@ impl Kernel {
         )?;
         if !entries.is_empty() {
             builder.note(PlanNote::info(format!(
-                "还有叫 {asset} 的 MCP 服务，这次只收编 skill"
+                "还有叫 {asset} 的 MCP 服务，这次只收录 skill"
             )));
         }
         Ok(builder)

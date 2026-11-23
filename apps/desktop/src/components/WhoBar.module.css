@@ -38,7 +38,8 @@
 }
 
 .used {
-  flex: 0 0 22px;
+  flex: 0 0 auto;
+  min-width: 28px;
   text-align: right;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
@@ -64,6 +65,28 @@
 
 .who[aria-expanded="true"] .chev {
   transform: rotate(90deg);
+}
+
+.listWrap {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 180ms var(--ease),
+    opacity 150ms var(--ease);
+}
+
+.listWrap[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.listInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.listWrap[data-open="false"] .listInner {
+  visibility: hidden;
 }
 
 .list {

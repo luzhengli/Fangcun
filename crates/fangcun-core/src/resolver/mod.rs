@@ -720,7 +720,7 @@ fn skills(
         let unused = triggers == 0;
         rows.push(EffectiveItem {
             id: format!("skill-group:{}", group.label),
-            name: format!("{} …等 {} 项", first.name, group.members.len()),
+            name: format!("{} 等 {} 项", first.name, group.members.len()),
             kind: AssetKind::Skill,
             version: None,
             scope: Scope::Global,
@@ -802,9 +802,9 @@ fn single_global(copy: &SkillCopy, triggers: u32, tool_name: &str, home: &Path) 
     let (state, label, reason) = if copy.source.is_none() {
         (
             Some(AssetState::UnknownSource),
-            "来源未知".to_owned(),
+            "未收录".to_owned(),
             format!(
-                "{tool_name} 在全局层读到它，但内容哈希与任何已知来源都不匹配。{}",
+                "{tool_name} 在全局层读到它，但尚未纳入资产库，无法追踪来源与版本。{}",
                 trigger_sentence(triggers)
             ),
         )

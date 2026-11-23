@@ -1,6 +1,6 @@
 import { useState } from "react";
-import c from "@/components/controls.module.css";
 import { InfoTip } from "@/components/InfoTip";
+import { Segmented } from "@/components/Segmented";
 import { formatK, formatLimit } from "@/components/tone";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { EffectiveItem } from "@/ipc/bindings/EffectiveItem";
@@ -32,6 +32,7 @@ export function ContextMap({
   hoverId,
   onHover,
   onPick,
+  stagedDisabledIds,
   after,
 }: {
   items: EffectiveItem[];
@@ -41,6 +42,8 @@ export function ContextMap({
   hoverId: string | null;
   onHover: (id: string | null) => void;
   onPick: (id: string) => void;
+  /** 待停用释放预演集合。 */
+  stagedDisabledIds?: ReadonlySet<string>;
   /** 排进计划还没同步的改动之后，常驻大约是多少（6.3「同步后约 N」）。 */
   after: number | null;
 }) {
@@ -76,14 +79,14 @@ export function ContextMap({
               <span aria-hidden="true" className={styles.hatchSwatch} />
               全局
             </span>
-            <span className={styles.legend} title="圆点：待处理（漂移 · 可更新）">
+            <span className={styles.legend} title="圆点：待处理（本地已改 · 可更新）">
               <span aria-hidden="true" className={styles.dot} data-tone="warn" />
               <span aria-hidden="true" className={styles.dot} data-tone="info" />
               待处理
             </span>
             <InfoTip label="地图说明">
               宽度按常驻估算，总宽度是{registered ? "项目预算" : "默认预算"}。斜纹是全局层带进来的，
-              圆点是待处理（漂移 · 可更新）。点一块看详情。
+              圆点是待处理（本地已改 · 可更新）。点一块看详情。
             </InfoTip>
           </div>
           <div className={styles.totals}>
@@ -101,18 +104,15 @@ export function ContextMap({
           </div>
         </div>
         <span className={styles.flex} />
-        <fieldset aria-label="地图分组" className={c.seg}>
-          {(
-            [
-              ["kind", "按类型"],
-              ["layer", "按作用层"],
-            ] as const
-          ).map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={mode === id} onClick={() => setMode(id)}>
-              {label}
-            </button>
-          ))}
-        </fieldset>
+        <Segmented
+          label="地图分组"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "kind", label: "按类型" },
+            { value: "layer", label: "按作用层" },
+          ]}
+        />
       </div>
 
       <div
@@ -132,6 +132,7 @@ export function ContextMap({
               className={styles.blk}
               data-kind={i.kind}
               data-glob={i.scope === "global"}
+              data-staged={stagedDisabledIds?.has(i.id) || undefined}
               data-ring={ring}
               data-hl={hoverId === i.id}
               data-on={selectedId === i.id}

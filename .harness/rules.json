@@ -69,10 +69,9 @@
       "id": "A-08",
       "text": "颜色只用「墨格」token，组件里不写色值",
       "source": "docs/ARCHITECTURE.md#不能破的规则",
-      "level": 5,
-      "guard": "token 取值有测试；组件里写色值没人守（现在 0 处）",
-      "violations": [],
-      "next": "lint：components、pages 里出现 #rrggbb、rgb( 就报（第 2 档）"
+      "level": 2,
+      "guard": "tokens.test.ts 守取值；designGuard.test.ts 禁组件与页面写色值",
+      "violations": []
     },
     {
       "id": "A-09",
@@ -294,12 +293,11 @@
     },
     {
       "id": "P-16",
-      "text": "固定术语：资产、物化（界面写「同步」）、漂移、回流 / 丢弃 / 分叉、固定 / 跟随、常驻标「估算」",
+      "text": "固定术语：资产、同步（本机软链 / 拷入仓库，禁「物化」）、收录、本地已改、写回源仓库 / 还原锁定版 / 转为项目独立文件、固定 / 跟随、常驻标「估算」",
       "source": "AGENTS.md#写文档的约定",
-      "level": 5,
-      "guard": "AGENTS.md 常驻",
-      "violations": [],
-      "next": "lint：界面文案里出现「物化」就报（第 2 档）"
+      "level": 2,
+      "guard": "designGuard.test.ts 守界面文案禁用词；AGENTS.md 常驻",
+      "violations": []
     },
     {
       "id": "P-17",

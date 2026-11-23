@@ -14,7 +14,7 @@ import { useSidebar } from "./useSidebar";
 
 /** 项目旁的短标签：只在需要处理时出现。 */
 const PROJECT_NOTE: Partial<Record<AssetState, string>> = {
-  drifted: "漂移",
+  drifted: "已改动",
   updatable: "可更新",
   "script-changed": "脚本变更",
 };

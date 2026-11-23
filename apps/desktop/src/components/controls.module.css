@@ -120,8 +120,9 @@
   background: transparent;
 }
 
-/* 分段控件：没有灰轨道，选中段白底加发丝环。 */
+/* 分段控件：透明轨道，由滑动胶囊 .segPill 承载选中底色与发丝阴影；未完成测量的纯测试环境由选中按钮兜底。 */
 .seg {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -132,7 +133,24 @@
   background: transparent;
 }
 
+.segPill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 0;
+  border-radius: 7px;
+  background: var(--raised);
+  box-shadow: var(--shadow-1);
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    transform 180ms var(--ease),
+    width 180ms var(--ease);
+}
+
 .seg > button {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -156,10 +174,19 @@
   background: var(--fill-1);
 }
 
+.seg[data-ready="true"] > button[aria-pressed="true"]:hover,
+.seg[data-ready="true"] > button[aria-selected="true"]:hover {
+  background: transparent;
+}
+
 .seg > button[aria-pressed="true"],
 .seg > button[aria-selected="true"] {
-  background: var(--raised);
   color: var(--tx-1);
+}
+
+.seg[data-ready="false"] > button[aria-pressed="true"],
+.seg[data-ready="false"] > button[aria-selected="true"] {
+  background: var(--raised);
   box-shadow: var(--shadow-1);
 }
 
@@ -310,22 +337,39 @@
 }
 
 .toolButton {
-  gap: 4px;
-  padding: 0 6px 0 7px;
+  gap: 5px;
+  padding: 0 7px 0 8px;
   color: var(--tx-1);
 }
 
+.toolLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx-1);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .toolLabel {
+    display: none;
+  }
+}
+
 .chev {
+  display: inline-flex;
+  flex: none;
   color: var(--tx-3);
 }
 
 .ccIcon {
+  flex: none;
   color: var(--tool-cc);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .b,
-  .seg > button {
+  .seg > button,
+  .segPill {
     transition: none;
   }
 

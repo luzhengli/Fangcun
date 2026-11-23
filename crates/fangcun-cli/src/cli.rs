@@ -34,13 +34,13 @@ pub enum Command {
         from_existing: bool,
     },
 
-    /// 当前项目的同步状态与漂移
+    /// 当前项目的同步状态与本地改动
     Status,
-    /// 当前项目的漂移：不写资产时列出全部；写了资产、不写动作时看差异；写了动作时出计划（F4、6.9）
+    /// 当前项目的本地改动：不写资产时列出全部；写了资产、不写动作时看差异；写了动作时出计划（F4、6.9）
     Drift {
         /// 资产
         asset: Option<String>,
-        /// 回流 / 丢弃 / 分叉
+        /// 写回源仓库 / 还原锁定版 / 转为独立文件
         #[arg(value_enum, requires = "asset")]
         action: Option<DriftAction>,
     },
@@ -51,13 +51,13 @@ pub enum Command {
         asset: String,
     },
 
-    /// 收编进资产库
+    /// 收录进本机资产库
     Adopt {
         /// 资产
         asset: String,
     },
 
-    /// 从全局层移除（只对已收编进资产库的项，6.6、7.5）
+    /// 从全局层移除（只对已收录进资产库的项，6.6、7.5）
     Remove {
         /// 资产，可以写几个，名字可以带 * 通配
         #[arg(required = true)]
@@ -81,7 +81,7 @@ pub enum Command {
         format: ExportFormat,
     },
 
-    /// 按清单与锁物化
+    /// 按清单与锁同步写入工具配置
     Sync {
         /// CI 用：锁与清单不一致就失败
         #[arg(long)]
@@ -128,14 +128,14 @@ pub enum Command {
     },
 }
 
-/// `fangcun drift` 的三个动作，顺序固定：回流、丢弃、分叉。
+/// `fangcun drift` 的三个动作，顺序固定：写回源仓库、还原锁定版、转为项目独立文件。
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]
 pub enum DriftAction {
-    /// 回流到来源（只对本地来源，9.3）
+    /// 写回源仓库（只对本地来源）
     Promote,
-    /// 丢弃修改，恢复锁里的版本
+    /// 还原锁定版，本地修改存入快照
     Discard,
-    /// 分叉为项目专属，清单和锁里去掉这一项
+    /// 转为项目独立文件，清单和锁里去掉这一项
     Fork,
 }
 

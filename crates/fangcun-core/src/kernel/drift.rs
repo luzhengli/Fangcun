@@ -119,7 +119,9 @@ impl Kernel {
         if let Some(a) = asset
             && !drifts.iter().any(|d| d.asset == a)
         {
-            return Err(Error::NotFound(format!("{a} 的漂移（副本和锁里的一样）")));
+            return Err(Error::NotFound(format!(
+                "{a} 的本地改动（文件与锁定版本一致）"
+            )));
         }
         Ok(drifts
             .iter()
@@ -163,14 +165,14 @@ impl Kernel {
             summary.push_str("改的是资产库里的正本，链到它的项目都跟着变了。");
         }
         if !original {
-            summary.push_str("原版取不回，只能回流或分叉。");
+            summary.push_str("原版无法取回，只能写回源仓库或转为项目独立文件。");
         }
         let promote_blocked = match locked.map(|l| Source::parse(&SourceRef(l.source.clone()))) {
             Some(Ok(Source::Local { .. })) => None,
             Some(Ok(Source::Github { .. })) => {
-                Some("GitHub 来源的回流还没开放（9.3），可以丢弃或分叉".to_owned())
+                Some("GitHub 来源暂不支持写回源仓库，可还原锁定版或转为项目独立文件".to_owned())
             }
-            _ => Some("锁里没有这一项的来源，回流不了".to_owned()),
+            _ => Some("锁里未记录这一项的来源，无法写回源仓库".to_owned()),
         };
         let others = self
             .others_using(root, &drifted.asset, locked.map(|l| l.source.as_str()))
@@ -202,7 +204,7 @@ impl Kernel {
             .drifts(root)?
             .into_iter()
             .find(|d| d.asset == asset)
-            .ok_or_else(|| Error::NotFound(format!("{asset} 的漂移（副本和锁里的一样）")))?;
+            .ok_or_else(|| Error::NotFound(format!("{asset} 的本地改动（文件与锁定版本一致）")))?;
         let locked = lock
             .skills
             .get(asset)
@@ -215,9 +217,9 @@ impl Kernel {
         let original = self.original(&library, &sources, &drifted, Some(&locked));
         let modified = drifted.modified_dir(root);
         let title = match choice {
-            DriftChoice::Discard => format!("丢弃 {asset} 的修改"),
-            DriftChoice::Fork => format!("分叉 {asset} 为本项目专属"),
-            DriftChoice::Promote => format!("回流 {asset} 到 {}", locked.source),
+            DriftChoice::Discard => format!("还原 {asset} 为锁定版"),
+            DriftChoice::Fork => format!("将 {asset} 转为本项目独立文件"),
+            DriftChoice::Promote => format!("将 {asset} 写回 {}", locked.source),
         };
         let verb = match choice {
             DriftChoice::Promote => "promote",
@@ -239,22 +241,25 @@ impl Kernel {
         match choice {
             DriftChoice::Discard => {
                 let original = original.ok_or_else(|| {
-                    Error::Blocked("原版取不回（本地来源没有提交），只能回流或分叉".to_owned())
+                    Error::Blocked(
+                        "原版无法取回（本地来源没有提交），只能写回源仓库或转为项目独立文件"
+                            .to_owned(),
+                    )
                 })?;
                 let detail = if drifted.object.is_some() {
-                    format!("恢复资产库里的正本 {label}，链到它的项目一起恢复；改过的内容进快照")
+                    format!("恢复资产库里的正本 {label}，链到它的项目一起还原；本地改动已存进快照")
                 } else {
-                    format!("丢弃修改，恢复为 {label}；改过的内容进快照")
+                    format!("还原为锁定版 {label}；本地改动已存进快照")
                 };
                 drift::replace_dir(&mut builder, &modified, &original.dir, detail)?;
                 builder.note(PlanNote::info(
-                    "想找回被丢弃的修改，对这条记录回滚即可（6.7 回滚规则第 4 条）",
+                    "如需找回被还原的本地修改，在「活动」页对此记录执行回滚即可",
                 ));
             }
             DriftChoice::Fork => {
                 if !in_manifest {
                     return Err(Error::Blocked(format!(
-                        "{asset} 来自套装，分叉还不支持：先在套装里去掉它"
+                        "{asset} 来自套装，暂不支持转为独立文件：先在套装里去掉它"
                     )));
                 }
                 let text = std::fs::read_to_string(&manifest_file).map_err(|source| Error::Io {
@@ -268,7 +273,7 @@ impl Kernel {
                 builder.write_file(
                     &manifest_file,
                     edited.into_bytes(),
-                    format!("[skills] 去掉 {asset}，不再跟随来源"),
+                    format!("[skills] 去掉 {asset}，脱离资产库管理"),
                 )?;
                 let mut new_lock = lock.clone();
                 new_lock.skills.remove(asset);
@@ -283,7 +288,7 @@ impl Kernel {
                         &mut builder,
                         &dest,
                         object,
-                        "改成本项目自己的实体目录，提交进仓库".to_owned(),
+                        "转为本项目独立实体文件，随 Git 提交".to_owned(),
                     )?;
                     match &original {
                         Some(original) => {
@@ -291,11 +296,11 @@ impl Kernel {
                                 &mut builder,
                                 object,
                                 &original.dir,
-                                format!("资产库里的正本恢复为 {label}，其他项目不受影响"),
+                                format!("资产库正本恢复为 {label}，其他项目不受影响"),
                             )?;
                         }
                         None => builder.note(PlanNote::warning(
-                            "原版取不回，资产库里的正本保持改过的样子，链到它的其他项目也一样",
+                            "原版无法取回，资产库正本保留修改后的状态，其他软链项目也会看到",
                         )),
                     }
                 }
@@ -312,17 +317,19 @@ impl Kernel {
                 let source = SourceRef(locked.source.clone());
                 let Ok(Source::Local { name: local }) = Source::parse(&source) else {
                     return Err(Error::Blocked(
-                        "GitHub 来源的回流还没开放（9.3），可以丢弃或分叉".to_owned(),
+                        "GitHub 来源暂不支持写回源仓库，可还原锁定版或转为独立文件".to_owned(),
                     ));
                 };
                 let Some(decl) = project.manifest.skills.get(asset).cloned() else {
-                    return Err(Error::Blocked(format!("{asset} 来自套装，回流还不支持")));
+                    return Err(Error::Blocked(format!(
+                        "{asset} 来自套装，暂不支持写回源仓库"
+                    )));
                 };
                 let promotion = sources.prepare_promote(
                     &source,
                     &locked.path,
                     &modified,
-                    &format!("fangcun: 从 {name} 回流 {asset}"),
+                    &format!("fangcun: 从 {name} 写回 {asset}"),
                 )?;
                 let short = promotion.commit[..7].to_owned();
                 let src_dir = sources.local_dir(&local)?.join(&locked.path);
@@ -330,7 +337,7 @@ impl Kernel {
                     &mut builder,
                     &src_dir,
                     &modified,
-                    format!("回流 {asset} 的修改，生成新版本 {short}"),
+                    format!("把 {asset} 的改动写回源仓库，生成新版本 {short}"),
                 )?;
                 builder.promotes(promotion.clone());
                 let version = library.ingest(
@@ -398,7 +405,7 @@ impl Kernel {
                     .collect();
                 if !others.is_empty() {
                     builder.note(PlanNote::info(format!(
-                        "另有 {} 个项目也用 {asset}：{}。回流后上游检查会把它们列进「可更新」，逐个决定是否跟进",
+                        "另有 {} 个项目也用 {asset}：{}。写回后上游检查会把它们列进「可更新」，逐个决定是否跟进",
                         others.len(),
                         others.join("、")
                     )));
@@ -463,9 +470,9 @@ impl Kernel {
             if let Some(drifted) = drifts.iter().find(|d| d.asset == item.name) {
                 let info = self.drift_info(root, drifted, lock.as_ref());
                 item.state = Some(crate::model::AssetState::Drifted);
-                item.label = "已漂移".to_owned();
+                item.label = "本地已改".to_owned();
                 item.reason = format!(
-                    "项目清单固定使用 {} 版本。\n但项目里的这份副本被改动过，和锁定的版本对不上，所以标为漂移。",
+                    "项目清单固定使用 {} 版本。\n但项目内这份文件已被本地修改，与锁定的版本不一致。",
                     info.locked
                 );
                 item.drift = Some(info);
@@ -566,7 +573,7 @@ fn drift_record(root: &Path, drifted: &Drifted, info: &DriftInfo, trigger: Trigg
         id: format!("drift-{}-{}-{}", at.0, std::process::id(), drifted.asset),
         at,
         kind: RecordKind::Drift,
-        title: format!("{} 的副本被修改", drifted.asset),
+        title: format!("{} 的本地文件被修改", drifted.asset),
         project: Some(ProjectId(root.to_string_lossy().into_owned())),
         project_label: crate::scanner::project_name(root),
         trigger,
@@ -574,7 +581,10 @@ fn drift_record(root: &Path, drifted: &Drifted, info: &DriftInfo, trigger: Trigg
         snapshots: Vec::new(),
         reverts: None,
         status: RecordStatus::Pending,
-        summary: format!("{}到项目页处理：回流、丢弃或分叉。", info.summary),
+        summary: format!(
+            "{}请到项目页选择处理方式：写回源仓库、还原锁定版或转为项目独立文件。",
+            info.summary
+        ),
         files: info
             .files
             .iter()

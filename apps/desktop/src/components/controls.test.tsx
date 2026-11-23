@@ -18,11 +18,11 @@ function withQuery(node: React.ReactNode) {
 }
 
 describe("目标工具（6.3）", () => {
-  it("按钮只放图标，读屏写「目标工具 · 名字」；菜单只列完整支持的工具，当前项打勾，Esc 关", () => {
+  it("图标旁显示当前工具名，读屏写「目标工具 · 名字」；菜单只列完整支持的工具，当前项打勾，Esc 关", () => {
     const onChange = vi.fn();
     withQuery(<ToolPicker value="claude-code" onChange={onChange} />);
     const button = screen.getByRole("button", { name: "目标工具 · Claude Code" });
-    expect(button).toHaveTextContent("");
+    expect(button).toHaveTextContent("Claude Code");
     fireEvent.click(button);
     const items = screen.getAllByRole("menuitemradio");
     expect(items.map((i) => i.textContent)).toEqual(["Claude Code", "Codex"]);

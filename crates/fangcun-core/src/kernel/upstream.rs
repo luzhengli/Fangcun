@@ -304,8 +304,8 @@ impl Kernel {
                     None => "固定版本".to_owned(),
                 };
                 let mode = match mode {
-                    crate::model::SyncMode::Link => "链接",
-                    crate::model::SyncMode::Vendor => "入库",
+                    crate::model::SyncMode::Link => "本机软链",
+                    crate::model::SyncMode::Vendor => "拷入仓库",
                 };
                 UpdateProject {
                     project: ProjectId(e.project.to_string_lossy().into_owned()),

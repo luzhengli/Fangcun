@@ -6,6 +6,23 @@
   box-sizing: border-box;
 }
 
+:root {
+  --on-k: #ffffff;
+  --veil-bg: rgba(15, 23, 42, 0.2);
+  --veil-soft: rgba(15, 23, 42, 0.12);
+  --switch-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --sticky-shadow: 0 1px 0 var(--line), 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --veil-bg: rgba(0, 0, 0, 0.45);
+    --veil-soft: rgba(0, 0, 0, 0.35);
+    --sticky-shadow: 0 1px 0 var(--line), 0 4px 14px rgba(0, 0, 0, 0.28);
+  }
+}
+
 html,
 body,
 #root {
@@ -44,7 +61,17 @@ a:hover {
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+
+code,
+pre,
+.mono,
+table,
+dd,
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 code,

@@ -11,10 +11,14 @@ export const SCOPE_NAMES: Record<Scope, string> = {
   personal: "个人",
 };
 
-/** 签名元素「层级刻度」：四个 6px 小方格，实心格是所在的层。 */
+/** 签名元素「层级刻度」：四条递增阶梯刻度，实心蓝色条代表当前生效层，悬停可读文字说明。 */
 export function ScopeTicks({ scope }: { scope: Scope }) {
   return (
-    <span aria-hidden="true" className={styles.ticks}>
+    <span
+      aria-hidden="true"
+      title={`生效层：${SCOPE_NAMES[scope]}层（全局 → 套装 → 项目 → 个人）`}
+      className={styles.ticks}
+    >
       {SCOPES.map((s) => (
         <span key={s} className={styles.tick} data-on={s === scope} />
       ))}

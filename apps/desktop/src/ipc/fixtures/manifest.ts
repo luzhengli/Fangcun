@@ -73,12 +73,12 @@ export function manifestView(): ManifestView {
           "项目清单。同事克隆仓库后运行 fangcun sync，就能还原完全相同的环境。界面上的改动最终都写回这个文件。",
         sections: [
           SEC("项目设置", "设置", "值", "含义", [
-            RW("目标工具", "claude-code, codex", "两个工具都按本清单物化", "", { am: false }),
+            RW("目标工具", "claude-code, codex", "两个工具都按本清单同步", "", { am: false }),
             RW(
-              "物化方式",
+              "同步方式",
               "link",
-              "项目目录里放软链，指向资产库",
-              "团队项目可改为 vendor，实体文件入库",
+              "本机软链，指向资产库正本",
+              "团队项目可改为 vendor（拷入仓库），实体文件随 Git 提交",
               { am: false },
             ),
             RW("套装", "工程基线", "套装里的资产一并生效", "", { am: false, bm: false }),

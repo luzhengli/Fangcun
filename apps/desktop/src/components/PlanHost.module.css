@@ -10,7 +10,7 @@
   /* 面板在工具栏（52px）下方 12px 处居中，遮罩盖住整个窗口（6.1「浮层」）。 */
   padding: 64px 16px 24px;
   box-sizing: border-box;
-  background: rgb(0 0 0 / 0.2);
+  background: var(--veil-bg);
   animation: fc-fade 160ms ease-out;
 }
 
@@ -93,19 +93,31 @@
 }
 
 .op {
-  flex: 0 0 12px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 11px;
   font-weight: 600;
 }
 
 .op[data-op="add"] {
+  background: var(--ok-weak);
   color: var(--ok);
 }
 
 .op[data-op="modify"] {
+  background: var(--warn-weak);
   color: var(--warn);
 }
 
 .op[data-op="remove"] {
+  background: var(--danger-weak);
   color: var(--danger);
 }
 
@@ -148,34 +160,6 @@
   flex: 1 1 200px;
   font-size: 12px;
   color: var(--tx-2);
-}
-
-.cancel,
-.apply {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-}
-
-.cancel {
-  border: 1px solid var(--line-2);
-  background: var(--win);
-  color: var(--tx-1);
-}
-
-.apply {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 500;
-}
-
-.apply:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .kbd {
@@ -247,7 +231,7 @@
   }
 }
 
-/* 登记弹窗：物化方式的两个选项（Main.dc.html「登记：先问物化方式」）。 */
+/* 登记弹窗：同步方式的两个选项。 */
 .options {
   margin: 0;
   padding: 14px 20px;

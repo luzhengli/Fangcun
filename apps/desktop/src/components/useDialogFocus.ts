@@ -14,8 +14,10 @@ export function useDialogFocus(ref: RefObject<HTMLElement | null>, open: boolean
     const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const box = ref.current;
     if (box && !box.contains(document.activeElement)) {
-      const first = box.querySelector<HTMLElement>(FOCUSABLE);
-      if (first) first.focus();
+      const target =
+        box.querySelector<HTMLElement>('[data-autofocus="true"]:not([disabled])') ??
+        box.querySelector<HTMLElement>(FOCUSABLE);
+      if (target) target.focus();
       else {
         box.tabIndex = -1;
         box.focus();

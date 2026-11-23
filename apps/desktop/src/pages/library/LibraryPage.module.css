@@ -122,6 +122,11 @@
   padding: 10px 24px;
   background: var(--win);
   border-bottom: 0.5px solid var(--line);
+  transition: box-shadow 150ms var(--ease);
+}
+
+.sticky[data-stuck="true"] {
+  box-shadow: var(--sticky-shadow);
 }
 
 .srcLabel {

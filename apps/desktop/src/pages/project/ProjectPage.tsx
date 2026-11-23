@@ -7,10 +7,13 @@ import { DecisionCard, Done, Options, WriteList } from "@/components/DecisionCar
 import { Icon } from "@/components/Icon";
 import { InfoTip } from "@/components/InfoTip";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
+import { OnboardingStrip } from "@/components/OnboardingStrip";
 import { SCOPE_NAMES, SCOPES, ScopeTicks } from "@/components/ScopeTicks";
+import { Segmented } from "@/components/Segmented";
 import { StatusDot } from "@/components/StatusDot";
 import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, toneOfState } from "@/components/tone";
+import { useListNav } from "@/components/useListNav";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { Change } from "@/ipc/bindings/Change";
 import type { DriftChoice } from "@/ipc/bindings/DriftChoice";
@@ -157,6 +160,7 @@ function ProjectView({ root }: { root: string | undefined }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [hover, setHover] = useState<string | null>(null);
+  const [stuck, setStuck] = useState(false);
   const [filter, setFilter] = useState<"all" | "pending">("all");
   // 回到项目卡片（6.3）：点列表空白处、Esc、再点一次侧栏里同一个项目。
   const toCard = () => {
@@ -164,7 +168,7 @@ function ProjectView({ root }: { root: string | undefined }) {
     setInspectorOpen(true);
   };
   // 再点一次侧栏里同一个项目：地址不变，但每次导航都有新的 location.key。
-  // 从活动页的待处理过来时带着 ?asset=，选中那一项（6.7「去处理漂移」「查看差异」）。
+  // 从活动页的待处理过来时带着 ?asset=，选中那一项（6.7「去处理」「查看差异」）。
   const navKey = useLocation().key;
   const [params] = useSearchParams();
   const [seenNavKey, setSeenNavKey] = useState<string | null>(null);
@@ -263,11 +267,16 @@ function ProjectView({ root }: { root: string | undefined }) {
         </button>
         {registered && (
           <button
+            key={pending}
             type="button"
-            className={pending > 0 ? `${c.b} ${c.primary}` : c.b}
+            className={`${pending > 0 ? `${c.b} ${c.primary}` : c.b}${pending > 0 ? ` ${styles.syncPop}` : ""}`}
             onClick={() => openSync()}
             disabled={readOnly}
-            title={readOnly ? "只读模式：在设置里关掉后才能同步" : "按清单与锁物化，先出变更计划"}
+            title={
+              readOnly
+                ? "只读模式：在设置里关掉后才能同步"
+                : "按清单与锁同步到项目目录，先出变更计划"
+            }
           >
             <Icon name="sync" size={14} strokeWidth={1.6} />
             同步
@@ -295,12 +304,17 @@ function ProjectView({ root }: { root: string | undefined }) {
         </button>
       </PageToolbar>
 
+      <OnboardingStrip />
+
       {data && (
         <ContextMap
           items={items}
           limit={data.budget.limit}
           registered={registered}
           selectedId={current?.id}
+          stagedDisabledIds={
+            new Set(items.filter((i) => stagedOp(staged, i) === "disable").map((i) => i.id))
+          }
           hoverId={hover}
           onHover={setHover}
           onPick={(id) => {
@@ -312,42 +326,31 @@ function ProjectView({ root }: { root: string | undefined }) {
         />
       )}
 
-      <div className={styles.viewBar}>
+      <div className={styles.viewBar} data-stuck={stuck}>
         {registered && (
-          <div aria-label="项目视图" className={c.seg} role="tablist">
-            {(
-              [
-                ["effective", "生效上下文"],
-                ["manifest", "清单"],
-                ["history", "历史"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => setTab(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="项目视图"
+            role="tablist"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "effective", label: "生效上下文" },
+              { value: "manifest", label: "清单" },
+              { value: "history", label: "历史" },
+            ]}
+          />
         )}
         <span className={styles.flex} />
         {(tab === "effective" || !registered) && data && (
-          <fieldset aria-label="筛选" className={c.seg}>
-            <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-              全部 <span className={c.count}>{items.length}</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={filter === "pending"}
-              onClick={() => setFilter("pending")}
-            >
-              待处理 <span className={c.count}>{pendingItems.length}</span>
-            </button>
-          </fieldset>
+          <Segmented
+            label="筛选"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "全部", count: items.length },
+              { value: "pending", label: "待处理", count: pendingItems.length },
+            ]}
+          />
         )}
       </div>
 
@@ -357,6 +360,7 @@ function ProjectView({ root }: { root: string | undefined }) {
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
         <section
           className={page.list}
+          onScroll={(e) => setStuck(e.currentTarget.scrollTop > 4)}
           onClick={(e) => {
             if (!picked) return;
             if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
@@ -464,13 +468,24 @@ function EffectiveList({
   selectedId: string | undefined;
   onPick: (id: string) => void;
 }) {
+  const [collapsed, setCollapsed] = useState<Partial<Record<AssetKind, boolean>>>({});
   const missing = context.observedMissing.map((k) => OBSERVED_LABEL[k]);
   const shown = (i: EffectiveItem) => filter === "all" || (i.state !== null && PENDING[i.state]);
+  const navIds = GROUPS.flatMap(({ kind }) =>
+    collapsed[kind]
+      ? []
+      : context.items.filter((i) => i.kind === kind && shown(i)).map((i) => i.id),
+  );
+  useListNav(navIds, selectedId, onPick);
+  const maxResident = Math.max(
+    1,
+    ...context.items.map((i) => (i.counted && i.resident !== null ? i.resident : 0)),
+  );
   if (filter === "pending" && !context.items.some(shown))
     return (
       <div className={page.empty}>
         <p className={styles.emptyTitle}>没有待处理的项</p>
-        <p>漂移、可更新、脚本变更都处理完了。</p>
+        <p>本地改动、可更新、脚本变更都处理完了。</p>
       </div>
     );
   return (
@@ -487,62 +502,99 @@ function EffectiveList({
         const counted = rows.filter((r) => r.counted);
         const cost = counted.reduce((n, r) => n + (r.resident ?? 0), 0);
         const unestimated = counted.some((r) => r.resident === null);
+        const open = !collapsed[kind];
         return (
           <div key={kind}>
             <h2 className={page.groupHead}>
-              <span>{label}</span>
+              <button
+                type="button"
+                className={styles.groupToggle}
+                aria-expanded={open}
+                onClick={() => setCollapsed((prev) => ({ ...prev, [kind]: !prev[kind] }))}
+              >
+                <Icon name="chevron" size={11} strokeWidth={1.8} className={styles.groupChev} />
+                <span>{label}</span>
+                <span className={styles.groupCount}>{rows.length}</span>
+              </button>
               <span className={page.groupCost}>
                 常驻 {unestimated && cost === 0 ? "未估算" : formatK(cost)}
               </span>
             </h2>
-            {rows.map((raw) => {
-              const pending = stagedOp(staged, raw);
-              const upgrade = staged.some((e) => e.op === "upgrade" && e.asset === raw.name);
-              // 排进计划还没同步的：写「停用（待同步）」「待同步 ↑ 新版本」，常驻不提前扣（6.3）。
-              const item: EffectiveItem =
-                pending === "disable"
-                  ? { ...raw, label: "停用（待同步）" }
-                  : pending === "enable"
-                    ? { ...raw, label: "恢复（待同步）" }
-                    : upgrade && raw.update
-                      ? { ...raw, label: `待同步 ↑ ${raw.update.to}` }
-                      : raw;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={page.row}
-                  aria-pressed={item.id === selectedId}
-                  data-hl={hoverId === item.id}
-                  onMouseEnter={() => onHover(item.id)}
-                  onMouseLeave={() => onHover(null)}
-                  onClick={() => onPick(item.id)}
-                >
-                  <span className={styles.colName}>
-                    <span
-                      className={`${page.name} ${item.state === "overridden" || pending === "disable" ? page.struck : ""}`}
+            <div className={styles.groupBody} data-open={open} aria-hidden={!open || undefined}>
+              <div className={styles.groupInner}>
+                {rows.map((raw) => {
+                  const pending = stagedOp(staged, raw);
+                  const upgrade = staged.some((e) => e.op === "upgrade" && e.asset === raw.name);
+                  // 排进计划还没同步的：写「停用（待同步）」「待同步 ↑ 新版本」，常驻不提前扣（6.3）。
+                  const item: EffectiveItem =
+                    pending === "disable"
+                      ? { ...raw, label: "停用（待同步）" }
+                      : pending === "enable"
+                        ? { ...raw, label: "恢复（待同步）" }
+                        : upgrade && raw.update
+                          ? { ...raw, label: `待同步 ↑ ${raw.update.to}` }
+                          : raw;
+                  const sparkPct =
+                    item.counted && item.resident !== null && item.resident > 0
+                      ? Math.max(6, Math.min(100, Math.round((item.resident / maxResident) * 100)))
+                      : 0;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-nav-id={item.id}
+                      className={page.row}
+                      aria-pressed={item.id === selectedId}
+                      data-hl={hoverId === item.id}
+                      onMouseEnter={() => onHover(item.id)}
+                      onMouseLeave={() => onHover(null)}
+                      onClick={() => onPick(item.id)}
                     >
-                      {item.name}
-                    </span>
-                    {item.version && <span className={page.version}>{item.version}</span>}
-                  </span>
-                  <span className={styles.colLayer}>
-                    <ScopeTicks scope={item.scope} />
-                    <span>{SCOPE_NAMES[item.scope]}</span>
-                  </span>
-                  <span className={styles.colStatus}>
-                    <StatusDot
-                      tone={item.state ? toneOfState(item.state) : "neutral"}
-                      label={item.label}
-                      strong={item.state !== null && STRONG[item.state] === true}
-                    />
-                  </span>
-                  <span className={`${styles.colCost} ${page.cost}`}>
-                    {!item.counted ? "–" : item.resident === null ? "—" : formatK(item.resident)}
-                  </span>
-                </button>
-              );
-            })}
+                      <span className={styles.colName}>
+                        <Icon name={item.kind} size={13} className={styles.rowIcon} />
+                        <span
+                          className={`${page.name} ${item.state === "overridden" || pending === "disable" ? page.struck : ""}`}
+                        >
+                          {item.name}
+                        </span>
+                        {item.version && <span className={page.version}>{item.version}</span>}
+                      </span>
+                      <span className={styles.colLayer}>
+                        <ScopeTicks scope={item.scope} />
+                        <span>{SCOPE_NAMES[item.scope]}</span>
+                      </span>
+                      <span className={styles.colStatus}>
+                        <StatusDot
+                          tone={item.state ? toneOfState(item.state) : "neutral"}
+                          label={item.label}
+                          strong={item.state !== null && STRONG[item.state] === true}
+                        />
+                      </span>
+                      <span className={`${styles.colCost} ${page.cost}`}>
+                        <span className={styles.costCell}>
+                          <span>
+                            {!item.counted
+                              ? "–"
+                              : item.resident === null
+                                ? "—"
+                                : formatK(item.resident)}
+                          </span>
+                          {sparkPct > 0 && (
+                            <span aria-hidden="true" className={styles.sparkTrack}>
+                              <span
+                                className={styles.sparkFill}
+                                data-kind={item.kind}
+                                style={{ width: `${sparkPct}%` }}
+                              />
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         );
       })}
@@ -782,7 +834,7 @@ function stagedOp(staged: ManifestEdit[], item: EffectiveItem): SwitchOp | null 
   return null;
 }
 
-/** 差异片段：一个文件的行，增删着色（原型 Main 漂移块）。 */
+/** 差异片段：一个文件的行，增删着色（原型 Main 本地已改）。 */
 function DiffLines({ file }: { file: FileDiff }) {
   if (file.binary)
     return <p className={styles.sectionNote}>{file.path} 是二进制文件，不列差异。</p>;
@@ -803,14 +855,14 @@ function DiffLines({ file }: { file: FileDiff }) {
 type DriftDone = { choice: DriftChoice; record: string; others: string[] };
 
 const DRIFT_DONE: Record<DriftChoice, { title: string; desc: string }> = {
-  promote: { title: "已回流到来源", desc: "来源生成了新版本，本项目改用它。" },
+  promote: { title: "已写回源仓库", desc: "源仓库已生成新版本，本项目随之升级到新版。" },
   discard: {
-    title: "已丢弃修改",
-    desc: "副本已恢复为锁定的版本。被丢弃的修改在快照里，回滚能找回。",
+    title: "已还原为锁定版",
+    desc: "本地文件已恢复为锁定的版本。刚才改过的内容留进快照，回滚可找回。",
   },
   fork: {
-    title: "已分叉为项目专属",
-    desc: "改成本项目自己的文件，提交进仓库。清单和锁里去掉了这一项，方寸不再管它。",
+    title: "已转为项目独立文件",
+    desc: "已变为本项目独立文件，提交进仓库。清单和锁不再跟随原来源。",
   },
 };
 
@@ -834,8 +886,9 @@ function undoRecord(record: string) {
 }
 
 /**
- * 漂移的决定卡片（6.3、F4、9.3）：差异片段，回流、丢弃、分叉三选一，「会写入 · N 处」随选项变，
- * 点按钮就写。回流只对本地来源，GitHub 来源置灰并说明。
+ * 本地已改的决定卡片（6.3、F4、9.3）：差异片段，固定顺序三选一：
+ * 1. 写回源仓库 · 2. 还原锁定版 · 3. 转为项目独立文件。
+ * 写回只对本地来源开放，GitHub 来源置灰并说明。
  */
 function DriftBox({
   item,
@@ -862,22 +915,22 @@ function DriftBox({
   }[] = [
     {
       id: "promote",
-      title: "回流到来源",
-      desc: `写回 ${item.source ?? "来源"} 生成新版本${others > 0 ? `，其他 ${others} 个项目进「可更新」` : ""}。`,
+      title: "1. 写回源仓库",
+      desc: `写入 ${item.source ?? "源仓库"} 生成新版本${others > 0 ? `，其他 ${others} 个项目进「可更新」` : ""}。`,
       off: drift.promoteBlocked,
       recommended: true,
     },
     {
       id: "discard",
-      title: "丢弃修改",
-      desc: "被丢弃的修改另存一份，可找回。",
+      title: "2. 还原锁定版",
+      desc: "恢复为清单锁定的版本；改动前自动留快照，回滚可找回。",
       off: drift.original ? null : "原版取不回（本地来源没有提交）",
     },
     {
       id: "fork",
-      title: "分叉为项目专属",
-      desc: "改成本项目自己的文件，提交进仓库，不再跟随来源。",
-      off: item.scope === "bundle" ? "来自套装的项还不能分叉" : null,
+      title: "3. 转为项目独立文件",
+      desc: "在项目目录保留独立文件并提交进仓库，脱离清单跟随关系。",
+      off: item.scope === "bundle" ? "来自套装的项暂不支持直接转为独立文件" : null,
     },
   ];
   const chosen = options.find((o) => o.id === pick && !o.off) ?? options.find((o) => !o.off);
@@ -887,9 +940,9 @@ function DriftBox({
     enabled: chosen !== undefined,
   });
   const button: Record<DriftChoice, string> = {
-    promote: "回流到来源",
-    discard: "丢弃修改",
-    fork: "分叉到项目",
+    promote: "写回源仓库",
+    discard: "还原锁定版",
+    fork: "转为独立文件",
   };
   const apply = async () => {
     if (!chosen || !plan.data || plan.data.blocked) return;
@@ -1252,22 +1305,22 @@ function OverriddenBox({
   );
 }
 
-/** 来源未知的决定卡片（6.3）：收编后才能追踪版本与更新，去资产库收编。 */
+/** 未收录的决定卡片（6.3）：收录后才能追踪版本与更新，去资产库收录。 */
 function UnknownBox({ item }: { item: EffectiveItem }) {
   return (
     <DecisionCard
-      title="查不到来源"
+      title="未收录（查不到来源）"
       metric="哈希不匹配任何来源"
       foot={
         <>
           <span className={styles.footNote}>
-            收编后才能追踪版本与更新
-            <InfoTip label="来源未知说明" align="right">
+            收录后才能追踪版本与更新
+            <InfoTip label="未收录说明" align="right">
               在 {item.location} 发现，内容哈希与资产库里任何来源都不匹配。
             </InfoTip>
           </span>
           <Link to={`/library?asset=${encodeURIComponent(item.name)}`} className={c.b}>
-            去收编
+            去资产库收录 →
           </Link>
         </>
       }
@@ -1331,23 +1384,15 @@ function ManifestTab({ root, context }: { root: string; context: EffectiveContex
         <>
           <div className={styles.manifestBar}>
             <span className={styles.manifestDesc}>{file.description}</span>
-            <fieldset aria-label="显示方式" className={styles.viewSwitch}>
-              {(
-                [
-                  ["table", "结构化"],
-                  ["src", "源文件"],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={mode === id}
-                  onClick={() => setMode(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </fieldset>
+            <Segmented
+              label="显示方式"
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "table", label: "结构化" },
+                { value: "src", label: "源文件" },
+              ]}
+            />
           </div>
           {!file.exists ? (
             <p className={styles.sectionNote}>还没有 {file.name}。</p>
@@ -1439,6 +1484,11 @@ function UnregisteredInspector({
     <Inspector
       kind="项目"
       name={context.projectName}
+      badge={
+        <span className={styles.projectBadge}>
+          <Icon name="projects" size={16} />
+        </span>
+      }
       status={{ tone: "muted", label: "未登记" }}
       fields={[
         { k: "路径", v: context.projectPath, mono: true },
@@ -1462,7 +1512,7 @@ function UnregisteredInspector({
               <span className={styles.footNote}>
                 从现状生成 fangcun.toml 与 .lock
                 <InfoTip label="登记说明" align="right">
-                  从目录现状反推清单。查不出来源的项不进清单，留在原处照常生效。先问一次物化方式，再出变更计划。命令行：fangcun
+                  从目录现状反推清单。查不出来源的项不进清单，留在原处照常生效。先选一次同步方式，再出变更计划。命令行：fangcun
                   init --from-existing
                 </InfoTip>
               </span>
@@ -1531,7 +1581,7 @@ function RegisteredInspector({
   const drifted = pending.filter((i) => i.state === "drifted").length;
   const status =
     drifted > 0
-      ? { tone: toneOfState("drifted"), label: `${drifted} 处漂移` }
+      ? { tone: toneOfState("drifted"), label: `${drifted} 处本地已改` }
       : pending.length > 0
         ? { tone: toneOfState(summary?.state ?? "updatable"), label: `${pending.length} 处可更新` }
         : { tone: toneOfState("synced"), label: "已登记" };
@@ -1539,6 +1589,11 @@ function RegisteredInspector({
     <Inspector
       kind="项目"
       name={context.projectName}
+      badge={
+        <span className={styles.projectBadge}>
+          <Icon name="projects" size={16} />
+        </span>
+      }
       status={status}
       decision={
         staged.length > 0 && (
@@ -1569,8 +1624,8 @@ function RegisteredInspector({
           mono: context.hasManifest,
         },
         {
-          k: "物化方式",
-          v: context.mode === "vendor" ? "入库" : context.mode === "link" ? "链接" : "—",
+          k: "同步方式",
+          v: context.mode === "vendor" ? "拷入仓库" : context.mode === "link" ? "本机软链" : "—",
         },
         {
           k: "目标工具",
@@ -1643,7 +1698,7 @@ function HistoryTab({ root }: { root: string }) {
   if (history.data.length === 0)
     return (
       <div className={page.empty}>
-        <p>还没有快照。同步、收编、升级都会留快照，之后在这里一键回滚。</p>
+        <p>还没有快照。同步、收录、升级都会留快照，之后在这里一键回滚。</p>
       </div>
     );
   const rollback = async (snapshot: number) => {

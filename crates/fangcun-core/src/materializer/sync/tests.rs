@@ -496,9 +496,9 @@ fn adopt_merges_copies_into_the_library_and_rolls_back() {
     let before_home = tree(&f.user_home.join(".claude"));
     let before_proj = tree(&f.proj);
     let plan = kernel.plan_adopt("harness").unwrap();
-    assert_eq!(plan.title, "收编 harness：3 份副本归并为 2 份正本");
+    assert_eq!(plan.title, "收录 harness：3 份副本归并为 2 份正本");
     let texts: Vec<&str> = plan.notes.iter().map(|n| n.text.as_str()).collect();
-    assert!(texts.iter().any(|t| t.contains("已分叉")), "{texts:?}");
+    assert!(texts.iter().any(|t| t.contains("内容已分化")), "{texts:?}");
     assert!(
         texts
             .iter()
@@ -984,7 +984,7 @@ fn link_mode_drift_is_reported_discarded_and_recoverable_by_rollback() {
     kernel.rescan().unwrap();
     let context = kernel.effective_context(&f.proj, &claude()).unwrap();
     let tdd = context.items.iter().find(|i| i.name == "tdd").unwrap();
-    assert_eq!(tdd.label, "已漂移");
+    assert_eq!(tdd.label, "本地已改");
     let drift = tdd.drift.as_ref().unwrap();
     assert!(drift.original && drift.shared);
     assert!(drift.summary.contains("多 1 行"), "{}", drift.summary);
@@ -1198,7 +1198,7 @@ fn library_overview_lists_pins_and_unknowns() {
         .find(|v| v.tag == VersionTag::Locked)
         .expect("有一版锁定中");
     assert_eq!(locked.users[0].name, "proj");
-    assert_eq!(locked.users[0].mode, "链接");
+    assert_eq!(locked.users[0].mode, "本机软链");
     assert!(tdd.store.is_some());
 
     let stray = view

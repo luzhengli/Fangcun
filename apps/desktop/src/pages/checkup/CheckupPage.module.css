@@ -319,10 +319,25 @@
   color: var(--tx-3);
 }
 
+.noWritesBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
 .noWrites {
   margin: 0;
   font-size: 12px;
+  line-height: 1.55;
   color: var(--tx-2);
+}
+
+.routeLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

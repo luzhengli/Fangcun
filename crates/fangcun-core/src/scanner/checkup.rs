@@ -296,17 +296,17 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
         *extra += count_u32(copies.len() - 1);
 
         let title = if forked > 0 {
-            format!("{name} 有 {} 份副本，{forked} 份已分叉", copies.len())
+            format!("{name} 有 {} 份副本，{forked} 份内容已分化", copies.len())
         } else {
             format!("{name} 有 {} 份副本", copies.len())
         };
         let intro = if forked > 0 {
             format!(
-                "按内容哈希归并。{same} 份相同的副本收为同一版本，分叉的那份另存为独立版本，等你决定去留。"
+                "存入本机资产库统一管理。{same} 份相同的副本合并为同一版本，内容不同的另存为独立版本，原位置自动换为软链。"
             )
         } else {
             format!(
-                "按内容哈希归并。{} 份副本内容相同，收为同一版本。",
+                "存入本机资产库统一管理。{} 份副本内容完全一致，合并为同一份正本，原位置自动换为软链。",
                 copies.len()
             )
         };
@@ -317,7 +317,7 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
                 FindingLocation {
                     path: location_label(&copy.dir, copy.project.as_deref(), &scan.home),
                     detail: short_hash(&copy.hash.0),
-                    note: if is_same { "相同" } else { "已分叉" }.to_owned(),
+                    note: if is_same { "相同" } else { "内容分化" }.to_owned(),
                     tone: (!is_same).then_some(LocationTone::Warn),
                 }
             })
@@ -326,7 +326,7 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
             ready: false,
             record: None,
             metric: Some(copies.len().to_string()),
-            metric_note: Some("份可以归并成 1 份".to_owned()),
+            metric_note: Some("份可合并为 1 份正本".to_owned()),
             impact: Some(format!("{} 份 → 1 份", copies.len())),
             brief: format!("{same} 份内容相同"),
             id: format!("duplicate:{name}"),
@@ -335,8 +335,8 @@ fn duplicates(scan: &Scan, findings: &mut Vec<Finding>, extra: &mut u32) {
             status: FindingStatus::Pending,
             intro,
             locations,
-            action: "收编到资产库".to_owned(),
-            foot: "原位置替换为受管链接，事前自动备份。".to_owned(),
+            action: "收录到资产库".to_owned(),
+            foot: "原位置换为受管软链，Agent 读取不变，事前自动备份。".to_owned(),
         });
     }
 }
@@ -552,8 +552,8 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
                     tone: None,
                 },
             ],
-            action: "创建套装".to_owned(),
-            foot: "估算值。全局链接移除前自动快照。".to_owned(),
+            action: "去全局页清理".to_owned(),
+            foot: "估算值。全局软链移除前自动快照。".to_owned(),
         });
     }
 
@@ -584,7 +584,7 @@ fn global_tax(scan: &Scan, findings: &mut Vec<Finding>) {
                 format_k(TokenEstimate(resident))
             ),
             locations,
-            action: "从全局移除".to_owned(),
+            action: "去全局页清理".to_owned(),
             foot: "资产库保留正本，可在「活动」回滚。".to_owned(),
         });
     }
@@ -728,7 +728,7 @@ fn detached(scan: &Scan, findings: &mut Vec<Finding>) {
             locations.push(FindingLocation {
                 path: (*name).clone(),
                 detail: "只在目录里".to_owned(),
-                note: "来源未知".to_owned(),
+                note: "未收录".to_owned(),
                 tone: Some(LocationTone::Muted),
             });
         }

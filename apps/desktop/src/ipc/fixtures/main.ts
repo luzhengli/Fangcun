@@ -136,7 +136,7 @@ const R = {
             { kind: "context", text: "## 收尾检查" },
             { kind: "remove", text: "运行全部测试后再提交。" },
             { kind: "add", text: "先运行受影响的测试，再运行全部测试。" },
-            { kind: "add", text: "提交前检查 fangcun status 无漂移。" },
+            { kind: "add", text: "提交前检查 fangcun status 无本地未写回修改。" },
             { kind: "add", text: "新增依赖时同步更新 fangcun.toml。" },
           ],
         },
@@ -147,8 +147,8 @@ const R = {
       others: ["agent-lab", "fangcun", "blog-site", "notes-kit"],
     },
     recent: [
-      act("5 分钟前", "检测到漂移 · 多 3 行、少 1 行", "drift", "drift1"),
-      act("11-11", "收编进资产库", "adopt"),
+      act("5 分钟前", "检测到本地修改 · 多 3 行、少 1 行", "drift", "drift1"),
+      act("11-11", "收录进资产库", "adopt"),
       act("07-02", "固定到 4d9b1eb", "sync"),
     ],
     name: "project-harness",
@@ -156,7 +156,7 @@ const R = {
     scope: "project",
     version: "7月版 · 4d9b1eb",
     state: "drifted",
-    label: "已漂移",
+    label: "本地已改",
     resident: 400,
     source: "local:luyao-skills",
     location: ".agents/skills/project-harness",
@@ -165,7 +165,8 @@ const R = {
       ".agents/skills/project-harness → 资产库",
       ".claude/skills/project-harness → .agents/skills/project-harness",
     ],
-    reason: "项目清单固定使用 4d9b1eb。项目里的这份副本被改过，和锁定的版本对不上，所以标为漂移。",
+    reason:
+      "项目清单固定使用 4d9b1eb。项目里的这份副本被改过，和锁定的版本对不上，所以标为「本地已改」。",
   }),
   tdd: item({
     id: "tdd",
@@ -197,8 +198,8 @@ const R = {
         },
       ],
       others: [
-        { project: "/Users/me/code/agent-lab", name: "agent-lab", note: "跟随 main · 链接" },
-        { project: "/Users/me/code/fangcun", name: "fangcun", note: "跟随 main · 入库" },
+        { project: "/Users/me/code/agent-lab", name: "agent-lab", note: "跟随 main · 本机软链" },
+        { project: "/Users/me/code/fangcun", name: "fangcun", note: "跟随 main · 拷入仓库" },
       ],
     },
     recent: [
@@ -248,7 +249,7 @@ const R = {
   lark: item({
     id: "lark",
     recent: [act("07-05", "装入全局", "sync")],
-    name: "lark-doc …等 16 项",
+    name: "lark-doc 等 16 项",
     kind: "skill",
     scope: "global",
     label: "本项目从未使用",
@@ -271,10 +272,10 @@ const R = {
     kind: "skill",
     scope: "global",
     state: "unknown-source",
-    label: "来源未知",
+    label: "未收录",
     resident: 300,
     location: "~/.agents/skills/pr-review",
-    declared: stack(["生效 · 来源未知", "", "", ""]),
+    declared: stack(["生效 · 未收录", "", "", ""]),
     files: ["~/.claude/skills/pr-review → ~/.agents/skills/pr-review"],
     reason:
       "它装在全局目录里，所以对本项目也生效。方寸查不到它从哪来，无法判断版本，也没法提醒更新。",

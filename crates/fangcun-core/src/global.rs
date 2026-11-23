@@ -350,11 +350,11 @@ fn advice(
             vec!["从全局移除…".to_owned()],
         ),
         GlobalStatus::UnknownSource => (
-            "内容哈希与任何来源都不匹配。先去资产库收编，再决定留还是走。".to_owned(),
-            vec!["去资产库收编".to_owned()],
+            "未收录 · 查不到来源。先收录到资产库，再决定是否留在全局层。".to_owned(),
+            vec!["去资产库收录 →".to_owned()],
         ),
         GlobalStatus::Disabled => (
-            "配置里已经停用，不占常驻。要彻底清掉，在 M1 从全局移除。".to_owned(),
+            "配置里已经停用，不占常驻。要彻底移除，可先收录后再从全局层清理。".to_owned(),
             Vec::new(),
         ),
         GlobalStatus::AlwaysLoaded => (

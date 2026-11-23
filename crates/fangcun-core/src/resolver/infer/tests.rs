@@ -167,8 +167,8 @@ fn init_from_existing_writes_manifest_lock_and_registry() {
             .find(|n| n.text.contains(needle))
             .unwrap_or_else(|| panic!("缺少提示「{needle}」：{:?}", plan.notes))
     };
-    assert_eq!(note("来源未知").tone, NoteTone::Info);
-    assert!(note("来源未知").text.contains("orphan"));
+    assert_eq!(note("尚未收录").tone, NoteTone::Info);
+    assert!(note("尚未收录").text.contains("orphan"));
     assert_eq!(note("明文密钥").tone, NoteTone::Danger);
     assert!(note("明文密钥").text.contains("github 的 GITHUB_TOKEN"));
     assert!(note("远程服务").text.contains("remote"));

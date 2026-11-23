@@ -130,7 +130,7 @@
   overflow: hidden;
   font: inherit;
   text-align: left;
-  color: #fff;
+  color: var(--on-k);
   cursor: default;
   transition:
     width 240ms var(--ease),
@@ -157,6 +157,12 @@
 
 .blk[data-glob="true"] {
   background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 7px);
+}
+
+.blk[data-staged="true"] {
+  opacity: 0.44;
+  outline: 1.5px dashed var(--tx-2);
+  outline-offset: -2px;
 }
 
 .blk[data-ring="warn"],
