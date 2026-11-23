@@ -23,11 +23,21 @@
 
 .sidebar {
   flex: 0 0 236px;
+  width: 236px;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--side);
   border-right: 0.5px solid var(--line);
+}
+
+.sidebar[data-peek="false"][data-entering="true"] {
+  animation: sidebar-expand var(--dur-layout) var(--ease);
+}
+
+.sidebar[data-peek="false"][data-exiting="true"] {
+  pointer-events: none;
+  animation: sidebar-collapse var(--dur-layout) var(--ease) forwards;
 }
 
 /* 窄窗口里点开的侧栏浮在内容上。 */
@@ -39,6 +49,12 @@
   z-index: 8;
   width: 236px;
   box-shadow: var(--shadow-pop);
+  animation: peek-in 160ms var(--ease);
+}
+
+.sidebar[data-peek="true"][data-exiting="true"] {
+  pointer-events: none;
+  animation: peek-out 120ms var(--ease-exit) forwards;
 }
 
 .peekVeil {
@@ -47,7 +63,13 @@
   z-index: 7;
   padding: 0;
   border: 0;
-  background: transparent;
+  background: var(--veil-soft);
+  animation: veil-in 160ms var(--ease);
+}
+
+.peekVeil[data-exiting="true"] {
+  pointer-events: none;
+  animation: veil-out 120ms var(--ease-exit) forwards;
 }
 
 /* 窗口按钮是系统画的（tauri.conf.json 的 trafficLightPosition），这里留出位置和侧栏开关。 */
@@ -100,10 +122,17 @@
   text-align: left;
   text-decoration: none;
   cursor: default;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .nav:hover {
   background: var(--fill-1);
+}
+
+.nav:active:not(:disabled):not([aria-current="page"]) {
+  background: var(--fill-2);
 }
 
 .nav[aria-current="page"] {
@@ -237,8 +266,19 @@
 
 /* 侧栏收起时，工具栏左边接过窗口按钮的位置和侧栏开关。 */
 .lead {
+  flex: none;
   display: inline-flex;
   align-items: center;
+  overflow: hidden;
+}
+
+.lead[data-entering="true"] {
+  animation: lead-in var(--dur-layout) var(--ease);
+}
+
+.lead[data-exiting="true"] {
+  pointer-events: none;
+  animation: lead-out var(--dur-layout) var(--ease) forwards;
 }
 
 .lead .trafficLights {
@@ -285,11 +325,21 @@
   font-weight: 600;
   color: var(--tx-2);
   cursor: default;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
 }
 
 .crumb:hover {
   background: var(--fill-1);
   color: var(--tx-1);
+}
+
+.crumb:active {
+  background: var(--fill-2);
+  transform: scale(0.98);
+  transition-duration: var(--dur-press);
 }
 
 .crumbSep {
@@ -349,5 +399,101 @@
 
   .main {
     overflow: visible;
+  }
+}
+
+@keyframes sidebar-expand {
+  from {
+    margin-left: -236px;
+  }
+  to {
+    margin-left: 0;
+  }
+}
+
+@keyframes sidebar-collapse {
+  from {
+    margin-left: 0;
+  }
+  to {
+    margin-left: -236px;
+  }
+}
+
+@keyframes peek-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes peek-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes veil-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes veil-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes lead-in {
+  from {
+    max-width: 0;
+    margin-right: -10px;
+    opacity: 0;
+  }
+  to {
+    max-width: 98px;
+    margin-right: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes lead-out {
+  from {
+    max-width: 98px;
+    margin-right: 0;
+    opacity: 1;
+  }
+  to {
+    max-width: 0;
+    margin-right: -10px;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar[data-peek="false"][data-entering="true"],
+  .sidebar[data-peek="false"][data-exiting="true"],
+  .sidebar[data-peek="true"],
+  .sidebar[data-peek="true"][data-exiting="true"],
+  .peekVeil,
+  .peekVeil[data-exiting="true"],
+  .lead[data-entering="true"],
+  .lead[data-exiting="true"] {
+    animation: none;
+  }
+
+  .nav,
+  .crumb {
+    transition: none;
+  }
+
+  .crumb:active {
+    transform: none;
   }
 }

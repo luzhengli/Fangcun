@@ -8,6 +8,15 @@
 
 ---
 
+## 2026-11-24 全站交互动效分级标尺与退场机制精修
+
+- **人定**：优化 `apps/desktop` 全站交互动效，对标 Linear / Raycast / OrbStack 等 macOS 原生专业工具，要求干脆、跟手、克制、零回弹，明确高频操作（主列表点击与 `↑`/`↓` 切换、检查器换项、`⌘K` 命令面板、页面路由切换）保持 `0ms` 瞬时响应，采用 `60ms / 100ms / 150ms / 170ms` 分级动效标尺与 `cubic-bezier(.4, 0, 1, 1)` 快进快收退场，同步更新 `docs/product-design.md` 6.10 节并记入 `BACKLOG.md`「原型待改」。
+- **Agent 定，可逆**：
+  - **标尺入 `base.css` 守 `tokens.css` 零改动**：将 `--dur-press` / `--dur-micro` / `--dur-ui` / `--dur-layout` 与 `--ease-exit` 放进 `apps/desktop/src/styles/base.css` 并复用 `tokens.css` 的 `--ease`，保持 `tokens.css` 与原型逐项比对（`tokens.test.ts`）零偏差。
+  - **纯状态 `usePresence` 与 `0ms` 测试/无障碍同步卸载**：不引入外部动画库；`usePresence` 在 jsdom 与 `prefers-reduced-motion: reduce` 下于渲染期 `0ms` 同步返回卸载态，真机关闭首帧即由 `useDialogFocus` 归还触发按钮焦点并设 `pointer-events: none`，`useRetainedValue` 缓存退场期文案快照。
+  - **`placeholderData` 消除切换单选项跳帧**：`DriftBox` 与 `RegisterDialog` 的计划查询启用 `placeholderData: (prev) => prev`，切换三选一或同步方式时保留上一份 `WriteList` 并以 `data-updating` 轻量提示，彻底根除高度塌陷闪烁。
+  - **CSS Grid 折叠 `visibility` 延迟切换**：修复 `Inspector`、`WhoBar`、`EffectiveList` 分组收起瞬间第 1 帧文字瞬隐缺陷，改为收起时 `visibility 0s linear var(--dur-ui)` 延迟隐藏，保证收起过程平滑且随时可打断。
+
 ## 2026-11-24 术语精修：「纳管」改为「收录」
 
 人指出「“纳管”这个词还有点生硬不好理解」，随后选定 **「收录」** 方案替换全量界面、内核、命令行说明、设计文档与固定术语规则中的「纳管」：

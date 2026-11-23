@@ -3,6 +3,7 @@ import { NavLink, useMatch, useNavigate } from "react-router";
 import c from "@/components/controls.module.css";
 import { Icon } from "@/components/Icon";
 import { TONE_COLORS, toneOfState } from "@/components/tone";
+import { usePresence } from "@/components/usePresence";
 import type { AssetState } from "@/ipc/bindings/AssetState";
 import type { ProjectSummary } from "@/ipc/bindings/ProjectSummary";
 import { kernel } from "@/ipc/commands";
@@ -41,6 +42,9 @@ export function Sidebar() {
     if (root) openRegister(root);
   };
 
+  const exitMs = sidebar.peek ? 120 : 170;
+  const presence = usePresence(sidebar.shown, exitMs);
+
   useEffect(() => {
     if (!sidebar.peek || !sidebar.shown) return;
     const onKey = (e: KeyboardEvent) => {
@@ -50,11 +54,18 @@ export function Sidebar() {
     return () => document.removeEventListener("keydown", onKey);
   }, [sidebar]);
 
-  if (!sidebar.shown) return null;
+  if (!presence.mounted) return null;
 
   return (
     <>
-      <nav aria-label="主导航" className={styles.sidebar} data-peek={sidebar.peek}>
+      <nav
+        aria-label="主导航"
+        className={styles.sidebar}
+        data-peek={sidebar.peek}
+        data-entering={presence.entering || undefined}
+        data-exiting={presence.exiting || undefined}
+        aria-hidden={presence.exiting || undefined}
+      >
         <div className={styles.sideTop} data-tauri-drag-region>
           <span className={styles.trafficLights} aria-hidden="true" />
           <span className={styles.spacer} data-tauri-drag-region />
@@ -162,6 +173,8 @@ export function Sidebar() {
         <button
           type="button"
           className={styles.peekVeil}
+          data-exiting={presence.exiting || undefined}
+          aria-hidden={presence.exiting || undefined}
           aria-label="收起侧栏"
           onClick={sidebar.close}
         />

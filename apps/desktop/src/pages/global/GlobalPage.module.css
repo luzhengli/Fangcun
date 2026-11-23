@@ -114,6 +114,9 @@
   font: inherit;
   cursor: default;
   background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 7px);
+  transition:
+    width 160ms var(--ease),
+    filter var(--dur-micro) var(--ease);
 }
 
 .blk:hover {
@@ -157,14 +160,6 @@
   color: var(--tx-3);
   white-space: nowrap;
   overflow: hidden;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .blk {
-    transition:
-      width 240ms var(--ease),
-      filter 120ms;
-  }
 }
 
 /* 吸顶的筛选与表头 */
@@ -351,9 +346,10 @@
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 140ms var(--ease),
-    color 140ms var(--ease),
-    background-color 140ms var(--ease);
+    transform 120ms var(--ease),
+    border-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease);
 }
 
 .footText {
@@ -374,6 +370,11 @@
   color: var(--accent);
 }
 
+.foot:active {
+  transform: scale(0.98);
+  transition-duration: var(--dur-press);
+}
+
 /* 待清理浮条：浮在列表底部中间（6.6、6.1「浮层」圆角 14）。 */
 .tray {
   position: sticky;
@@ -388,6 +389,12 @@
   border-radius: 14px;
   background: var(--raised);
   box-shadow: var(--shadow-pop);
+  animation: tray-in var(--dur-ui) var(--ease);
+}
+
+.tray[data-exiting="true"] {
+  pointer-events: none;
+  animation: tray-out var(--dur-micro) var(--ease-exit) forwards;
 }
 
 .trayText {
@@ -477,10 +484,38 @@
 
 .idleChev {
   color: var(--tx-3);
+  transition: transform var(--dur-ui) var(--ease);
 }
 
 .idleToggle[aria-expanded="true"] .idleChev {
   transform: rotate(90deg);
+}
+
+.idleBody {
+  flex: none;
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--dur-ui) var(--ease),
+    opacity var(--dur-ui) var(--ease);
+}
+
+.idleBody[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.idleInner {
+  min-height: 0;
+  overflow: hidden;
+  visibility: visible;
+  transition: visibility 0s linear 0s;
+}
+
+.idleBody[data-open="false"] .idleInner {
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear var(--dur-ui);
 }
 
 .idleRow {
@@ -545,8 +580,44 @@
   margin-top: 10px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .idleChev {
-    transition: transform 160ms var(--ease);
+@keyframes tray-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tray-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray,
+  .tray[data-exiting="true"] {
+    animation: none;
+  }
+
+  .blk,
+  .sticky,
+  .foot,
+  .idleChev,
+  .idleBody,
+  .idleInner {
+    transition: none;
+  }
+
+  .foot:active {
+    transform: none;
   }
 }

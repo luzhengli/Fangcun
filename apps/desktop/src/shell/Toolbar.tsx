@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useLocation, useNavigate, useNavigationType } from "react-router";
 import c from "@/components/controls.module.css";
 import { Icon } from "@/components/Icon";
+import { usePresence } from "@/components/usePresence";
 import styles from "./AppShell.module.css";
 import { useToolbarSlots } from "./toolbarSlots";
 import { useSidebar } from "./useSidebar";
@@ -18,6 +19,10 @@ export function Toolbar() {
   const setTitle = useToolbarSlots((s) => s.setTitle);
   const setActions = useToolbarSlots((s) => s.setActions);
   const showLead = !sidebar.shown || sidebar.peek;
+  const leadPresence = usePresence(showLead, 170);
+  const leadVisible = sidebar.peek ? showLead : leadPresence.mounted;
+  const leadEntering = !sidebar.peek && leadPresence.entering;
+  const leadExiting = !sidebar.peek && leadPresence.exiting;
 
   return (
     <header
@@ -26,8 +31,13 @@ export function Toolbar() {
       className={styles.toolbar}
       data-tauri-drag-region
     >
-      {showLead && (
-        <span className={styles.lead}>
+      {leadVisible && (
+        <span
+          className={styles.lead}
+          data-entering={leadEntering || undefined}
+          data-exiting={leadExiting || undefined}
+          aria-hidden={leadExiting || undefined}
+        >
           <span className={styles.trafficLights} aria-hidden="true" />
           <button
             type="button"

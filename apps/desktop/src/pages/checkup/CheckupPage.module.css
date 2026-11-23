@@ -115,7 +115,7 @@
   height: 6px;
   border-radius: 3px;
   background: var(--fill-2);
-  transition: background-color 240ms;
+  transition: background-color 160ms var(--ease);
 }
 
 .segments > span[data-done="true"] {
@@ -142,10 +142,20 @@
   color: var(--tx-1);
   text-align: left;
   cursor: default;
+  transition:
+    border-color var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
 }
 
 .card:hover {
   border-color: var(--accent-line);
+}
+
+.card:active {
+  transform: scale(0.99);
+  transition-duration: var(--dur-press);
 }
 
 .card[data-on="true"] {
@@ -341,7 +351,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .segments > span {
+  .segments > span,
+  .card {
     transition: none;
+  }
+
+  .card:active {
+    transform: none;
   }
 }

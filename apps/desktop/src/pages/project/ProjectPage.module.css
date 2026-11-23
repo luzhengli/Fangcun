@@ -15,6 +15,21 @@
   font: inherit;
   color: var(--tx-3);
   text-align: left;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
+}
+
+.palette:hover {
+  background: var(--sunken);
+  color: var(--tx-2);
+}
+
+.palette:active {
+  transform: scale(0.99);
+  transition-duration: var(--dur-press);
 }
 
 .paletteText {
@@ -168,6 +183,7 @@
 .shareBar > span {
   display: block;
   height: 100%;
+  transition: width 160ms var(--ease);
 }
 
 .files {
@@ -278,10 +294,19 @@
   background: var(--win);
   color: var(--tx-1);
   text-align: left;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
 }
 
 .pendingRow:hover {
   box-shadow: inset 0 0 0 999px var(--fill-1);
+}
+
+.pendingRow:active {
+  transform: scale(0.99);
+  transition-duration: var(--dur-press);
 }
 
 .pendingName {
@@ -410,6 +435,20 @@
   background: var(--win);
   font: inherit;
   cursor: pointer;
+  transition:
+    border-color var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease),
+    transform 120ms var(--ease);
+}
+
+.fileCard:hover {
+  border-color: var(--accent-line);
+}
+
+.fileCard:active {
+  transform: scale(0.99);
+  transition-duration: var(--dur-press);
 }
 
 .fileCard[aria-pressed="true"] {
@@ -844,15 +883,15 @@
 }
 
 .syncPop {
-  animation: sync-nudge 200ms var(--ease);
+  animation: sync-nudge var(--dur-ui) var(--ease);
 }
 
 @keyframes sync-nudge {
   0% {
     transform: scale(1);
   }
-  45% {
-    transform: scale(1.04);
+  40% {
+    transform: scale(1.025);
   }
   100% {
     transform: scale(1);
@@ -893,6 +932,9 @@
   font: inherit;
   color: inherit;
   cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .groupToggle:hover {
@@ -902,7 +944,7 @@
 
 .groupChev {
   color: var(--tx-3);
-  transition: transform 160ms var(--ease);
+  transition: transform var(--dur-ui) var(--ease);
 }
 
 .groupToggle[aria-expanded="true"] .groupChev {
@@ -920,8 +962,8 @@
   display: grid;
   grid-template-rows: 1fr;
   transition:
-    grid-template-rows 180ms var(--ease),
-    opacity 150ms var(--ease);
+    grid-template-rows var(--dur-ui) var(--ease),
+    opacity var(--dur-ui) var(--ease);
 }
 
 .groupBody[data-open="false"] {
@@ -932,10 +974,14 @@
 .groupInner {
   min-height: 0;
   overflow: hidden;
+  visibility: visible;
+  transition: visibility 0s linear 0s;
 }
 
 .groupBody[data-open="false"] .groupInner {
   visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear var(--dur-ui);
 }
 
 .costCell {
@@ -959,6 +1005,7 @@
   height: 100%;
   border-radius: 1.5px;
   background: var(--accent);
+  transition: width 160ms var(--ease);
 }
 
 .sparkFill[data-kind="instruction"] {
@@ -974,12 +1021,27 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .syncPop,
+  .syncPop {
+    animation: none;
+  }
+
+  .palette,
+  .pendingRow,
+  .fileCard,
+  .shareBar > span,
+  .sparkFill,
+  .groupToggle,
   .groupChev,
   .groupBody,
+  .groupInner,
   .viewBar {
-    animation: none;
     transition: none;
+  }
+
+  .palette:active,
+  .pendingRow:active,
+  .fileCard:active {
+    transform: none;
   }
 }
 

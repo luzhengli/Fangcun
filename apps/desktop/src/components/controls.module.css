@@ -28,7 +28,9 @@
   user-select: none;
   transition:
     transform 120ms var(--ease),
-    background-color 120ms;
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease),
+    box-shadow var(--dur-micro) var(--ease);
 }
 
 .b:hover {
@@ -36,8 +38,9 @@
   color: var(--tx-1);
 }
 
-.b:active {
+.b:active:not(:disabled):not([aria-disabled="true"]) {
   transform: scale(0.97);
+  transition-duration: var(--dur-press);
 }
 
 .b:disabled,
@@ -100,11 +103,20 @@
   background: transparent;
   color: var(--tx-2);
   cursor: default;
+  transition:
+    transform 120ms var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .icon:hover {
   background: var(--fill-1);
   color: var(--tx-1);
+}
+
+.icon:active:not(:disabled) {
+  transform: scale(0.95);
+  transition-duration: var(--dur-press);
 }
 
 .icon[aria-pressed="true"] {
@@ -144,8 +156,8 @@
   pointer-events: none;
   z-index: 0;
   transition:
-    transform 180ms var(--ease),
-    width 180ms var(--ease);
+    transform var(--dur-ui) var(--ease),
+    width var(--dur-ui) var(--ease);
 }
 
 .seg > button {
@@ -165,8 +177,8 @@
   color: var(--tx-3);
   cursor: default;
   transition:
-    background-color 120ms,
-    color 120ms;
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .seg > button:hover {
@@ -250,11 +262,20 @@
   background: transparent;
   color: var(--tx-4);
   cursor: default;
+  transition:
+    transform 120ms var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .tip:hover {
   color: var(--tx-2);
   background: var(--fill-1);
+}
+
+.tip:active {
+  transform: scale(0.94);
+  transition-duration: var(--dur-press);
 }
 
 .tip[aria-expanded="true"] {
@@ -281,11 +302,14 @@
   line-height: 1.55;
   text-align: left;
   white-space: normal;
+  transform-origin: top left;
+  animation: fc-pop-in 90ms var(--ease);
 }
 
 .bubble[data-align="right"] {
   left: auto;
   right: -6px;
+  transform-origin: top right;
 }
 
 /* 弹出菜单（目标工具）。 */
@@ -307,6 +331,8 @@
   border-radius: 10px;
   background: var(--raised);
   box-shadow: var(--shadow-pop);
+  transform-origin: top right;
+  animation: fc-pop-in 90ms var(--ease);
 }
 
 .menuItem {
@@ -323,11 +349,18 @@
   color: var(--tx-1);
   text-align: left;
   cursor: default;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .menuItem:hover,
 .menuItem:focus-visible {
   background: var(--fill-1);
+}
+
+.menuItem:active {
+  background: var(--fill-2);
 }
 
 .menuCheck {
@@ -366,14 +399,31 @@
   color: var(--tool-cc);
 }
 
+@keyframes fc-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.98);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .b,
+  .icon,
+  .tip,
   .seg > button,
-  .segPill {
+  .segPill,
+  .menuItem {
     transition: none;
   }
 
-  .b:active {
+  .b:active:not(:disabled):not([aria-disabled="true"]),
+  .icon:active:not(:disabled),
+  .tip:active {
     transform: none;
+  }
+
+  .bubble,
+  .menu {
+    animation: none;
   }
 }

@@ -15,10 +15,17 @@
   text-align: left;
   font: inherit;
   cursor: default;
+  transition:
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .who:hover {
   background: var(--fill-1);
+}
+
+.who:active {
+  background: var(--fill-2);
 }
 
 .track {
@@ -35,6 +42,7 @@
   height: 100%;
   border-radius: 2px;
   background: var(--accent);
+  transition: width 160ms var(--ease);
 }
 
 .used {
@@ -56,6 +64,9 @@
 .chev {
   flex: none;
   color: var(--tx-4);
+  transition:
+    transform var(--dur-ui) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
 .who:hover .chev,
@@ -71,8 +82,8 @@
   display: grid;
   grid-template-rows: 1fr;
   transition:
-    grid-template-rows 180ms var(--ease),
-    opacity 150ms var(--ease);
+    grid-template-rows var(--dur-ui) var(--ease),
+    opacity var(--dur-ui) var(--ease);
 }
 
 .listWrap[data-open="false"] {
@@ -83,10 +94,14 @@
 .listInner {
   min-height: 0;
   overflow: hidden;
+  visibility: visible;
+  transition: visibility 0s linear 0s;
 }
 
 .listWrap[data-open="false"] .listInner {
   visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear var(--dur-ui);
 }
 
 .list {
@@ -141,9 +156,13 @@
   margin-left: 4px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .chev {
-    transition: transform 160ms var(--ease);
+@media (prefers-reduced-motion: reduce) {
+  .who,
+  .fill,
+  .chev,
+  .listWrap,
+  .listInner {
+    transition: none;
   }
 }
 

@@ -133,8 +133,9 @@
   color: var(--on-k);
   cursor: default;
   transition:
-    width 240ms var(--ease),
-    filter 120ms;
+    width 160ms var(--ease),
+    opacity var(--dur-ui) var(--ease),
+    filter var(--dur-micro) var(--ease);
 }
 
 .blk[data-kind="instruction"] {
@@ -245,7 +246,7 @@
   min-width: max-content;
   padding: 6px 12px 0 0;
   border-top: 1.5px solid var(--k2);
-  transition: width 240ms var(--ease);
+  transition: width 160ms var(--ease);
 }
 
 .axis > span[data-key="instruction"],

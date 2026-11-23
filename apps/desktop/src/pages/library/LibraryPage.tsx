@@ -481,6 +481,7 @@ function LibraryInspector({
       decision={
         adopted ? (
           <Done
+            animate
             title="已收录"
             desc="已存入本机资产库统一管理，原位置换为受管软链，Agent 读取不受影响，事前已备份。"
             onUndo={
