@@ -6,8 +6,10 @@ import { DecisionCard, WriteList } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
 import { InfoTip } from "@/components/InfoTip";
 import { Inspector, Section } from "@/components/Inspector";
+import { Segmented } from "@/components/Segmented";
 import { StatusDot } from "@/components/StatusDot";
 import type { Tone } from "@/components/tone";
+import { useListNav } from "@/components/useListNav";
 import type { FileOp } from "@/ipc/bindings/FileOp";
 import type { Record as ActivityRecord } from "@/ipc/bindings/Record";
 import type { RecordKind } from "@/ipc/bindings/RecordKind";
@@ -24,9 +26,9 @@ import styles from "./ActivityPage.module.css";
 /** 类型筛选，顺序固定（6.7）。「可更新」没有单独一项，算在「升级」里。 */
 const CHIPS: [RecordKind, string][] = [
   ["sync", "同步"],
-  ["drift", "漂移"],
+  ["drift", "改动"],
   ["upgrade", "升级"],
-  ["adopt", "收编"],
+  ["adopt", "收录"],
   ["rollback", "回滚"],
   ["checkup", "体检"],
   ["verify", "校验"],
@@ -35,10 +37,10 @@ const CHIPS: [RecordKind, string][] = [
 
 const KIND_LABEL: Record<RecordKind, string> = {
   sync: "同步",
-  drift: "漂移",
+  drift: "改动",
   upgrade: "升级",
   updatable: "可更新",
-  adopt: "收编",
+  adopt: "收录",
   rollback: "回滚",
   checkup: "体检",
   verify: "校验",
@@ -106,6 +108,7 @@ export function ActivityPage() {
   const [selected, setSelected] = useState<string | null>(params.get("record"));
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [lastCheck, setLastCheck] = useState<string | null>(null);
+  const [stuck, setStuck] = useState(false);
   const client = useQueryClient();
   const projects = useProjects();
   const overview = useOverview();
@@ -159,6 +162,11 @@ export function ActivityPage() {
     setSelected(id);
     setInspectorOpen(true);
   };
+  useListNav(
+    shown.map((r) => r.id),
+    current?.id,
+    pick,
+  );
 
   const row = (r: ActivityRecord) => {
     const status = statusOf(r);
@@ -166,6 +174,7 @@ export function ActivityPage() {
       <button
         key={r.id}
         type="button"
+        data-nav-id={r.id}
         className={styles.row}
         aria-pressed={r.id === current?.id}
         onClick={() => pick(r.id)}
@@ -232,38 +241,33 @@ export function ActivityPage() {
         </button>
       </PageToolbar>
       <div className={page.split}>
-        <section aria-label="活动时间线" className={`${page.list} ${styles.list}`}>
-          <div className={styles.filterBar}>
-            <fieldset aria-label="筛选" className={`${c.seg} ${styles.filters}`}>
-              <button
-                type="button"
-                aria-pressed={filter === "all"}
-                onClick={() => setFilter("all")}
-              >
-                全部
-              </button>
-              <button
-                type="button"
-                aria-pressed={filter === "pending"}
-                onClick={() => setFilter("pending")}
-              >
-                待处理{" "}
-                <span className={styles.pendingCount} data-zero={pendingAll === 0}>
-                  {pendingAll}
-                </span>
-              </button>
-              <span aria-hidden="true" className={styles.divider} />
-              {CHIPS.map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={filter === k}
-                  onClick={() => setFilter(k)}
-                >
-                  {label}
-                </button>
-              ))}
-            </fieldset>
+        <section
+          aria-label="活动时间线"
+          className={`${page.list} ${styles.list}`}
+          onScroll={(e) => setStuck(e.currentTarget.scrollTop > 4)}
+        >
+          <div className={styles.filterBar} data-stuck={stuck}>
+            <Segmented
+              label="筛选"
+              className={styles.filters}
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "全部" },
+                {
+                  value: "pending",
+                  label: (
+                    <>
+                      待处理{" "}
+                      <span className={styles.pendingCount} data-zero={pendingAll === 0}>
+                        {pendingAll}
+                      </span>
+                    </>
+                  ),
+                },
+                ...CHIPS.map(([k, label]) => ({ value: k, label })),
+              ]}
+            />
             <span className={styles.count}>{shown.length} 条</span>
           </div>
           {activity.isError && <p className={page.error}>{activity.error.message}</p>}
@@ -293,7 +297,7 @@ export function ActivityPage() {
               )}
               {pending.length === 0 && hiddenPending === 0 && (
                 <p className={styles.pinnedEmpty}>
-                  没有待处理的事。漂移、上游更新出现时会置顶在这里。
+                  没有待处理的事。本地改动、上游更新出现时会置顶在这里。
                 </p>
               )}
             </section>
@@ -353,7 +357,12 @@ function PendingRow({
   const tone = r.kind === "updatable" ? "info" : "warn";
   return (
     <div className={styles.pendingRow} data-on={on}>
-      <button type="button" className={styles.pendingMain} onClick={() => onPick(r.id)}>
+      <button
+        type="button"
+        data-nav-id={r.id}
+        className={styles.pendingMain}
+        onClick={() => onPick(r.id)}
+      >
         <span aria-hidden="true" className={styles.pendingTile} data-tone={tone}>
           <span className={styles.pendingDot} data-tone={tone} />
         </span>

@@ -58,6 +58,7 @@ export function ToolPicker({
         onClick={() => setOpen(!open)}
       >
         <ToolIcon tool={value} name={name} />
+        <span className={c.toolLabel}>{name}</span>
         <span className={c.chev}>
           <Icon name="chevronDown" size={10} strokeWidth={1.8} />
         </span>

@@ -76,7 +76,7 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         places.entry(copy.dir.clone()).or_insert(copy);
     }
     if places.is_empty() {
-        let mut why = vec![format!("{name} 没有可以收编的副本")];
+        let mut why = vec![format!("{name} 没有可以收录的副本")];
         if !out_of_scope.is_empty() {
             let list: Vec<&str> = out_of_scope.iter().map(String::as_str).collect();
             why.push(format!("不在写入范围里：{}", list.join("、")));
@@ -125,7 +125,7 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
         builder.symlink(
             dir,
             object,
-            format!("改由资产库管理，链接到 {name}@{short}；原来的 {removed} 个文件已备份"),
+            format!("改为资产库软链，指向 {name}@{short}；原有 {removed} 个文件已备份"),
         )?;
         ledger.links.retain(|l| l.path != *dir);
         ledger.links.push(AdoptedLink {
@@ -138,11 +138,11 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
     builder.write_file(
         &Adopted::file(input.home),
         ledger.to_toml()?.into_bytes(),
-        format!("收编台账：{name} 的 {} 个位置", places.len()),
+        format!("收录台账：{name} 的 {} 个位置", places.len()),
     )?;
 
     builder.set_title(format!(
-        "收编 {name}：{} 份副本归并为 {} 份正本",
+        "收录 {name}：{} 份副本归并为 {} 份正本",
         places.len(),
         versions.len()
     ));
@@ -157,7 +157,7 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
             .map(|(n, h)| format!("{h}（{n} 份）"))
             .collect();
         builder.note(PlanNote::warning(format!(
-            "有 {} 份已分叉，各自另存为独立版本，内容不变：{}。去留以后在升级或漂移处理时再定",
+            "有 {} 份内容已分化，各自另存为独立版本，原有内容不变：{}。后续可在升级或本地改动处理时决定去留",
             versions.len() - 1,
             forks.join("、")
         )));
@@ -165,7 +165,7 @@ pub fn plan(input: &AdoptInput<'_>, builder: &mut PlanBuilder) -> Result<()> {
     if !out_of_scope.is_empty() {
         let list: Vec<&str> = out_of_scope.iter().map(String::as_str).collect();
         builder.note(PlanNote::info(format!(
-            "{} 份不在写入范围里（未登记的项目或只读扫描的工具），没有收编：{}",
+            "{} 份不在写入范围里（未登记的项目或只读扫描的工具），未收录：{}",
             list.len(),
             list.join("、")
         )));
@@ -235,7 +235,7 @@ pub fn plan_mcp(input: &McpAdoptInput<'_>, builder: &mut PlanBuilder) -> Result<
     }
     if versions.is_empty() {
         return Err(Error::NotFound(format!(
-            "{name} 没有可以收编的配置：只有远程服务（url），资产库还不支持"
+            "{name} 没有可以收录的配置：只有远程服务（url），资产库还不支持"
         )));
     }
 
@@ -266,7 +266,7 @@ pub fn plan_mcp(input: &McpAdoptInput<'_>, builder: &mut PlanBuilder) -> Result<
 
     let places: usize = versions.values().map(Vec::len).sum();
     builder.set_title(format!(
-        "收编 MCP {name}：{places} 处配置归并为 {} 份正本",
+        "收录 MCP {name}：{places} 处配置归并为 {} 份正本",
         versions.len()
     ));
     let list: Vec<String> = versions
@@ -293,7 +293,7 @@ pub fn plan_mcp(input: &McpAdoptInput<'_>, builder: &mut PlanBuilder) -> Result<
     if !remote.is_empty() {
         let list: Vec<&str> = remote.iter().map(String::as_str).collect();
         builder.note(PlanNote::info(format!(
-            "{} 处是远程服务（url），资产库还不支持，没有收编：{}",
+            "{} 处是远程服务（url），资产库还不支持，未收录：{}",
             list.len(),
             list.join("、")
         )));

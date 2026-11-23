@@ -126,7 +126,12 @@ export async function runStep(page, step) {
         const ref = id && document.getElementById(id);
         return ref ? ref.textContent.trim() : "";
       };
-      const exact = all.filter((el) => textOf(el) === text || labelled(el) === text);
+      const exact = all.filter(
+        (el) =>
+          textOf(el) === text ||
+          labelled(el) === text ||
+          (el.getAttribute("aria-label") ?? "").trim() === text,
+      );
       const loose = all.filter((el) => textOf(el).includes(text));
       const list = exact.length > 0 ? exact : loose;
       const el = list[nth ?? 0];

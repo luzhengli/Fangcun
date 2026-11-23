@@ -1,5 +1,7 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import styles from "./components.module.css";
+import c from "./controls.module.css";
+import { Icon } from "./Icon";
 import { StatusBadge } from "./StatusDot";
 import { TONE_COLORS, type Tone } from "./tone";
 
@@ -150,14 +152,39 @@ export function Section({
         )}
         {aside}
       </div>
-      {open && children}
+      <div className={styles.sectionBody} data-open={open} aria-hidden={!open || undefined}>
+        <div className={styles.sectionInner}>{children}</div>
+      </div>
     </section>
   );
 }
 
-/** 命令行的对应写法，例如「$ fangcun why tdd」（6.1 检查器第 2 条）。 */
+/** 命令行的对应写法，例如「$ fangcun why tdd」（6.1 检查器第 2 条）。支持点击一键复制。 */
 export function CommandHint({ command }: { command: string }) {
-  return <span className={styles.command}>$ {command}</span>;
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1200);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  return (
+    <button
+      type="button"
+      className={styles.command}
+      data-copied={copied}
+      title="点击复制命令"
+      aria-label={`复制命令：${command}`}
+      onClick={() => {
+        void navigator.clipboard?.writeText(command).catch(() => {});
+        setCopied(true);
+      }}
+    >
+      <span>{copied ? "✓ 已复制" : `$ ${command}`}</span>
+      {!copied && <Icon name="copy" size={11} className={styles.commandIcon} />}
+    </button>
+  );
 }
 
 /** 还没接上内核用例的写入动作：按钮置灰，旁边说明。 */
@@ -174,7 +201,7 @@ export function ReadOnlyAction({
     <div className={styles.actionRow}>
       <button
         type="button"
-        className={primary ? styles.primary : styles.secondary}
+        className={primary ? `${c.b} ${c.primary}` : c.b}
         disabled
         title={note ?? "这个动作还没有开放"}
       >

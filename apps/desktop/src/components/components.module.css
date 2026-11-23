@@ -32,22 +32,39 @@
   border: 1px solid var(--line);
 }
 
-/* ── 层级刻度 ── */
+/* ── 层级刻度（递增阶梯，底部对齐） ── */
 
 .ticks {
   display: inline-flex;
+  align-items: flex-end;
   gap: 2px;
+  height: 11px;
 }
 
 .tick {
-  width: 6px;
-  height: 6px;
+  width: 3.5px;
   border-radius: 1.5px;
-  border: 1px solid var(--line-2);
+  background: var(--line-2);
+  transition: background-color 140ms var(--ease);
+}
+
+.tick:nth-child(1) {
+  height: 5px;
+}
+
+.tick:nth-child(2) {
+  height: 7px;
+}
+
+.tick:nth-child(3) {
+  height: 9px;
+}
+
+.tick:nth-child(4) {
+  height: 11px;
 }
 
 .tick[data-on="true"] {
-  border: 0;
   background: var(--accent);
 }
 
@@ -95,33 +112,6 @@
 .bar > span {
   display: block;
   height: 100%;
-}
-
-/* ── 分段控件 ── */
-
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 7px;
-  background: var(--fill-2);
-  gap: 2px;
-}
-
-.segmented button {
-  height: 24px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--tx-2);
-  font-size: 12px;
-}
-
-.segmented button[aria-pressed="true"] {
-  background: var(--win);
-  color: var(--tx-1);
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 /* ── 检查器 ── */
@@ -216,7 +206,7 @@
 .fields dd {
   margin: 0;
   min-width: 0;
-  word-break: break-all;
+  overflow-wrap: anywhere;
   color: var(--tx-1);
 }
 
@@ -262,39 +252,7 @@
   gap: 8px;
 }
 
-.primary,
-.secondary {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.primary {
-  border: 0;
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.secondary {
-  border: 1px solid var(--line-2);
-  background: var(--win);
-  color: var(--tx-1);
-}
-
-.primary:disabled,
-.secondary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-fieldset.segmented {
-  margin: 0;
-  border: 0;
-  min-width: 0;
-}
-
-/* 分区标题可点，折叠或展开（6.1）。 */
+/* 分区标题可点，CSS Grid 丝滑折叠或展开（6.1）。 */
 .sectionToggle {
   display: inline-flex;
   align-items: center;
@@ -313,30 +271,81 @@ fieldset.segmented {
 }
 
 .chev {
-  transition: transform 150ms var(--ease);
+  transition: transform 160ms var(--ease);
 }
 
 .sectionToggle[aria-expanded="true"] .chev {
   transform: rotate(90deg);
 }
 
+.sectionBody {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 180ms var(--ease),
+    opacity 150ms var(--ease);
+}
+
+.sectionBody[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.sectionInner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionBody[data-open="false"] .sectionInner {
+  visibility: hidden;
+}
+
 .command {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  gap: 6px;
+  height: 24px;
   margin-top: 4px;
   padding: 0 8px;
+  border: 0.5px solid transparent;
   border-radius: 6px;
   background: var(--fill-1);
   font-family: var(--mono);
   font-size: 11px;
   color: var(--tx-2);
   user-select: text;
+  cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms,
+    color 120ms;
+}
+
+.command:hover {
+  background: var(--fill-2);
+  border-color: var(--line);
+  color: var(--tx-1);
+}
+
+.command[data-copied="true"] {
+  background: var(--ok-weak);
+  border-color: transparent;
+  color: var(--ok);
+}
+
+.commandIcon {
+  flex: none;
+  opacity: 0.7;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chev {
+  .chev,
+  .sectionBody,
+  .tick {
     transition: none;
   }
 }

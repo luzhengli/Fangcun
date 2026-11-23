@@ -54,7 +54,7 @@ fn global_mcp_is_adopted_with_references_removed_by_key_and_rolled_back() {
     // 收编：资产库里是引用版本，明文在应用时进钥匙串，配置不动。
     let adopt = kernel.plan_adopt("context7").unwrap();
     assert!(
-        adopt.title.starts_with("收编 MCP context7"),
+        adopt.title.starts_with("收录 MCP context7"),
         "{}",
         adopt.title
     );

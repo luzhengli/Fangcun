@@ -1025,7 +1025,7 @@ impl Run<'_, '_> {
             };
             if !untouched {
                 self.notes.push(PlanNote::warning(format!(
-                    "{} 清单里已经去掉，但本机这份被改过，没有删。先在项目页处理漂移",
+                    "{} 清单里已经去掉，但本机这份被本地修改过，没有删除。请先在项目页处理本地改动",
                     owned.path
                 )));
                 self.new.paths.push(owned);

@@ -304,14 +304,14 @@ impl Sources {
         message: &str,
     ) -> Result<Promotion> {
         let Source::Local { name } = Source::parse(source)? else {
-            return Err(Error::Source("只有本地来源能回流（9.3）".to_owned()));
+            return Err(Error::Source("只有本地来源才能写回源仓库".to_owned()));
         };
         let repo = self.local_dir(&name)?;
         let path = checked_path(path)?;
         let branch = git::run_text(Some(&repo), &["symbolic-ref", "--quiet", "--short", "HEAD"])
             .map_err(|_| {
                 Error::Source(format!(
-                    "来源 {name} 不在任何分支上（detached HEAD），回流不了"
+                    "来源 {name} 不在任何分支上（detached HEAD），无法写回源仓库"
                 ))
             })?;
         let parent = git::commit_of(&repo, "HEAD")
@@ -322,7 +322,7 @@ impl Sources {
                 .is_empty()
             {
                 return Err(Error::Source(format!(
-                    "来源 {name} 的 git 没设 {key}，回流的提交没有作者。先 git config {key} …"
+                    "来源 {name} 的 git 没设 {key}，写回源仓库的提交没有作者。先运行 git config {key} …"
                 )));
             }
         }
@@ -418,7 +418,7 @@ impl Sources {
             &[
                 "update-ref",
                 "-m",
-                "fangcun: 回流",
+                "fangcun: 写回源仓库",
                 &refname,
                 &promotion.commit,
                 &promotion.parent,

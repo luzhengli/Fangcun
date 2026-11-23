@@ -75,9 +75,9 @@
     {
       "group": "守规矩",
       "dimension": "组件里不写色值（规则 8 后半）",
-      "oracle": "没有",
-      "grade": "无",
-      "next": "lint（.harness/rules.json A-08）"
+      "oracle": "designGuard.test.ts",
+      "grade": "机判",
+      "when": "提交前、CI"
     },
     {
       "group": "守规矩",
@@ -133,9 +133,9 @@
     {
       "group": "符合意图",
       "dimension": "术语与语气",
-      "oracle": "没有",
-      "grade": "无",
-      "next": "lint：界面文案禁用词（P-16）"
+      "oracle": "designGuard.test.ts（禁工程黑话）",
+      "grade": "机判",
+      "when": "提交前、CI"
     },
     {
       "group": "符合意图",

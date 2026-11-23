@@ -495,7 +495,7 @@
 .viewSwitch button[aria-pressed="true"] {
   background: var(--win);
   color: var(--tx-1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--card-shadow);
 }
 
 .manifestSections {
@@ -836,6 +836,151 @@
   padding: 10px 24px;
   background: var(--win);
   border-bottom: 0.5px solid var(--line);
+  transition: box-shadow 150ms var(--ease);
+}
+
+.viewBar[data-stuck="true"] {
+  box-shadow: var(--sticky-shadow);
+}
+
+.syncPop {
+  animation: sync-nudge 200ms var(--ease);
+}
+
+@keyframes sync-nudge {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.kindIcon {
+  flex: none;
+  color: var(--tx-3);
+}
+
+.projectBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.rowIcon {
+  flex: none;
+  color: var(--tx-3);
+}
+
+.groupToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.groupToggle:hover {
+  background: var(--fill-1);
+  color: var(--tx-1);
+}
+
+.groupChev {
+  color: var(--tx-3);
+  transition: transform 160ms var(--ease);
+}
+
+.groupToggle[aria-expanded="true"] .groupChev {
+  transform: rotate(90deg);
+}
+
+.groupCount {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--tx-3);
+}
+
+.groupBody {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 180ms var(--ease),
+    opacity 150ms var(--ease);
+}
+
+.groupBody[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.groupInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.groupBody[data-open="false"] .groupInner {
+  visibility: hidden;
+}
+
+.costCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  width: 100%;
+}
+
+.sparkTrack {
+  width: 40px;
+  height: 2.5px;
+  border-radius: 1.5px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.sparkFill {
+  display: block;
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--accent);
+}
+
+.sparkFill[data-kind="instruction"] {
+  background: var(--k1);
+}
+
+.sparkFill[data-kind="skill"] {
+  background: var(--k2);
+}
+
+.sparkFill[data-kind="mcp"] {
+  background: var(--k3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .syncPop,
+  .groupChev,
+  .groupBody,
+  .viewBar {
+    animation: none;
+    transition: none;
+  }
 }
 
 .flex {

@@ -6,8 +6,10 @@ import { DecisionCard } from "@/components/DecisionCard";
 import { Icon } from "@/components/Icon";
 import { InfoTip } from "@/components/InfoTip";
 import { CommandHint, Inspector, Section } from "@/components/Inspector";
+import { Segmented } from "@/components/Segmented";
 import { ToolPicker } from "@/components/ToolPicker";
 import { formatK, formatLimit, TONE_COLORS, type Tone } from "@/components/tone";
+import { useListNav } from "@/components/useListNav";
 import { RecentList, WhoButton, WhoList, type WhoTag } from "@/components/WhoBar";
 import type { AssetKind } from "@/ipc/bindings/AssetKind";
 import type { Change } from "@/ipc/bindings/Change";
@@ -31,7 +33,7 @@ function statusOf(row: GlobalRow): { tone: Tone; label: string } {
     "never-used": { tone: "warn", label: "从未使用" },
     overridden: { tone: "neutral", label: `被覆盖 ${row.overridden} 处` },
     "same-name-conflict": { tone: "neutral", label: `同名冲突 ${row.conflicts} 处` },
-    "unknown-source": { tone: "unknown", label: "来源未知" },
+    "unknown-source": { tone: "unknown", label: "未收录" },
     common: { tone: "ok", label: "常用" },
     "most-projects": { tone: "ok", label: "多数项目在用" },
     "every-project": { tone: "ok", label: "每个项目都用" },
@@ -41,7 +43,7 @@ function statusOf(row: GlobalRow): { tone: Tone; label: string } {
   return map[row.status];
 }
 
-/** 建议对应的动作：转套装、移除、先收编、留在全局。 */
+/** 建议对应的动作：转套装、移除、先收录、留在全局。 */
 type Act = "bundle" | "remove" | "adopt" | "keep";
 
 function actOf(row: GlobalRow): Act {
@@ -62,7 +64,7 @@ function actOf(row: GlobalRow): Act {
 const CARD_TITLE: Record<Act, string> = {
   bundle: "只有少数项目在用",
   remove: "近 30 天没有项目用到",
-  adopt: "在用，但查不到来源",
+  adopt: "在用，但未收录（查不到来源）",
   keep: "每个项目都该有",
 };
 
@@ -89,7 +91,7 @@ function savingFor(rows: GlobalRow[], project: string): number {
 
 /**
  * 全局：瘦身（6.6，方寸 2）。概要与地图、吸顶的筛选与快速勾选、「谁在用」比例条可展开、
- * 检查器的决定卡片、底部瘦身托盘与按建议分组的瘦身计划。v0.1 不出转成套装（M1-35）。
+ * 检查器的决定卡片、底部待清理浮条与按建议分组的清理计划。v0.1 不出转成套装（M1-35）。
  */
 export function GlobalPage() {
   const tool = useUi((s) => s.tool);
@@ -100,6 +102,7 @@ export function GlobalPage() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [stuck, setStuck] = useState(false);
   const [whoOpen, setWhoOpen] = useState<Set<string>>(new Set());
   const [idleOpen, setIdleOpen] = useState<string | null>(null);
 
@@ -149,6 +152,11 @@ export function GlobalPage() {
     setSelected(id);
     setInspectorOpen(true);
   };
+  useListNav(
+    rows.map((r) => r.id),
+    current?.id,
+    pick,
+  );
 
   const kindCount = (k: Filter) =>
     all.filter((r) => k === "all" || r.kind === k).reduce((n, r) => n + r.count, 0);
@@ -174,13 +182,13 @@ export function GlobalPage() {
           tool,
           ready.flatMap((r) => r.members.map((name) => ({ kind: r.kind, name }))),
         ),
-      title: () => `瘦身全局 · ${n} 项`,
+      title: () => `清理全局层 · ${n} 项`,
       sub: () =>
         skipped.length > 0
-          ? `${skipped.map((r) => r.name).join("、")} 还没收编，没放进计划：先去资产库收编（7.5）`
+          ? `${skipped.map((r) => r.name).join("、")} 还没收录，没放进计划：请先去资产库收录（7.5）`
           : "用到它的项目照常加载 · 应用前各留快照，可撤销",
       group: { of: (ch) => groupOf(ch, ready) },
-      done: () => `已瘦身全局 ${ready.length} 项，每个项目最多 −${save} · 已留快照`,
+      done: () => `已清理全局层 ${ready.length} 项，每个项目最多 −${save} · 已留快照`,
       after: () => setPicked(new Set()),
     });
   };
@@ -207,7 +215,10 @@ export function GlobalPage() {
 
       {data && (
         <div className={page.split}>
-          <main className={`${page.list} ${styles.main}`}>
+          <main
+            className={`${page.list} ${styles.main}`}
+            onScroll={(e) => setStuck(e.currentTarget.scrollTop > 4)}
+          >
             <section aria-label="全局层概要" className={styles.summary}>
               <div className={styles.sumRow}>
                 <div className={styles.sumCol}>
@@ -221,7 +232,9 @@ export function GlobalPage() {
                 </div>
                 <span className={styles.flex} />
                 <div className={`${styles.sumCol} ${styles.sumEnd}`}>
-                  <span className={styles.cap}>照建议瘦身后</span>
+                  <span className={styles.cap}>
+                    {FEATURES.bundles ? "照建议瘦身后" : "清理闲置全局项后"}
+                  </span>
                   <div className={styles.sumLine}>
                     <span className={styles.after}>{formatK(keepCost)}</span>
                     <span className={styles.saveNote}>
@@ -250,7 +263,7 @@ export function GlobalPage() {
                       style={{
                         width: `calc(${w.toFixed(2)}% - 3px)`,
                         backgroundColor: KIND_FILL[r.kind],
-                        color: r.kind === "mcp" ? "var(--accent)" : "#fff",
+                        color: r.kind === "mcp" ? "var(--accent)" : "var(--on-k)",
                       }}
                     >
                       {w >= 8 && (
@@ -268,21 +281,18 @@ export function GlobalPage() {
               </div>
             </section>
 
-            <div className={styles.sticky}>
+            <div className={styles.sticky} data-stuck={stuck}>
               <div className={styles.filterRow}>
-                <fieldset className={c.seg} aria-label="类型">
-                  {filters.map(([k, label]) => (
-                    <button
-                      key={k}
-                      type="button"
-                      aria-pressed={filter === k}
-                      onClick={() => setFilter(k)}
-                    >
-                      {label}
-                      <span className={c.count}>{kindCount(k)}</span>
-                    </button>
-                  ))}
-                </fieldset>
+                <Segmented
+                  label="类型"
+                  value={filter}
+                  onChange={setFilter}
+                  options={filters.map(([k, label]) => ({
+                    value: k,
+                    label,
+                    count: kindCount(k),
+                  }))}
+                />
                 <span className={styles.flex} />
                 <span className={styles.lg} title="快速勾选">
                   <Icon name="picked" size={14} strokeWidth={1.4} />
@@ -365,7 +375,7 @@ export function GlobalPage() {
                             },
                       );
                 return (
-                  <div key={r.id}>
+                  <div key={r.id} data-nav-id={r.id}>
                     <div
                       className={styles.row}
                       data-on={r.id === current?.id}
@@ -408,22 +418,21 @@ export function GlobalPage() {
                       </span>
                       <span className={styles.cCost}>{formatK(r.resident ?? 0)}</span>
                     </div>
-                    {open && (
-                      <WhoList
-                        id={r.id}
-                        label={`${r.name} 用在哪些项目`}
-                        indent={42}
-                        lead={full ? "每次会话都读全文：" : undefined}
-                        tags={tags}
-                        idle={
-                          full || idle.length === 0
-                            ? undefined
-                            : idle.length === total && users.length + conflicts.length === 0
-                              ? `近 30 天 ${total} 个项目都没用到`
-                              : `没用到：${idle.join("、")}`
-                        }
-                      />
-                    )}
+                    <WhoList
+                      id={r.id}
+                      label={`${r.name} 用在哪些项目`}
+                      indent={42}
+                      open={open}
+                      lead={full ? "每次会话都读全文：" : undefined}
+                      tags={tags}
+                      idle={
+                        full || idle.length === 0
+                          ? undefined
+                          : idle.length === total && users.length + conflicts.length === 0
+                            ? `近 30 天 ${total} 个项目都没用到`
+                            : `没用到：${idle.join("、")}`
+                      }
+                    />
                   </div>
                 );
               })}
@@ -433,7 +442,10 @@ export function GlobalPage() {
                   className={styles.foot}
                   onClick={() => setTool(otherNote.tool)}
                 >
-                  另有 {otherNote.count} 项只被 {otherNote.toolName} 加载
+                  <span>
+                    另有 {otherNote.count} 项仅在 {otherNote.toolName} 加载 · 切换查看
+                  </span>
+                  <Icon name="arrowRight" size={12} />
                 </button>
               ) : (
                 <p className={styles.footText}>只显示 {toolName} 加载的项</p>
@@ -441,10 +453,10 @@ export function GlobalPage() {
             </div>
 
             {pickedRows.length > 0 && (
-              <section className={styles.tray} aria-label="瘦身托盘">
+              <section className={styles.tray} aria-label="待清理项目">
                 <span className={styles.trayText}>
                   <span className={styles.trayTitle}>
-                    已选 {pickedRows.length} 项 ·{" "}
+                    待清理 {pickedRows.length} 项 ·{" "}
                     {bundleCount > 0 ? `转套装 ${bundleCount} · ` : ""}移除{" "}
                     {pickedRows.length - bundleCount} · 每个项目最多 −{formatK(traySave)}
                   </span>
@@ -466,7 +478,7 @@ export function GlobalPage() {
                   title={
                     pickedRows.some((r) => r.inLibrary)
                       ? "逐条预览会写入的变更"
-                      : "选中的都还没收编：从全局移除只对已收编进资产库的项开放，先去资产库收编"
+                      : "选中的都未收录：从全局移除只对已收录进资产库的项开放，请先去资产库收录"
                   }
                   onClick={openPlan}
                 >
@@ -483,8 +495,9 @@ export function GlobalPage() {
               total={total}
               projectNames={projectNames}
               idleOpen={idleOpen === current.id}
+              inTray={picked.has(current.id)}
               onIdle={() => setIdleOpen(idleOpen === current.id ? null : current.id)}
-              onPickIt={() => setPicked((prev) => new Set([...prev, current.id]))}
+              onPickIt={() => toggle(current.id)}
               onClose={() => setInspectorOpen(false)}
             />
           )}
@@ -520,6 +533,7 @@ function GlobalInspector({
   total,
   projectNames,
   idleOpen,
+  inTray,
   onIdle,
   onPickIt,
   onClose,
@@ -528,6 +542,7 @@ function GlobalInspector({
   total: number;
   projectNames: string[];
   idleOpen: boolean;
+  inTray: boolean;
   onIdle: () => void;
   onPickIt: () => void;
   onClose: () => void;
@@ -578,9 +593,9 @@ function GlobalInspector({
                 <Link
                   to={`/library?asset=${encodeURIComponent(cli)}`}
                   className={`${c.b} ${c.primary}`}
-                  title="在资产库中收编，记下来源与版本"
+                  title="收录到资产库，记录来源与版本"
                 >
-                  去收编
+                  去资产库收录 →
                 </Link>
               </>
             ) : act === "bundle" && !FEATURES.bundles ? undefined : act === "bundle" ? (
@@ -592,16 +607,16 @@ function GlobalInspector({
                   disabled={notAdopted}
                   title={
                     notAdopted
-                      ? "从全局移除只对已收编进资产库的项开放，先去资产库收编"
-                      : "先放进下方托盘，和其他项一起出计划"
+                      ? "从全局移除只对已收录进资产库的项开放，请先去资产库收录"
+                      : "放入下方待清理列表，和其他项一起出变更计划"
                   }
                 >
-                  加入托盘
+                  {inTray ? "✓ 已在待清理" : "加入待清理"}
                 </button>
                 <span className={styles.flex} />
                 {notAdopted && (
                   <Link to={`/library?asset=${encodeURIComponent(cli)}`} className={c.b}>
-                    去收编
+                    去资产库收录 →
                   </Link>
                 )}
               </>
@@ -615,21 +630,21 @@ function GlobalInspector({
                 </span>
                 {notAdopted && (
                   <Link to={`/library?asset=${encodeURIComponent(cli)}`} className={c.b}>
-                    去收编
+                    去资产库收录 →
                   </Link>
                 )}
                 <button
                   type="button"
-                  className={`${c.b} ${c.primary}`}
+                  className={inTray ? c.b : `${c.b} ${c.primary}`}
                   onClick={onPickIt}
                   disabled={notAdopted}
                   title={
                     notAdopted
-                      ? "从全局移除只对已收编进资产库的项开放，先去资产库收编"
-                      : "先放进下方托盘，和其他项一起出计划"
+                      ? "从全局移除只对已收录进资产库的项开放，请先去资产库收录"
+                      : "放入下方待清理列表，和其他项一起出变更计划"
                   }
                 >
-                  加入托盘
+                  {inTray ? "✓ 已在待清理" : "加入待清理"}
                 </button>
               </>
             )

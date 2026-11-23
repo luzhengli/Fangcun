@@ -14,18 +14,18 @@ import { useDialogFocus } from "./useDialogFocus";
 const OPTIONS: { mode: SyncMode; title: string; desc: string }[] = [
   {
     mode: "link",
-    title: "链接",
-    desc: "项目目录里是指向资产库的软链，零重复。适合个人项目。",
+    title: "本机软链",
+    desc: "项目内放软链指向本机资产库，不进 Git，零重复。适合个人项目。",
   },
   {
     mode: "vendor",
-    title: "入库",
-    desc: "实体文件提交进仓库，同事与云端 Agent 不装方寸也能用。适合多人协作。",
+    title: "拷入仓库",
+    desc: "实体文件拷入项目目录随 Git 提交，队友与云端 Agent 不装方寸也能直接用。适合多人协作。",
   },
 ];
 
 /**
- * 登记面板（6.3「登记」，方寸 2）：先选物化方式，按提交者人数标「推荐」；
+ * 登记面板（6.3「登记」，方寸 2）：选择资产在项目里的同步方式，按提交者人数标「推荐」；
  * 下面「会写入」逐条列文件，随所选方式变；点「登记」就写，提示条给撤销。
  */
 export function RegisterHost() {
@@ -81,8 +81,8 @@ function RegisterDialog({ root }: { root: string }) {
   const basis = suggestion.isPending
     ? "正在看 git 历史…"
     : committers === 0
-      ? "不是 git 仓库，建议「链接」。"
-      : `提交者 ${committers} 位，建议「${committers >= 2 ? "入库" : "链接"}」。`;
+      ? "不是 git 仓库，建议「本机软链」。"
+      : `提交者 ${committers} 位，建议「${committers >= 2 ? "拷入仓库" : "本机软链"}」。`;
 
   return (
     <div className={styles.veil}>
@@ -97,10 +97,10 @@ function RegisterDialog({ root }: { root: string }) {
           <h2 id="reg-title" className={styles.title}>
             登记 {name}
           </h2>
-          <p className={styles.sub}>先选物化方式。{basis}</p>
+          <p className={styles.sub}>选择资产在项目里的同步方式。{basis}</p>
         </div>
         <fieldset className={styles.options}>
-          <legend className={styles.srOnly}>物化方式</legend>
+          <legend className={styles.srOnly}>同步方式</legend>
           {OPTIONS.map((o) => (
             <label key={o.mode} className={styles.option} data-on={picked === o.mode}>
               <input
@@ -134,6 +134,7 @@ function RegisterDialog({ root }: { root: string }) {
           <button
             type="button"
             className={`${c.b} ${c.primary}`}
+            data-autofocus="true"
             disabled={!plan.data || plan.data.blocked || busy}
             onClick={() => void register()}
           >

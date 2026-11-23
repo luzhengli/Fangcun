@@ -47,7 +47,7 @@ const ACTIONS: Record<X["act"], string[]> = {
   bundle: ["转成套装…", "从全局移除…"],
   remove: ["从全局移除…"],
   keep: [],
-  adopt: ["去资产库收编"],
+  adopt: ["去资产库收录"],
 };
 
 function R(
@@ -74,7 +74,7 @@ function R(
       : null,
     label: tools.includes(t)
       ? kind === "skill"
-        ? "已链接"
+        ? "已软链"
         : kind === "mcp"
           ? "按键合并"
           : "全文加载"
@@ -303,12 +303,12 @@ const ROWS: Row[] = [
     ],
   }) as Row,
   SK("prrev", "pr-review", ["cc", "cx", "ws"], 0.3, PROJS, "unknown-source", {
-    src: "未知 · 内容哈希 d4410e2",
+    src: "未收录 · 内容哈希 d4410e2",
     ver: "无版本记录",
     act: "adopt",
     summary: "每个项目都在用，但内容哈希与任何来源都不匹配，无法追踪版本与更新。",
-    advice: "值得留在全局，但应先收编进资产库，记录来源与版本。",
-    acts: [["11-11", "体检发现 · 来源未知"]],
+    advice: "值得留在全局，建议先收录进资产库，记录来源与版本。",
+    acts: [["11-11", "体检发现 · 未收录"]],
   }) as Row,
   SK("xlsx", "xlsx", ["cc", "ws"], 0.2, [], "never-used", {
     src: ANTH,

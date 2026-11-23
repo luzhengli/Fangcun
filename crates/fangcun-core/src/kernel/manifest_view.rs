@@ -199,7 +199,7 @@ pub(super) fn build(
         [
             "目标工具",
             &names.join(", "),
-            &format!("{} 都按本清单物化", tool_names.join("、")),
+            &format!("按本清单同步写入 {} 的原生配置", tool_names.join("、")),
         ],
         [false, true, false],
         None,
@@ -208,17 +208,26 @@ pub(super) fn build(
     let mode = manifest.project.mode.unwrap_or(SyncMode::Link);
     settings.push(match (manifest.project.mode, mode) {
         (_, SyncMode::Link) => row(
-            ["物化方式", "link", "项目目录里放软链，指向资产库"],
+            [
+                "同步方式",
+                "link",
+                "本机软链：项目目录放软链指向本机资产库，不进 Git",
+            ],
             [false, true, false],
             Some(if manifest.project.mode.is_none() {
-                "清单没写，按默认的 link。团队项目可改为 vendor，实体文件入库".to_owned()
+                "清单未指定，默认使用 link（本机软链）。团队协作可改为 vendor（拷入仓库）"
+                    .to_owned()
             } else {
-                "团队项目可改为 vendor，实体文件入库".to_owned()
+                "团队协作可改为 vendor（拷入仓库），随 Git 提交".to_owned()
             }),
             false,
         ),
         (_, SyncMode::Vendor) => row(
-            ["物化方式", "vendor", "实体文件复制进项目，随仓库提交"],
+            [
+                "同步方式",
+                "vendor",
+                "拷入仓库：实体文件复制进项目目录，随 Git 提交",
+            ],
             [false, true, false],
             None,
             false,

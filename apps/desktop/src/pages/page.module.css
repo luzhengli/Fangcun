@@ -174,77 +174,6 @@ button.row:hover,
   font-size: 12px;
 }
 
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.tabs button {
-  height: 36px;
-  padding: 0 10px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--tx-2);
-}
-
-.tabs button[aria-selected="true"] {
-  color: var(--tx-1);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.chip {
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 12px;
-  border: 1px solid var(--line-2);
-  background: var(--win);
-  color: var(--tx-2);
-  font-size: 12px;
-}
-
-.chip[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-weak);
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.button {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 1px solid var(--line-2);
-  background: var(--win);
-  color: var(--tx-1);
-}
-
-.buttonPrimary {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 6px;
-  border: 0;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 500;
-}
-
-.button:disabled,
-.buttonPrimary:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .box {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -297,11 +226,4 @@ button.row:hover,
   .list {
     overflow: visible;
   }
-}
-
-fieldset.chips {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
 }

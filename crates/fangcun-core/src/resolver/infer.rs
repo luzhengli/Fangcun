@@ -223,7 +223,7 @@ fn infer_skills(
     }
     if !unknown.is_empty() {
         out.notes.push(PlanNote::info(format!(
-            "{} 项 skill 来源未知，未纳入清单，留在原处照常生效：{}。收编后再加",
+            "{} 项 skill 尚未收录（查不到来源），未写入清单，留在原处照常生效：{}。收录后再加进清单",
             unknown.len(),
             unknown.join("、")
         )));

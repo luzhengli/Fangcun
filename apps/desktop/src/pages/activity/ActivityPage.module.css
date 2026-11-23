@@ -264,6 +264,11 @@
   padding: 0 24px;
   background: var(--win);
   border-bottom: 0.5px solid var(--line);
+  transition: box-shadow 150ms var(--ease);
+}
+
+.filterBar[data-stuck="true"] {
+  box-shadow: var(--sticky-shadow);
 }
 
 .filters {

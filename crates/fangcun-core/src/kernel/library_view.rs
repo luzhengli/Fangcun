@@ -254,9 +254,9 @@ impl Kernel {
                         mode: if locked.bundle.is_some() {
                             "套装".to_owned()
                         } else if linked(skill) {
-                            "链接".to_owned()
+                            "本机软链".to_owned()
                         } else {
-                            "入库".to_owned()
+                            "拷入仓库".to_owned()
                         },
                         drift: drifted.contains(skill),
                     });
@@ -430,7 +430,7 @@ impl Kernel {
                     };
                     (command, group)
                 }
-                (None, _) => ("来源未知 · 已收编".to_owned(), SourceGroup::Local),
+                (None, _) => ("未登记来源 · 已收录".to_owned(), SourceGroup::Local),
             };
             let (description, resident) = match (entry.kind, &object) {
                 (AssetKind::Skill, Some(dir)) => {
@@ -461,7 +461,7 @@ impl Kernel {
             };
             let summary = description.unwrap_or_else(|| match status {
                 LibraryStatus::Adopted => {
-                    "已收编，原位置换成受管链接。来源未知，补上来源后才能写进清单。".to_owned()
+                    "已收录，原位置自动换为受管软链。补上来源后即可写入项目清单。".to_owned()
                 }
                 LibraryStatus::Unused => "在资产库里，没有已登记的项目固定它。".to_owned(),
                 _ => format!(
@@ -579,9 +579,9 @@ impl Kernel {
                 has_scripts: copies.iter().any(|c| c.has_scripts),
                 store: None,
                 summary: if in_global {
-                    "全局层发现，内容哈希与任何来源都不匹配。收编后才能追踪版本与更新。".to_owned()
+                    "全局层发现，尚未收录进资产库。收录后即可统一追踪版本与更新，原位置自动换为软链。".to_owned()
                 } else {
-                    "项目里发现，内容哈希与任何来源都不匹配。收编后才能追踪版本与更新。".to_owned()
+                    "项目里发现，尚未收录进资产库。收录后即可统一追踪版本与更新，原位置自动换为软链。".to_owned()
                 },
                 recent: recent_named(std::slice::from_ref(&name), &records),
                 adoptable: true,
@@ -597,7 +597,7 @@ impl Kernel {
                 AssetKind::Instruction => kinds.instruction += 1,
             }
             let label = match row.group {
-                SourceGroup::Unknown => "来源未知".to_owned(),
+                SourceGroup::Unknown => "未收录".to_owned(),
                 SourceGroup::Npm => "npm".to_owned(),
                 _ => repo_of(&row.source),
             };

@@ -10,7 +10,7 @@ import c from "./controls.module.css";
 import styles from "./PlanHost.module.css";
 import { useDialogFocus } from "./useDialogFocus";
 
-const OP: Record<ChangeOp, string> = { add: "+", modify: "~", remove: "−" };
+const OP: Record<ChangeOp, string> = { add: "新增", modify: "修改", remove: "移除" };
 const NOTE: Record<NoteTone, string> = {
   info: styles.noteInfo ?? "",
   warning: styles.noteWarning ?? "",
@@ -155,6 +155,7 @@ export function PlanHost() {
               <button
                 type="button"
                 className={`${c.b} ${c.primary}`}
+                data-autofocus="true"
                 disabled={
                   readOnly || !plan || plan.blocked || plan.changes.length === 0 || applying
                 }

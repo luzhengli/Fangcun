@@ -15,9 +15,9 @@ const PROJS = ["evals_studio", "agent-lab", "fangcun", "blog-site", "notes-kit",
 const TAG: Record<string, VersionTag> = {
   锁定中: "locked",
   最新: "latest",
-  分叉: "fork",
+  已分化: "fork",
   旧版: "old",
-  未收编: "unadopted",
+  未收录: "unadopted",
 };
 
 /** 原型 `V(id, note, tag, projs)`。 */
@@ -48,7 +48,12 @@ function acts(id: string, list: [string, string][]): LibraryRow["recent"] {
       when === "5 分钟前" || when === "刚刚"
         ? "2026-11-14T10:00:00+08:00"
         : `2026-${when}T10:00:00+08:00`,
-    kind: text.includes("漂移") ? "drift" : text.includes("收编") ? "adopt" : "sync",
+    kind:
+      text.includes("修改") || text.includes("本地")
+        ? "drift"
+        : text.includes("收录")
+          ? "adopt"
+          : "sync",
     text,
   }));
 }
@@ -112,18 +117,18 @@ function rows(): LibraryRow[] {
       store: "~/.fangcun/lib/sha256-4d9b…",
       versions: [
         V("4d9b1eb", "7 月版 · 07-02", "锁定中", [
-          ["evals_studio", "链接", true],
-          ["agent-lab", "链接"],
-          ["fangcun", "链接"],
-          ["blog-site", "入库"],
-          ["notes-kit", "链接"],
+          ["evals_studio", "本机软链", true],
+          ["agent-lab", "本机软链"],
+          ["fangcun", "本机软链"],
+          ["blog-site", "拷入仓库"],
+          ["notes-kit", "本机软链"],
         ]),
-        V("e81c55a", "evals_studio/.trae 分叉", "分叉"),
+        V("e81c55a", "evals_studio/.trae 已分化", "已分化"),
         V("2b77c10", "06-11", "旧版"),
       ],
       acts: [
-        ["5 分钟前", "evals_studio 中的副本发生漂移"],
-        ["11-11", "收编进资产库"],
+        ["5 分钟前", "evals_studio 中的本地文件已修改"],
+        ["11-11", "收录进资产库"],
         ["07-02", "发布 4d9b1eb"],
       ],
     }),
@@ -163,8 +168,8 @@ function rows(): LibraryRow[] {
       summary: "同一资产的两个大版本并存，各项目按需固定。",
       store: "~/.fangcun/lib/sha256-77e0…",
       versions: [
-        V("v2.1.0", "11-02", "最新", [["client-acme", "入库"]]),
-        V("v1.0.0", "08-15", "旧版", [["agent-lab", "链接"]]),
+        V("v2.1.0", "11-02", "最新", [["client-acme", "拷入仓库"]]),
+        V("v1.0.0", "08-15", "旧版", [["agent-lab", "本机软链"]]),
       ],
       acts: [
         ["11-02", "发布 v2.1.0，client-acme 升级"],
@@ -184,10 +189,10 @@ function rows(): LibraryRow[] {
       store: "~/.fangcun/lib/sha256-c03d…",
       versions: [
         V("v1.3.0", "11-12", "锁定中", [
-          ["evals_studio", "链接"],
-          ["blog-site", "入库"],
+          ["evals_studio", "本机软链"],
+          ["blog-site", "拷入仓库"],
         ]),
-        V("v1.1.0", "09-20 · 全局层仍在用", "旧版", [["全局层", "软链"]]),
+        V("v1.1.0", "09-20 · 全局层仍在用", "旧版", [["全局层", "本机软链"]]),
       ],
       acts: [
         ["11-12", "发布 v1.3.0，2 个项目升级"],
@@ -248,12 +253,12 @@ function rows(): LibraryRow[] {
           status: "adopted",
           cost: 0.3,
           scripts: false,
-          summary: "已收编为本地来源，原位置替换为受管链接，事前已备份。",
+          summary: "已收录为本地来源，原位置已换为受管软链，Agent 读取不受影响，事前已备份。",
           store: "~/.fangcun/lib/sha256-d441…",
-          versions: [V("d4410e2", "收编于刚刚", "锁定中", [["全部 6 个项目", "全局层"]])],
+          versions: [V("d4410e2", "收录于刚刚", "锁定中", [["全部 6 个项目", "全局层"]])],
           acts: [
-            ["刚刚", "收编进资产库"],
-            ["11-11", "体检发现 · 来源未知"],
+            ["刚刚", "收录进资产库"],
+            ["11-11", "体检发现 · 未收录"],
           ],
         })
       : row({
@@ -265,10 +270,10 @@ function rows(): LibraryRow[] {
           status: "unknown-source",
           cost: 0.3,
           scripts: false,
-          summary: "全局层发现，内容哈希与任何来源都不匹配。收编后才能追踪版本与更新。",
+          summary: "全局层发现，内容哈希与任何来源都不匹配。收录后才能追踪版本与更新。",
           store: null,
-          versions: [V("d4410e2", "本地内容哈希", "未收编", [["全部 6 个项目", "全局层"]])],
-          acts: [["11-11", "体检发现 · 来源未知"]],
+          versions: [V("d4410e2", "本地内容哈希", "未收录", [["全部 6 个项目", "全局层"]])],
+          acts: [["11-11", "体检发现 · 未收录"]],
         }),
   ];
 }

@@ -75,4 +75,24 @@ describe("上下文地图（6.3）", () => {
     );
     expect(screen.getByText("· 同步后约 2.8k")).toBeInTheDocument();
   });
+
+  it("待停用项传入 stagedDisabledIds 时呈现虚线释放预演态", () => {
+    render(
+      <ContextMap
+        items={items}
+        limit={20000}
+        registered
+        selectedId={undefined}
+        hoverId={null}
+        onHover={() => {}}
+        onPick={() => {}}
+        stagedDisabledIds={new Set(["lark"])}
+        after={2800}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^lark · 6.4k/ })).toHaveAttribute(
+      "data-staged",
+      "true",
+    );
+  });
 });
