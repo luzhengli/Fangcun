@@ -2,7 +2,7 @@
 
 ## 下一步
 
-1. 在终端本地 `claude` 会话同步更新原型画布，补齐 `BACKLOG.md`「原型待改」`P-14`～`P-20`（含术语「收录」、设计系统动效分级标尺与交互细节），同步 `prototype/` 后跑 `pnpm screens --compare` 与 `pnpm workflow accept` 完成像素级验收。
+1. 在终端本地 `claude` 会话同步更新原型画布，补齐 `BACKLOG.md`「原型待改」`P-14`～`P-21`（含术语「收录」、设计系统动效分级标尺与项目页双层紧凑上下文地图），同步 `prototype/` 后跑 `pnpm screens --compare` 与 `pnpm workflow accept` 完成像素级验收。
 2. 推进 M1 剩余内核缺口（`M1-44` 上游检查时间、`M1-45` 添加来源、`M1-47` 分叉标记、`M1-36`～`M1-38`）。
 
 ## 卡在哪 / 接手须知

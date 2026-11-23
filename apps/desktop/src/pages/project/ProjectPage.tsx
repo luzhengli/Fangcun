@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router";
 import { FEATURES } from "@/app/features";
 import c from "@/components/controls.module.css";
@@ -162,6 +162,13 @@ function ProjectView({ root }: { root: string | undefined }) {
   const [hover, setHover] = useState<string | null>(null);
   const [stuck, setStuck] = useState(false);
   const [filter, setFilter] = useState<"all" | "pending">("all");
+  const [collapsed, setCollapsed] = useState<Partial<Record<AssetKind, boolean>>>({});
+  const listRef = useRef<HTMLElement>(null);
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    listRef.current?.scrollTo?.({ top: 0 });
+    setStuck(false);
+  };
   // 回到项目卡片（6.3）：点列表空白处、Esc、再点一次侧栏里同一个项目。
   const toCard = () => {
     setSelected(null);
@@ -252,6 +259,23 @@ function ProjectView({ root }: { root: string | undefined }) {
   const openRegister = useRegister((s) => s.open);
   const readOnly = useReadOnly();
   const onlyGlobal = items.length > 0 && items.every((i) => i.scope === "global");
+  const pickUnestimatedMcp = () => {
+    setTab("effective");
+    setFilter("all");
+    setCollapsed((prev) => ({ ...prev, mcp: false }));
+    const target =
+      items.find((i) => i.kind === "mcp" && i.counted && i.resident === null) ??
+      items.find((i) => i.kind === "mcp");
+    if (target) {
+      setSelected(target.id);
+      setInspectorOpen(true);
+    }
+    requestAnimationFrame(() => {
+      const el = listRef.current?.querySelector('[data-group="mcp"]');
+      const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      el?.scrollIntoView?.({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    });
+  };
 
   return (
     <div className={page.page}>
@@ -319,69 +343,57 @@ function ProjectView({ root }: { root: string | undefined }) {
         </button>
       </PageToolbar>
 
-      <OnboardingStrip />
-
-      {data && (
-        <ContextMap
-          items={items}
-          limit={data.budget.limit}
-          registered={registered}
-          selectedId={current?.id}
-          stagedDisabledIds={
-            new Set(items.filter((i) => stagedOp(staged, i) === "disable").map((i) => i.id))
-          }
-          hoverId={hover}
-          onHover={setHover}
-          onPick={(id) => {
-            setTab("effective");
-            setSelected(id);
-            setInspectorOpen(true);
-          }}
-          after={afterSync}
-        />
-      )}
-
-      <div className={styles.viewBar} data-stuck={stuck}>
-        {registered && (
-          <Segmented
-            label="项目视图"
-            role="tablist"
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "effective", label: "生效上下文" },
-              { value: "manifest", label: "清单" },
-              { value: "history", label: "历史" },
-            ]}
-          />
-        )}
-        <span className={styles.flex} />
-        {(tab === "effective" || !registered) && data && (
-          <Segmented
-            label="筛选"
-            value={filter}
-            onChange={setFilter}
-            options={[
-              { value: "all", label: "全部", count: items.length },
-              { value: "pending", label: "待处理", count: pendingItems.length },
-            ]}
-          />
-        )}
-      </div>
-
       <div className={page.split}>
         {/* 点空白处回到项目卡片只是快捷方式，键盘用 Esc。 */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: 同上 */}
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: 同上 */}
         <section
-          className={page.list}
+          ref={listRef}
+          className={`${page.list} ${styles.main}`}
           onScroll={(e) => setStuck(e.currentTarget.scrollTop > 4)}
           onClick={(e) => {
             if (!picked) return;
-            if ((e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+            if (
+              (e.target as HTMLElement).closest(
+                "button, a, input, select, textarea, [data-no-card]",
+              )
+            )
+              return;
             toCard();
           }}
         >
+          <div className={styles.viewBar} data-stuck={stuck} data-no-card="true">
+            {registered ? (
+              <Segmented
+                label="项目视图"
+                role="tablist"
+                value={tab}
+                onChange={switchTab}
+                options={[
+                  { value: "effective", label: "生效上下文" },
+                  { value: "manifest", label: "清单" },
+                  { value: "history", label: "历史" },
+                ]}
+              />
+            ) : (
+              <span className={styles.viewLead}>生效上下文 · 只读</span>
+            )}
+            <span className={styles.flex} />
+            {(tab === "effective" || !registered) && data && (
+              <Segmented
+                label="筛选"
+                value={filter}
+                onChange={setFilter}
+                options={[
+                  { value: "all", label: "全部", count: items.length },
+                  { value: "pending", label: "待处理", count: pendingItems.length },
+                ]}
+              />
+            )}
+          </div>
+
+          {(tab === "effective" || !registered) && <OnboardingStrip />}
+
           {context.isError && <p className={page.error}>{context.error.message}</p>}
           {!data && !context.isError && <p className={page.empty}>正在解析生效上下文…</p>}
           {data && !registered && (
@@ -394,18 +406,40 @@ function ProjectView({ root }: { root: string | undefined }) {
             </p>
           )}
           {data && (tab === "effective" || !registered) && (
-            <EffectiveList
-              context={data}
-              staged={staged}
-              filter={filter}
-              hoverId={hover}
-              onHover={setHover}
-              selectedId={current?.id}
-              onPick={(id) => {
-                setSelected(id);
-                setInspectorOpen(true);
-              }}
-            />
+            <>
+              <ContextMap
+                items={items}
+                limit={data.budget.limit}
+                registered={registered}
+                selectedId={current?.id}
+                stagedDisabledIds={
+                  new Set(items.filter((i) => stagedOp(staged, i) === "disable").map((i) => i.id))
+                }
+                hoverId={hover}
+                onHover={setHover}
+                onPick={(id) => {
+                  setTab("effective");
+                  setSelected(id);
+                  setInspectorOpen(true);
+                }}
+                onPickUnestimated={pickUnestimatedMcp}
+                after={afterSync}
+              />
+              <EffectiveList
+                context={data}
+                staged={staged}
+                filter={filter}
+                collapsed={collapsed}
+                onToggleGroup={(kind) => setCollapsed((prev) => ({ ...prev, [kind]: !prev[kind] }))}
+                hoverId={hover}
+                onHover={setHover}
+                selectedId={current?.id}
+                onPick={(id) => {
+                  setSelected(id);
+                  setInspectorOpen(true);
+                }}
+              />
+            </>
           )}
           {data && registered && tab === "manifest" && root && (
             <ManifestTab root={root} context={data} />
@@ -470,6 +504,8 @@ function EffectiveList({
   context,
   staged,
   filter,
+  collapsed,
+  onToggleGroup,
   hoverId,
   onHover,
   selectedId,
@@ -478,12 +514,13 @@ function EffectiveList({
   context: EffectiveContext;
   staged: ManifestEdit[];
   filter: "all" | "pending";
+  collapsed: Partial<Record<AssetKind, boolean>>;
+  onToggleGroup: (kind: AssetKind) => void;
   hoverId: string | null;
   onHover: (id: string | null) => void;
   selectedId: string | undefined;
   onPick: (id: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState<Partial<Record<AssetKind, boolean>>>({});
   const missing = context.observedMissing.map((k) => OBSERVED_LABEL[k]);
   const shown = (i: EffectiveItem) => filter === "all" || (i.state !== null && PENDING[i.state]);
   const navIds = GROUPS.flatMap(({ kind }) =>
@@ -519,13 +556,13 @@ function EffectiveList({
         const unestimated = counted.some((r) => r.resident === null);
         const open = !collapsed[kind];
         return (
-          <div key={kind}>
+          <div key={kind} data-group={kind}>
             <h2 className={page.groupHead}>
               <button
                 type="button"
                 className={styles.groupToggle}
                 aria-expanded={open}
-                onClick={() => setCollapsed((prev) => ({ ...prev, [kind]: !prev[kind] }))}
+                onClick={() => onToggleGroup(kind)}
               >
                 <Icon name="chevron" size={11} strokeWidth={1.8} className={styles.groupChev} />
                 <span>{label}</span>

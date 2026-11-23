@@ -218,7 +218,7 @@
 
 /* 未登记的目录：列表顶上一句说明（Main.dc.html 的 recentNote）。 */
 .recentNote {
-  margin: 12px 16px 0;
+  margin: 10px 20px 0;
   padding: 8px 12px;
   border-radius: 6px;
   background: var(--sunken);
@@ -862,7 +862,20 @@
 
 /* ── 方寸 2（批 9） ── */
 
-/* 地图下面的页签与筛选，吸顶（6.3）。 */
+/* 左侧可滚动主栏（6.3）。 */
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewLead {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx-2);
+}
+
+/* 页签与筛选置顶在左侧主栏最上方并吸顶（6.3）。 */
 .viewBar {
   position: sticky;
   top: 0;
@@ -872,7 +885,7 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 24px;
+  padding: 8px 20px;
   background: var(--win);
   border-bottom: 0.5px solid var(--line);
   transition: box-shadow 150ms var(--ease);

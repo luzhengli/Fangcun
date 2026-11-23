@@ -1,31 +1,27 @@
-/* 上下文地图（6.3）。尺寸照抄 prototype/project/Main.dc.html 的 .blk 与地图一节。 */
+/* 上下文地图（6.3、6.10 签名元素）：预算水位细轨 + 满宽构成条 + 紧凑汇总与按需图例。 */
 
 .map {
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 24px 16px;
+  gap: 7px;
+  padding: 12px 20px;
   border-bottom: 0.5px solid var(--line);
 }
 
 .headRow {
   display: flex;
-  align-items: flex-end;
-  gap: 16px;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.headText {
+.metrics {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.legendRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cap {
@@ -33,67 +29,43 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--tx-3);
-}
-
-.legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--tx-3);
-  white-space: nowrap;
-}
-
-.hatchSwatch {
-  width: 14px;
-  height: 9px;
-  border-radius: 2px;
-  background-color: var(--k2);
-  background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 5px);
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.dot + .dot {
-  margin-left: -2px;
-}
-
-.dot[data-tone="warn"] {
-  background: var(--warn-dot);
-}
-
-.dot[data-tone="info"] {
-  background: var(--info-dot);
-}
-
-.totals {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  margin-right: 3px;
 }
 
 .total {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 32px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 22px;
   letter-spacing: -0.02em;
+  color: var(--tx-1);
+}
+
+.estPrefix {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx-2);
+  letter-spacing: 0;
 }
 
 .cap2 {
+  font-size: 12px;
   color: var(--tx-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.sep {
+  color: var(--tx-4);
+  font-size: 11px;
 }
 
 .left {
   font-size: 12px;
   font-weight: 500;
-  color: var(--tx-3);
+  color: var(--tx-2);
+  font-variant-numeric: tabular-nums;
 }
 
 .left[data-over="true"] {
@@ -110,21 +82,84 @@
   flex: 1;
 }
 
+/* ── Row 2: 4px 预算水位细轨 ── */
+
+.rail {
+  position: relative;
+  display: flex;
+  gap: 1.5px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.railSeg {
+  flex: none;
+  height: 100%;
+  background: var(--k2);
+  transition: width 160ms var(--ease);
+}
+
+.railSeg[data-key="instruction"],
+.railSeg[data-key="project"],
+.railSeg[data-key="personal"] {
+  background: var(--k1);
+}
+
+.railSeg[data-key="global"] {
+  background-color: var(--k2);
+  background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 5px);
+}
+
+.railSeg[data-key="mcp"] {
+  background: var(--k3);
+}
+
+.railUnest {
+  flex: none;
+  height: 100%;
+  background-image: repeating-linear-gradient(-45deg, var(--line-2) 0 2px, transparent 2px 4px);
+}
+
+.railCap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--warn-dot);
+}
+
+/* ── Row 3: 32px 满宽构成条 + MCP 未估算虚点块 ── */
+
 .blocks {
   display: flex;
   gap: 3px;
-  height: 48px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.estimated {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  gap: 3px;
+  height: 100%;
 }
 
 .blk {
   position: relative;
   display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 3px;
+  flex: 1 1 0%;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 4px;
   height: 100%;
-  padding: 0 8px;
+  padding: 0;
   border: 0;
   border-radius: 6px;
   overflow: hidden;
@@ -133,9 +168,18 @@
   color: var(--on-k);
   cursor: default;
   transition:
-    width 160ms var(--ease),
+    flex-grow 160ms var(--ease),
     opacity var(--dur-ui) var(--ease),
     filter var(--dur-micro) var(--ease);
+}
+
+.blk[data-labeled="true"] {
+  padding: 0 8px;
+}
+
+.blk[data-labeled="true"][data-ring="warn"],
+.blk[data-labeled="true"][data-ring="info"] {
+  padding-right: 16px;
 }
 
 .blk[data-kind="instruction"] {
@@ -177,13 +221,21 @@
 
 .blkDot {
   position: absolute;
-  top: 5px;
-  right: 6px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 7px;
   height: 7px;
   border-radius: 50%;
   box-shadow: 0 0 0 1.5px var(--win);
   pointer-events: none;
+}
+
+.blk[data-labeled="true"] .blkDot {
+  top: 4px;
+  right: 5px;
+  left: auto;
+  transform: none;
 }
 
 .blk[data-ring="none"] .blkDot {
@@ -199,68 +251,125 @@
 }
 
 .blkName {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   font-size: 12px;
   font-weight: 600;
-  line-height: 15px;
+  line-height: 16px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .blkCost {
+  flex: none;
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
-  line-height: 14px;
+  line-height: 16px;
   opacity: 0.85;
 }
 
-.room {
-  flex: 1 1 auto;
-  display: flex;
+.unestBlk {
+  flex: 0 0 auto;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  padding: 0 6px;
+  height: 100%;
+  padding: 0 10px;
   border-radius: 6px;
   border: 1px dashed var(--line-2);
-  font-size: 11px;
-  color: var(--tx-3);
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.axis {
-  display: flex;
-  gap: 3px;
-  margin-top: -4px;
-  font-size: 12px;
+  background: var(--sunken);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
   color: var(--tx-2);
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-micro) var(--ease),
+    background-color var(--dur-micro) var(--ease),
+    color var(--dur-micro) var(--ease);
 }
 
-.axis > span {
-  flex: none;
+.unestBlk[data-solo="true"] {
+  flex: 1 1 auto;
+}
+
+.unestBlk:hover {
+  border-color: var(--accent-line);
+  background: var(--fill-1);
+  color: var(--tx-1);
+}
+
+.unestBlk[data-on="true"] {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Row 4: 紧凑汇总与按需图例 ── */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--tx-2);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.summaryItem {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-width: max-content;
-  padding: 6px 12px 0 0;
-  border-top: 1.5px solid var(--k2);
-  transition: width 160ms var(--ease);
+  white-space: nowrap;
 }
 
-.axis > span[data-key="instruction"],
-.axis > span[data-key="project"],
-.axis > span[data-key="personal"] {
-  border-top-color: var(--k1);
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+  background: var(--k2);
 }
 
-.axis > span[data-key="mcp"] {
-  border-top-color: var(--k3);
+.swatch[data-key="instruction"],
+.swatch[data-key="project"],
+.swatch[data-key="personal"] {
+  background: var(--k1);
+}
+
+.swatch[data-key="global"] {
+  background-color: var(--k2);
+  background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 4px);
+}
+
+.swatch[data-key="mcp"] {
+  background: var(--k3);
+}
+
+.unestSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+  border: 1px dashed var(--line-2);
+  background: var(--sunken);
 }
 
 .axisCost {
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   color: var(--tx-1);
 }
@@ -270,9 +379,51 @@
   color: var(--tx-3);
 }
 
+.legends {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--tx-3);
+  white-space: nowrap;
+}
+
+.hatchSwatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  background-color: var(--k2);
+  background-image: repeating-linear-gradient(-45deg, var(--hatch) 0 2px, transparent 2px 4px);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.dot + .dot {
+  margin-left: -2px;
+}
+
+.dot[data-tone="warn"] {
+  background: var(--warn-dot);
+}
+
+.dot[data-tone="info"] {
+  background: var(--info-dot);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .railSeg,
   .blk,
-  .axis > span {
+  .unestBlk {
     transition: none;
   }
 }
